@@ -38,7 +38,7 @@ app.layout = html.Div([
             ),
             dcc.RadioItems(
                 id='crossfilter-yaxis-type',
-                options=[{'label': i, 'value': i} for i in ['Linear', 'Log']],
+                options=[{'label': i, 'value': i} for i in ['Linear', 'Logi']],
                 value='Linear',
                 labelStyle={'display': 'inline-block'}
             )
@@ -143,4 +143,4 @@ def update_x_timeseries(hoverData, yaxis_column_name, axis_type):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=True, port=9375, host='0.0.0.0' ,threaded=True)
