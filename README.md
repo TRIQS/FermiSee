@@ -13,7 +13,5 @@
 * should we try to avoid using triqs, to make installation easier? 
 * decide on h5 data structure
     * are we using tb_lattice to interpolate k meshes on the fly?
-* how to ship everything in a simple to use fashion? Or only host this on a webserver which has triqs installed? 
 
 ## ToDo list: 
-[ ] create a simple test data set as h5 
