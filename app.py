@@ -52,6 +52,9 @@ def update_data(h5_file):
     data['k_points'] = data['k_points'][:-1].tolist()
     data['eps_nuk'] = (data['eps_nuk'].real - data['dft_mu']).tolist()
 
+    # max value
+    data['max_Akw'] = 1.05 * np.max(np.array(data['Akw']))
+
     return data
 
 # init data
@@ -218,8 +221,8 @@ def update_Akw(tb_bands, akw, filename, data):
 
     if tb_bands:
         for band in range(3):
-            fig.add_trace(go.Scatter(x=data['k_mesh'], y=data['eps_nuk'][band], mode='lines',
-                          line=go.scatter.Line(color=px.colors.sequential.Viridis[0]), showlegend=False, text=f'tb band {band}',
+            fig.add_trace(go.Scattergl(x=data['k_mesh'], y=data['eps_nuk'][band], mode='lines',
+                          line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=False, text=f'tb band {band}',
                           hoverinfo='x+y+text'
                           ))
     fig.update_layout(margin={'l': 40, 'b': 40, 't': 40, 'r': 40},
@@ -243,15 +246,15 @@ def update_EDC(kpt_edc, data):
     fig = go.Figure(layout=layout)
 
     
-    fig.add_trace(go.Scatter(x=data['freq_mesh'], y=np.array(data['Akw'])[kpt_edc,:], mode='lines',
-        line=go.scatter.Line(color=px.colors.sequential.Viridis[0]), showlegend=True, name='k = {:.3f}'.format(data['k_mesh'][kpt_edc]),
+    fig.add_trace(go.Scattergl(x=data['freq_mesh'], y=np.array(data['Akw'])[kpt_edc,:], mode='lines',
+        line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=True, name='k = {:.3f}'.format(data['k_mesh'][kpt_edc]),
                           hoverinfo='x+y+text'
                           ))
 
     fig.update_layout(margin={'l': 40, 'b': 40, 't': 40, 'r': 40},
                       hovermode='closest',
                       xaxis_range=[data['freq_mesh'][0], data['freq_mesh'][-1]],
-                      yaxis_range=[0, 1.05 * max(data['Akw'][kpt_edc])],
+                      yaxis_range=[0, data['max_Akw']],
                       xaxis_title='ω (eV)',
                       yaxis_title='A(ω)',
                       font=dict(size=16),
@@ -270,15 +273,16 @@ def update_MDC(w_mdc, data):
     layout = go.Layout(title={'text':'MDC', 'xanchor': 'center', 'x':0.5})
     fig = go.Figure(layout=layout)
 
-    fig.add_trace(go.Scatter(x=data['k_mesh'], y=np.array(data['Akw'])[:, w_mdc], mode='lines',
-        line=go.scatter.Line(color=px.colors.sequential.Viridis[0]), showlegend=True, name='ω = {:.3f} eV'.format(data['freq_mesh'][w_mdc]),
+    fig.add_trace(go.Scattergl(x=data['k_mesh'], y=np.array(data['Akw'])[:, w_mdc], mode='lines',
+        line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=True, name='ω = {:.3f} eV'.format(data['freq_mesh'][w_mdc]),
                           hoverinfo='x+y+text'
                           ))
 
     fig.update_layout(margin={'l': 40, 'b': 40, 't': 40, 'r': 40},
                       hovermode='closest',
                       xaxis_range=[data['k_mesh'][0], data['k_mesh'][-1]],
-                      yaxis_range=[0, 1.05 * np.max(np.array(data['Akw'])[:, w_mdc])],
+                    #   yaxis_range=[0, 1.05 * np.max(np.array(data['Akw'])[:, w_mdc])],
+                      yaxis_range=[0, data['max_Akw']],
                       xaxis_title='k',
                       yaxis_title='A(k)',
                       font=dict(size=16),
