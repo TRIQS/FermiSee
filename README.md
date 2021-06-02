@@ -4,9 +4,9 @@
  
  This is using the dash library (dash.plotly.com) to export plotly plots interactively to html.
 
- To run the example do 
+ To run the locally do 
  ```
- python example_dash.py
+ python app.py
  ```
 
 ## questions:
