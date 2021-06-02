@@ -1,4 +1,4 @@
- # triqs valley_tools
+ # triqs_spectrometer
  
  This is a graphical A(k,w) analyzer build on triqs thight binding models decorated with a self-energy. 
  
