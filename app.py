@@ -127,7 +127,8 @@ app.layout = html.Div([
     html.Div([
         dcc.Graph(
             id='Akw',
-            style={'height': '84vh'}
+            style={'height': '84vh'},
+            clickData={'points': []}
         )
     ], style={
         'display': 'inline-block',
@@ -226,25 +227,38 @@ def update_Akw(tb_bands, akw, filename, data):
                           hoverinfo='x+y+text'
                           ))
     fig.update_layout(margin={'l': 40, 'b': 40, 't': 40, 'r': 40},
+                      clickmode='event+select',
                       hovermode='closest',
                       yaxis_range=[data['freq_mesh'][0], data['freq_mesh'][-1]],
                       yaxis_title='ω (eV)',
                       xaxis=dict(ticktext=['γ' if k == 'g' else k for k in data['k_points_labels']],tickvals=data['k_points']),
                       font=dict(size=16))
+
+    fig.update_xaxes(showspikes=True, spikemode='across', spikesnap='cursor', rangeslider_visible=False, 
+                     showticklabels=False, spikedash='solid')
+    fig.update_yaxes(showspikes=True, spikemode='across', spikesnap='cursor', showticklabels=False, spikedash='solid')
+    fig.update_traces(xaxis='x', hoverinfo='none')
+
     return fig, data
 
 
 @app.callback(
     [dash.dependencies.Output('EDC', 'figure'),
+    dash.dependencies.Output('kpt_edc', 'value'),
     dash.dependencies.Output('kpt_edc', 'max')],
     [dash.dependencies.Input('kpt_edc', 'value'),
-    dash.dependencies.Input('data-storage', 'data')]
+    dash.dependencies.Input('data-storage', 'data'),
+    dash.dependencies.Input('Akw', 'clickData')]
     )
 #
-def update_EDC(kpt_edc, data):
+def update_EDC(kpt_edc, data, click_coordinates):
     layout = go.Layout(title={'text':'EDC', 'xanchor': 'center', 'x':0.5})
     fig = go.Figure(layout=layout)
-
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if trigger_id == 'Akw':
+        new_kpt = click_coordinates['points'][0]['x']
+        kpt_edc = np.argmin(np.abs(np.array(data['k_mesh']) - new_kpt))
     
     fig.add_trace(go.Scattergl(x=data['freq_mesh'], y=np.array(data['Akw'])[kpt_edc,:], mode='lines',
         line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=True, name='k = {:.3f}'.format(data['k_mesh'][kpt_edc]),
@@ -260,18 +274,25 @@ def update_EDC(kpt_edc, data):
                       font=dict(size=16),
                       legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
                       )
-    return fig, len(data['k_mesh'])-1
+    return fig, kpt_edc, len(data['k_mesh'])-1
 
 @app.callback(
     [dash.dependencies.Output('MDC', 'figure'),
+    dash.dependencies.Output('w_mdc', 'value'),
     dash.dependencies.Output('w_mdc', 'max')],
     [dash.dependencies.Input('w_mdc', 'value'),
-     dash.dependencies.Input('data-storage', 'data')]
+     dash.dependencies.Input('data-storage', 'data'),
+     dash.dependencies.Input('Akw', 'clickData')]
     )
 #
-def update_MDC(w_mdc, data):
+def update_MDC(w_mdc, data, click_coordinates):
     layout = go.Layout(title={'text':'MDC', 'xanchor': 'center', 'x':0.5})
     fig = go.Figure(layout=layout)
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if trigger_id == 'Akw':
+        new_w = click_coordinates['points'][0]['y']
+        w_mdc = np.argmin(np.abs(np.array(data['freq_mesh']) - new_w))
 
     fig.add_trace(go.Scattergl(x=data['k_mesh'], y=np.array(data['Akw'])[:, w_mdc], mode='lines',
         line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=True, name='ω = {:.3f} eV'.format(data['freq_mesh'][w_mdc]),
@@ -289,7 +310,7 @@ def update_MDC(w_mdc, data):
                       xaxis=dict(ticktext=['γ' if k == 'g' else k for k in data['k_points_labels']],tickvals=data['k_points']),
                       legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
                       )
-    return fig, len(data['freq_mesh'])-1
+    return fig, w_mdc, len(data['freq_mesh'])-1
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=9375, host='0.0.0.0')
