@@ -1,3 +1,6 @@
+import io
+import base64
+
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -21,8 +24,20 @@ def _get_tb_bands(k_mesh, e_mat, k_points,):
     return e_val, e_vec
 
 
-def update_data(h5_file):
-    data = {'file': h5_file}
+def update_data(contents, h5_filename):
+    data = {'filename': h5_filename}
+    if not contents: 
+        h5_file = h5_filename
+    else:
+        h5_file = h5_filename
+        # content_type, content_string = contents.split(',')
+        # decoded = base64.b64decode(content_string)
+        # h5_file = io.BytesIO(decoded)
+        # h5 = HDFArchive(h5_file)
+        # print(h5)
+        # data['Akw'] = None
+
+        
     with HDFArchive(h5_file, 'r') as ar:
         # Akw data
         # data['Akw_data'] = ar['A_k_w_data'] # contains A_k_w, dft_mu
@@ -58,7 +73,7 @@ def update_data(h5_file):
     return data
 
 # init data
-data = update_data('example.h5')
+data = update_data(None, 'example.h5')
 
 # layout
 app.layout = html.Div([
@@ -200,15 +215,16 @@ app.layout = html.Div([
     dash.dependencies.Output('data-storage', 'data')],
     [dash.dependencies.Input('tb-bands', 'on'),
      dash.dependencies.Input('akw', 'on'),
+     dash.dependencies.Input('upload-file', 'contents'),
      dash.dependencies.Input('upload-file', 'filename'),
      dash.dependencies.Input('data-storage', 'data')])
 #
-def update_Akw(tb_bands, akw, filename, data):
+def update_Akw(tb_bands, akw, contents, filename, data):
     layout = go.Layout(title={'text':'A(k,ω)', 'xanchor': 'center', 'x':0.5})
     fig = go.Figure(layout=layout)
 
-    if filename != None and not filename == data['file']:
-        data = update_data(filename)
+    if filename != None and not filename == data['filename']:
+        data = update_data(contents, filename)
 
     fig.add_shape(type = 'line', x0=0, y0=0, x1=max(data['k_mesh']), y1=0, line=dict(color='gray', width=0.8))
 
@@ -221,7 +237,7 @@ def update_Akw(tb_bands, akw, filename, data):
 
 
     if tb_bands:
-        for band in range(3):
+        for band in range(len(data['eps_nuk'])):
             fig.add_trace(go.Scattergl(x=data['k_mesh'], y=data['eps_nuk'][band], mode='lines',
                           line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=False, text=f'tb band {band}',
                           hoverinfo='x+y+text'
@@ -235,8 +251,8 @@ def update_Akw(tb_bands, akw, filename, data):
                       font=dict(size=16))
 
     fig.update_xaxes(showspikes=True, spikemode='across', spikesnap='cursor', rangeslider_visible=False, 
-                     showticklabels=False, spikedash='solid')
-    fig.update_yaxes(showspikes=True, spikemode='across', spikesnap='cursor', showticklabels=False, spikedash='solid')
+                     showticklabels=True, spikedash='solid')
+    fig.update_yaxes(showspikes=True, spikemode='across', spikesnap='cursor', showticklabels=True, spikedash='solid')
     fig.update_traces(xaxis='x', hoverinfo='none')
 
     return fig, data
