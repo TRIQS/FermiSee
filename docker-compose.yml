@@ -1,0 +1,12 @@
+# docker-compose.yml
+version: '3'
+networks:
+  myapp-network:
+services:
+  # main application
+  myapp:
+    container_name: triqs_spectrometer
+    build:
+      .
+    ports:
+      - "9375:9375"

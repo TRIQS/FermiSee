@@ -8,6 +8,14 @@
  ```
  python app.py
  ```
+ or via docker-compose:
+ ```
+ docker-compose up
+ ```
+ to rebuild after changes in the Dockerfile:
+ ```
+ docker-compose build
+ ```
 
 ## questions:
 * should we try to avoid using triqs to make installation easier? 
