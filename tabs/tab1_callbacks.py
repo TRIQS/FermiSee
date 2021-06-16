@@ -2,8 +2,38 @@ import numpy as np
 import dash
 import plotly.express as px
 import plotly.graph_objects as go
+import ast
 
 def register_callbacks(app, data):
+
+    @app.callback(
+        [dash.dependencies.Output('sigma-function-input', 'style'),
+         dash.dependencies.Output('sigma-function-button', 'style'),
+         dash.dependencies.Output('sigma-upload', 'style')],
+        dash.dependencies.Input('choose-sigma', 'value')
+        )
+    def toggle_update_sigma(sigma_radio_item):
+        if sigma_radio_item == 'upload':
+            return [{'display': 'none'}] * 2 + [{'display': 'block'}]
+        else:
+            return [{'display': 'block'}] * 2 + [{'display': 'none'}]
+
+    @app.callback(
+        #[dash.dependencies.Output('sigma-function-output', 'children'),
+        # dash.dependencies.Output('sigma-function', 'sigma')],
+        dash.dependencies.Output('sigma-function-output', 'children'),
+        dash.dependencies.Input('sigma-function-button', 'n_clicks'),
+        dash.dependencies.State('sigma-function-input', 'value')
+        )
+    def update_sigma(n_clicks, value):
+        if n_clicks > 0:
+            # parse function
+            tree = ast.parse(value, mode='exec')
+            code = compile(tree, filename='test', mode='exec')
+            namespace = {} 
+            exec(code, namespace)
+
+            return 'You have entered: \n{}'.format(value)
 
     # make connections
     @app.callback(

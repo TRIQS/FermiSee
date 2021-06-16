@@ -10,6 +10,9 @@ def layout(data):
         children=[
             # column 1
             html.Div([
+                    html.Hr(),
+                    html.H4('TB Hamiltonian'),
+                    html.Hr(),
                     dcc.Upload(
                         id='upload-file',
                         children=html.Div(['drop or ', html.A('select files')]),
@@ -36,6 +39,42 @@ def layout(data):
                         ),
                     ], style={'padding': '5px 5px'}
                     ),
+                    html.Hr(),
+                    html.H4('Σ(ω)'),
+                    html.Hr(),
+                    dcc.RadioItems(
+                        id='choose-sigma',
+                        options=[{'label': i, 'value': i} for i in ['upload', 'enter manually']],
+                        value='upload',
+                        labelStyle={'display': 'inline-block'}
+                    ),
+                    dcc.Upload(
+                        id='sigma-upload',
+                        children=html.Div(['drop or ', html.A('select files')]),
+                        style={
+                            'width': '90%',
+                            'height': '60px',
+                            'lineHeight': '60px',
+                            'borderWidth': '1px',
+                            'borderStyle': 'dashed',
+                            'borderRadius': '5px',
+                            'textAlign': 'center',
+                            'margin': '10px'
+                        },
+                        multiple=False
+                    ),
+                    dcc.Textarea(
+                        id='sigma-function-input',
+                        #value='Enter a python function for Σ(k,ω):\n\ndef sigma(ω, a, b):\n\treturn a + b * ω',
+                        placeholder='Enter a python function',
+                        value='def sigma(w, a, b): return a + b * w',
+                        style={'width': '100%', 'height': 300}
+                        ),
+                    html.Button('Submit', id='sigma-function-button', n_clicks=0),
+                    html.Div(id='sigma-function-output', style={'whiteSpace': 'pre-line'}),
+                    html.Hr(),
+                    html.H4('A(k,ω)'),
+                    html.Hr(),
                     html.Div([
                         html.P('show A(k,ω):',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                             ),
@@ -52,13 +91,8 @@ def layout(data):
                         options=[{'label': 'A(k,ω)', 'value': 3}],
                         value='Fertility rate, total (births per woman)'
                     ),
-                    dcc.RadioItems(
-                        id='choose-sigma',
-                        options=[{'label': i, 'value': i} for i in ['Σ(ω)', 'linearize']],
-                        value='Σ(ω)',
-                        labelStyle={'display': 'inline-block'}
-                    ),
-                    dcc.Store(id="data-storage", data = data)
+                    html.Hr(),
+                    dcc.Store(id="data-storage", data = data),
             ], style={
                 'borderBottom': 'thin lightgrey solid',
                 'padding-left': '1%',
