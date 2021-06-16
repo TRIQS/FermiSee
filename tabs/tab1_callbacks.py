@@ -4,6 +4,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import ast
 
+from load_data import update_data
+
 def register_callbacks(app, data):
 
     @app.callback(
