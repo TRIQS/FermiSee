@@ -1,4 +1,6 @@
 import numpy as np
+import base64
+import io
 from h5 import HDFArchive
 
 def _get_tb_bands(k_mesh, e_mat, k_points,):
@@ -14,31 +16,31 @@ def _get_tb_bands(k_mesh, e_mat, k_points,):
 def update_data(contents, h5_filename):
     data = {'filename': h5_filename}
     if not contents: 
-        h5_file = h5_filename
+        ar = HDFArchive(h5_filename, 'r')
+
     else:
-        h5_file = h5_filename
-        # content_type, content_string = contents.split(',')
-        # decoded = base64.b64decode(content_string)
-        # h5_file = io.BytesIO(decoded)
-        # h5 = HDFArchive(h5_file)
-        # print(h5)
-        # data['Akw'] = None
-
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
+        h5_bytestream = io.BytesIO(decoded)
+        ar = HDFArchive(h5_bytestream.read())
         
-    with HDFArchive(h5_file, 'r') as ar:
-        # Akw data
-        # data['Akw_data'] = ar['A_k_w_data'] # contains A_k_w, dft_mu
-        data['Akw'] = ar['A_k_w_data']['A_k_w']
-        data['dft_mu'] = ar['A_k_w_data']['dft_mu']
+    # Akw data
+    # data['Akw_data'] = ar['A_k_w_data'] # contains A_k_w, dft_mu
+    data['Akw'] = ar['A_k_w_data']['A_k_w']
+    data['dft_mu'] = ar['A_k_w_data']['dft_mu']
 
-        # tb data
-        # data['tb_data'] = ar['tb_data'] # e_mat, k_mesh, k_points, k_points_labels
-        data['k_points_labels'] = ar['tb_data']['k_points_labels']
-        e_mat = ar['tb_data']['e_mat']
-        data['k_points'] = ar['tb_data']['k_points']
-        data['k_mesh'] = ar['tb_data']['k_mesh']
-        # w mesh
-        data['freq_mesh'] = ar['w_mesh']['w_mesh']
+    # tb data
+    # data['tb_data'] = ar['tb_data'] # e_mat, k_mesh, k_points, k_points_labels
+    data['k_points_labels'] = ar['tb_data']['k_points_labels']
+    e_mat = ar['tb_data']['e_mat']
+    data['k_points'] = ar['tb_data']['k_points']
+    data['k_mesh'] = ar['tb_data']['k_mesh']
+    # w mesh
+    data['freq_mesh'] = ar['w_mesh']['w_mesh']
+
+    if not contents:
+        del ar
+
     data['eps_nuk'], evec_nuk = _get_tb_bands(data['k_mesh'], e_mat, data['k_points'])
 
     # workaround to remove last point in k_mesh
