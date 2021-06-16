@@ -13,6 +13,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
       libgmp-dev \
       libhdf5-dev \
       libopenmpi-dev \
+      gunicorn \
       python3-dev \
       python3-mako \
       python3-numpy \
