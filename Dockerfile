@@ -56,6 +56,6 @@ WORKDIR /home/triqs/triqs_spectrometer
 COPY . ./
 
 # Finally, run gunicorn.
-# CMD [ "gunicorn", "--workers=4", "--threads=1", "-b 0.0.0.0:$PORT", "app:server"]
+# CMD [ "gunicorn", "--workers=4", "--threads=1", "-b 0.0.0.0:9375", "app:server"]
 # or run in debug mode
 CMD ["python3", "app.py"]
