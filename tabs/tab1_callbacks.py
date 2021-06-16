@@ -5,13 +5,15 @@ import plotly.graph_objects as go
 import ast
 
 from load_data import update_data
+from tabs.id_factory import id_factory
 
 def register_callbacks(app, data):
-
+    id = id_factory('tab1')
+    
     @app.callback(
-         [dash.dependencies.Output('sigma-function', 'style'),
-         dash.dependencies.Output('sigma-upload', 'style')],
-        dash.dependencies.Input('choose-sigma', 'value')
+         [dash.dependencies.Output(id('sigma-function'), 'style'),
+         dash.dependencies.Output(id('sigma-upload'), 'style')],
+        dash.dependencies.Input(id('choose-sigma'), 'value')
         )
     def toggle_update_sigma(sigma_radio_item):
         if sigma_radio_item == 'upload':
@@ -22,9 +24,9 @@ def register_callbacks(app, data):
     @app.callback(
         #[dash.dependencies.Output('sigma-function-output', 'children'),
         # dash.dependencies.Output('sigma-function', 'sigma')],
-        dash.dependencies.Output('sigma-function-output', 'children'),
-        dash.dependencies.Input('sigma-function-button', 'n_clicks'),
-        dash.dependencies.State('sigma-function-input', 'value')
+        dash.dependencies.Output(id('sigma-function-output'), 'children'),
+        dash.dependencies.Input(id('sigma-function-button'), 'n_clicks'),
+        dash.dependencies.State(id('sigma-function-input'), 'value')
         )
     def update_sigma(n_clicks, value):
         if n_clicks > 0:
@@ -39,12 +41,12 @@ def register_callbacks(app, data):
     # make connections
     @app.callback(
         [dash.dependencies.Output('Akw', 'figure'),
-        dash.dependencies.Output('data-storage', 'data')],
-        [dash.dependencies.Input('tb-bands', 'on'),
-         dash.dependencies.Input('akw', 'on'),
-         dash.dependencies.Input('upload-file', 'contents'),
-         dash.dependencies.Input('upload-file', 'filename'),
-         dash.dependencies.Input('data-storage', 'data')])
+        dash.dependencies.Output(id('data-storage'), 'data')],
+        [dash.dependencies.Input(id('tb-bands'), 'on'),
+         dash.dependencies.Input(id('akw'), 'on'),
+         dash.dependencies.Input(id('upload-file'), 'contents'),
+         dash.dependencies.Input(id('upload-file'), 'filename'),
+         dash.dependencies.Input(id('data-storage'), 'data')])
     #
     def update_Akw(tb_bands, akw, contents, filename, data):
         layout = go.Layout(title={'text':'A(k,ω)', 'xanchor': 'center', 'x':0.5})
@@ -90,7 +92,7 @@ def register_callbacks(app, data):
         dash.dependencies.Output('kpt_edc', 'value'),
         dash.dependencies.Output('kpt_edc', 'max')],
         [dash.dependencies.Input('kpt_edc', 'value'),
-        dash.dependencies.Input('data-storage', 'data'),
+        dash.dependencies.Input(id('data-storage'), 'data'),
         dash.dependencies.Input('Akw', 'clickData')]
         )
     #
@@ -124,7 +126,7 @@ def register_callbacks(app, data):
         dash.dependencies.Output('w_mdc', 'value'),
         dash.dependencies.Output('w_mdc', 'max')],
         [dash.dependencies.Input('w_mdc', 'value'),
-         dash.dependencies.Input('data-storage', 'data'),
+         dash.dependencies.Input(id('data-storage'), 'data'),
          dash.dependencies.Input('Akw', 'clickData')]
         )
     #
