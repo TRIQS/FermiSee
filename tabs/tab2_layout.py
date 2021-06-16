@@ -11,13 +11,15 @@ def layout(data):
             make_dashboard(data, 2),
             # column 2
             html.Div([
-                html.H1('Page under construction 🚧'),
+                dcc.Graph(
+                    id='A0k',
+                    style={'height': '60vh'},
+                    )
                 ],
                 style={
                     'display': 'inline-block',
-                    'width': '84%',
+                    'width': '70%',
                     'textAlign': 'center',
-                    'margin-top': '40%'
                     }
                 )
             ]
