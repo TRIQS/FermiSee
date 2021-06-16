@@ -39,7 +39,7 @@ def layout(data):
                     ], style={'padding': '5px 5px'}
                     ),
                     html.Hr(),
-                    html.H4('Σ(k,ω)'),
+                    html.H4('self-energy Σ(k,ω)'),
                     html.Div('Choose Σ(k,ω):'),
                     dcc.RadioItems(
                         id='choose-sigma',
@@ -76,7 +76,7 @@ def layout(data):
                         html.Div(id='sigma-function-output', style={'whiteSpace': 'pre-line'}),
                     ]),
                     html.Hr(),
-                    html.H4('A(k,ω)'),
+                    html.H4('spectral function A(k,ω)'),
                     html.Div([
                         html.P('show A(k,ω):',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                             ),
