@@ -1,5 +1,0 @@
-dash
-dash-daq
-gunicorn
-flask
-pandas

@@ -1,11 +1,9 @@
 # docker-compose.yml
 version: '3'
-networks:
-  myapp-network:
 services:
   # main application
-  myapp:
-    container_name: triqs_spectrometer
+  triqs_spectrometer:
+    image: triqs_spectrometer
     build:
       .
     ports:
