@@ -7,16 +7,15 @@ import ast
 def register_callbacks(app, data):
 
     @app.callback(
-        [dash.dependencies.Output('sigma-function-input', 'style'),
-         dash.dependencies.Output('sigma-function-button', 'style'),
+         [dash.dependencies.Output('sigma-function', 'style'),
          dash.dependencies.Output('sigma-upload', 'style')],
         dash.dependencies.Input('choose-sigma', 'value')
         )
     def toggle_update_sigma(sigma_radio_item):
         if sigma_radio_item == 'upload':
-            return [{'display': 'none'}] * 2 + [{'display': 'block'}]
+            return [{'display': 'none'}] * 1 + [{'display': 'block'}]
         else:
-            return [{'display': 'block'}] * 2 + [{'display': 'none'}]
+            return [{'display': 'block'}] * 1 + [{'display': 'none'}]
 
     @app.callback(
         #[dash.dependencies.Output('sigma-function-output', 'children'),
