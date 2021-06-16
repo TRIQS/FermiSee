@@ -20,9 +20,8 @@ def update_data(contents, h5_filename):
 
     else:
         content_type, content_string = contents.split(',')
-        decoded = base64.b64decode(content_string)
-        h5_bytestream = io.BytesIO(decoded)
-        ar = HDFArchive(h5_bytestream.read())
+        h5_bytestream = base64.b64decode(content_string)
+        ar = HDFArchive(h5_bytestream)
         
     # Akw data
     # data['Akw_data'] = ar['A_k_w_data'] # contains A_k_w, dft_mu
