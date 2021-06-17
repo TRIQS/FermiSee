@@ -14,6 +14,7 @@ def layout(data):
             make_dashboard(data, 1),
             # column 2
             html.Div([
+                html.H3('A(k,ω)', style={'textAlign': 'center'}),
                 dcc.Graph(
                     id='Akw',
                     style={'height': '84vh'},
@@ -30,6 +31,7 @@ def layout(data):
             # column 3
             html.Div([
                 html.Div([
+                    html.H3('EDC', style={'textAlign': 'center'}),
                     dcc.Graph(
                         id='EDC',
                         style={'height': '95%'}
@@ -47,13 +49,14 @@ def layout(data):
                 ], style={
                     'padding-right': '1%',
                     'width': '99%',
-                    'padding-top': '3%',
+                    #'padding-top': '3%',
                     'height': '40vh',
                     'vertical-align': 'top',
                     'borderBottom': 'thin lightgrey solid'
                     }
                 ),
                 html.Div([
+                    html.H3('MDC', style={'textAlign': 'center'}),
                     dcc.Graph(
                         id='MDC',
                         style={'height': '95%'}
@@ -69,7 +72,7 @@ def layout(data):
                         verticalHeight=100),
                 ], style={
                     'padding-right': '1%',
-                    'padding-top': '3%',
+                    'padding-top': '10%',
                     'width': '99%',
                     'height': '40vh'
                     }

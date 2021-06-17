@@ -3,6 +3,7 @@ import dash
 import plotly.express as px
 import plotly.graph_objects as go
 import ast
+import inspect
 
 from load_data import update_data
 from tabs.id_factory import id_factory
@@ -38,6 +39,15 @@ def register_callbacks(app, data):
 
             return 'You have entered: \n{}'.format(value)
 
+    @app.callback(
+        dash.dependencies.Output(id('colorscale'), 'options'),
+        dash.dependencies.Input(id('colorscale-mode'), 'value')
+        )
+    def update_colorscales(mode):
+        colorscales = [name for name, body in inspect.getmembers(getattr(px.colors, mode))
+                if isinstance(body, list) and len(name.rsplit('_')) is 1]
+        return [{'label': key, 'value': key} for key in colorscales]
+
     # make connections
     @app.callback(
         [dash.dependencies.Output('Akw', 'figure'),
@@ -46,10 +56,11 @@ def register_callbacks(app, data):
          dash.dependencies.Input(id('akw'), 'on'),
          dash.dependencies.Input(id('upload-file'), 'contents'),
          dash.dependencies.Input(id('upload-file'), 'filename'),
+         dash.dependencies.Input(id('colorscale'), 'value'),
          dash.dependencies.Input(id('data-storage'), 'data')])
     #
-    def update_Akw(tb_bands, akw, contents, filename, data):
-        layout = go.Layout(title={'text':'A(k,ω)', 'xanchor': 'center', 'x':0.5})
+    def update_Akw(tb_bands, akw, contents, filename, colorscale, data):
+        layout = go.Layout()
         fig = go.Figure(layout=layout)
     
         if filename != None and not filename == data['filename']:
@@ -61,7 +72,7 @@ def register_callbacks(app, data):
             # kw_x, kw_y = np.meshgrid(data.tb_data['k_mesh'], w_mesh['w_mesh'])
             z_data = np.log(np.array(data['Akw']).T)
             fig.add_trace(go.Heatmap(x=data['k_mesh'], y=data['freq_mesh'], z=z_data,
-                          colorscale='Tealrose',reversescale=False, showscale=False,
+                          colorscale=colorscale,reversescale=False, showscale=False,
                           zmin=np.min(z_data), zmax=np.max(z_data)))
     
     
@@ -71,7 +82,7 @@ def register_callbacks(app, data):
                               line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=False, text=f'tb band {band}',
                               hoverinfo='x+y+text'
                               ))
-        fig.update_layout(margin={'l': 40, 'b': 40, 't': 40, 'r': 40},
+        fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                           clickmode='event+select',
                           hovermode='closest',
                           yaxis_range=[data['freq_mesh'][0], data['freq_mesh'][-1]],
@@ -97,7 +108,7 @@ def register_callbacks(app, data):
         )
     #
     def update_EDC(kpt_edc, data, click_coordinates):
-        layout = go.Layout(title={'text':'EDC', 'xanchor': 'center', 'x':0.5})
+        layout = go.Layout()
         fig = go.Figure(layout=layout)
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -110,7 +121,7 @@ def register_callbacks(app, data):
                               hoverinfo='x+y+text'
                               ))
     
-        fig.update_layout(margin={'l': 40, 'b': 40, 't': 40, 'r': 40},
+        fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                           hovermode='closest',
                           xaxis_range=[data['freq_mesh'][0], data['freq_mesh'][-1]],
                           yaxis_range=[0, data['max_Akw']],
@@ -131,7 +142,7 @@ def register_callbacks(app, data):
         )
     #
     def update_MDC(w_mdc, data, click_coordinates):
-        layout = go.Layout(title={'text':'MDC', 'xanchor': 'center', 'x':0.5})
+        layout = go.Layout()
         fig = go.Figure(layout=layout)
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -144,7 +155,7 @@ def register_callbacks(app, data):
                               hoverinfo='x+y+text'
                               ))
     
-        fig.update_layout(margin={'l': 40, 'b': 40, 't': 40, 'r': 40},
+        fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                           hovermode='closest',
                           xaxis_range=[data['k_mesh'][0], data['k_mesh'][-1]],
                         #   yaxis_range=[0, 1.05 * np.max(np.array(data['Akw'])[:, w_mdc])],
