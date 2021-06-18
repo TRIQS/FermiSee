@@ -10,6 +10,16 @@ from tabs.id_factory import id_factory
 
 def register_callbacks(app, data):
     id = id_factory('tab1')
+
+    @app.callback(
+        dash.dependencies.Output(id('k-points'), 'data'),
+        dash.dependencies.Input(id('add-kpoint'), 'n_clicks'),
+        dash.dependencies.State(id('k-points'), 'data'),
+        dash.dependencies.State(id('k-points'), 'columns'))
+    def add_row(n_clicks, rows, columns):
+        if n_clicks > 0:
+            rows.append({c['id']: '' for c in columns})
+        return rows
     
     @app.callback(
          [dash.dependencies.Output(id('sigma-function'), 'style'),

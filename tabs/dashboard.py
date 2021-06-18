@@ -2,6 +2,7 @@ import numpy as np
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_daq as daq
+import dash_table
 
 from tabs.id_factory import id_factory
 
@@ -12,12 +13,11 @@ def make_dashboard(data, tab_number):
     return dcc.Tab(
         label='spectral function A(k,ω)',
         children=[
-            # column 1
             html.Div([
-                    #html.Hr(),
                     html.H3('Data input'),
+                    # section 1
                     html.Div(children=[
-                        html.H5('TB Hamiltonian'),
+                        html.H5('Upload config'),
                         dcc.Upload(
                             id=id('upload-file'),
                             children=html.Div(['drop or ', html.A('select files')]),
@@ -33,6 +33,42 @@ def make_dashboard(data, tab_number):
                             },
                             multiple=False
                         ),
+                    ], style={'backgroundColor': col_part,
+                               'borderRadius': '15px',
+                               'padding': '10px'}),
+                    # section 2
+                    html.Hr(),
+                    html.Div(children=[
+                        html.H5('TB Hamiltonian'),
+                        dcc.Upload(
+                            id=id('upload-w90'),
+                            children=html.Div(['drop or ', html.A('select files')]),
+                            style={
+                                'width': '90%',
+                                'height': '60px',
+                                'lineHeight': '60px',
+                                'borderWidth': '1px',
+                                'borderStyle': 'dashed',
+                                'borderRadius': '5px',
+                                'textAlign': 'center',
+                                'margin': '10px'
+                            },
+                            multiple=False
+                        ),
+                        dash_table.DataTable(
+                            id=id('k-points'),
+                            columns=[{
+                                'name': k,
+                                'id' : id('column-{}'.format(i)),
+                                'deletable': False,
+                                } for i, k in enumerate(['label', 'kx', 'ky', 'kz'])],
+                            data=[
+                                {id('column-{}'.format(i)): k for i, k in enumerate(['G', 0,0,0])},
+                                {id('column-{}'.format(i)): k for i, k in enumerate(['M', 0.5,0.5,0])}],
+                            editable=True,
+                            row_deletable=True
+                            ),
+                        html.Button('Add k-point', id=id('add-kpoint'), n_clicks=0),
                         html.Div([
                             html.P('show TB bands:',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                 ),
@@ -47,6 +83,7 @@ def make_dashboard(data, tab_number):
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
                                'padding': '10px'}),
+                    # section 3
                     html.Hr(),
                     html.Div(children=[
                         html.H5('self-energy Σ(k,ω)'),
@@ -88,6 +125,7 @@ def make_dashboard(data, tab_number):
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
                                'padding': '10px'}),
+                    # section 4
                     html.Hr(),
                     html.Div(children=[
                         html.H5('spectral function A(k,ω)'),
