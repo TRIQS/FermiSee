@@ -39,7 +39,6 @@ def make_dashboard(data, tab_number):
                     # section 2
                     html.Hr(),
                     html.Div(children=[
-                        html.H5('TB Hamiltonian'),
                         dcc.Upload(
                             id=id('upload-w90'),
                             children=html.Div(['drop or ', html.A('select files')]),
@@ -55,6 +54,31 @@ def make_dashboard(data, tab_number):
                             },
                             multiple=False
                         ),
+                        html.H5('TB Hamiltonian'),
+                        html.Div([
+                            html.P('add spin:',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
+                                ),
+                            daq.BooleanSwitch(
+                                id=id('add-spin'),
+                                on=False,
+                                color='#005eb0',
+                                style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
+                            ),
+                        ], style={'padding': '5px 5px'}
+                        ),
+                        dcc.Input(id=id('dft-mu'), type='number', placeholder='chemical potential μ'),
+                        html.Div('orbital order'),
+                        dash_table.DataTable(
+                            id=id('dft-orbital-order'), editable=True,
+                            columns=[{'name': f'orb{i}', 'id': id(f'oo-{i}'), 'presentation': 'dropdown'} for i in range(3)],
+                            data=[{id(f'oo-{i}'): key for i, key in enumerate(['dxz', 'dyz', 'dxy'])}],
+                            dropdown={id('oo-{}'.format(i)): {
+                                'options': [{'label': key, 'value': key} for key in ['dxz', 'dyz', 'dxy']]
+                                } for i in range(3)},
+                            #style_header = {'display': 'none'},
+                            css=[{'selector': 'tr:first-child','rule': 'display: none'}],
+                            ),
+                        html.Div('k-points'),
                         dash_table.DataTable(
                             id=id('k-points'),
                             columns=[{
@@ -69,17 +93,6 @@ def make_dashboard(data, tab_number):
                             row_deletable=True
                             ),
                         html.Button('Add k-point', id=id('add-kpoint'), n_clicks=0),
-                        html.Div([
-                            html.P('show TB bands:',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
-                                ),
-                            daq.BooleanSwitch(
-                                id=id('tb-bands'),
-                                on=True,
-                                color='#005eb0',
-                                style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
-                            ),
-                        ], style={'padding': '5px 5px'}
-                        ),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
                                'padding': '10px'}),
@@ -129,6 +142,17 @@ def make_dashboard(data, tab_number):
                     html.Hr(),
                     html.Div(children=[
                         html.H5('spectral function A(k,ω)'),
+                        html.Div([
+                            html.P('show TB bands:',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
+                                ),
+                            daq.BooleanSwitch(
+                                id=id('tb-bands'),
+                                on=True,
+                                color='#005eb0',
+                                style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
+                            ),
+                        ], style={'padding': '5px 5px'}
+                        ),
                         html.Div([
                             html.P('show A(k,ω):',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                 ),
