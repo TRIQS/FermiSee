@@ -2,6 +2,7 @@ import numpy as np
 import base64
 import io
 from h5 import HDFArchive
+from wannier90 import parse_hopping_from_wannier90_hr
 
 def _get_tb_bands(k_mesh, e_mat, k_points,):
     
@@ -13,8 +14,8 @@ def _get_tb_bands(k_mesh, e_mat, k_points,):
     return e_val, e_vec
 
 
-def update_data(contents, h5_filename):
-    data = {'filename': h5_filename}
+def load_config(contents, h5_filename):
+    data = {'config_filename': h5_filename}
     if not contents: 
         ar = HDFArchive(h5_filename, 'r')
 
@@ -59,4 +60,14 @@ def update_data(contents, h5_filename):
     data['max_Akw'] = 1.05 * np.max(np.array(data['Akw']))
 
     return data
+
+def load_w90_hr(contents):
+    content_type, content_string = contents.split(',')
+    w90_hr_stream = base64.b64decode(content_string).decode('utf-8')
+    hopping, num_wann = parse_hopping_from_wannier90_hr(w90_hr_stream)
+    print('number of Wannier orbitals {}'.format(num_wann))
+
+    return 
+
+
 

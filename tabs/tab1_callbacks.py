@@ -5,11 +5,30 @@ import plotly.graph_objects as go
 import ast
 import inspect
 
-from load_data import update_data
+from load_data import load_config, load_w90_hr
 from tabs.id_factory import id_factory
 
 def register_callbacks(app, data):
     id = id_factory('tab1')
+
+    @app.callback(
+        dash.dependencies.Output(id('data-storage'), 'data'),
+        [dash.dependencies.Input(id('data-storage'), 'data'),
+         dash.dependencies.Input(id('upload-file'), 'contents'),
+         dash.dependencies.Input(id('upload-file'), 'filename'),
+         dash.dependencies.Input(id('upload-w90'), 'contents')])
+    def update_data(data,config_contents,config_filename, w90_contents):  
+
+        if config_filename != None and not config_filename == data['config_filename']:
+            print('loading config file from h5...')
+            data = load_config(config_contents, config_filename)
+
+        if w90_contents != None:
+            print('loading w90 hr file...')
+
+            load_w90_hr(w90_contents)
+
+        return data
 
     @app.callback(
         dash.dependencies.Output(id('k-points'), 'data'),
@@ -55,26 +74,20 @@ def register_callbacks(app, data):
         )
     def update_colorscales(mode):
         colorscales = [name for name, body in inspect.getmembers(getattr(px.colors, mode))
-                if isinstance(body, list) and len(name.rsplit('_')) is 1]
+                if isinstance(body, list) and len(name.rsplit('_')) == 1]
         return [{'label': key, 'value': key} for key in colorscales]
 
     # make connections
     @app.callback(
-        [dash.dependencies.Output('Akw', 'figure'),
-        dash.dependencies.Output(id('data-storage'), 'data')],
+        dash.dependencies.Output('Akw', 'figure'),
         [dash.dependencies.Input(id('tb-bands'), 'on'),
          dash.dependencies.Input(id('akw'), 'on'),
-         dash.dependencies.Input(id('upload-file'), 'contents'),
-         dash.dependencies.Input(id('upload-file'), 'filename'),
          dash.dependencies.Input(id('colorscale'), 'value'),
          dash.dependencies.Input(id('data-storage'), 'data')])
     #
-    def update_Akw(tb_bands, akw, contents, filename, colorscale, data):
+    def update_Akw(tb_bands, akw, colorscale, data):
         layout = go.Layout()
         fig = go.Figure(layout=layout)
-    
-        if filename != None and not filename == data['filename']:
-            data = update_data(contents, filename)
     
         fig.add_shape(type = 'line', x0=0, y0=0, x1=max(data['k_mesh']), y1=0, line=dict(color='gray', width=0.8))
     
@@ -105,7 +118,7 @@ def register_callbacks(app, data):
         fig.update_yaxes(showspikes=True, spikemode='across', spikesnap='cursor', showticklabels=True, spikedash='solid')
         fig.update_traces(xaxis='x', hoverinfo='none')
     
-        return fig, data
+        return fig
     
     
     @app.callback(
@@ -177,3 +190,5 @@ def register_callbacks(app, data):
                           legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
                           )
         return fig, w_mdc, len(data['freq_mesh'])-1
+
+
