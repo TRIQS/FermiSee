@@ -70,13 +70,13 @@ def make_dashboard(data, tab_number):
                         html.Div('orbital order'),
                         dash_table.DataTable(
                             id=id('dft-orbital-order'), editable=True,
-                            columns=[{'name': f'orb{i}', 'id': id(f'oo-{i}'), 'presentation': 'dropdown'} for i in range(3)],
+                            columns=[{'name': f'orb{i}', 'id': id(f'oo-{i}'), 'clearable': False, 'presentation': 'dropdown'} for i in range(3)],
                             data=[{id(f'oo-{i}'): key for i, key in enumerate(['dxz', 'dyz', 'dxy'])}],
                             dropdown={id('oo-{}'.format(i)): {
                                 'options': [{'label': key, 'value': key} for key in ['dxz', 'dyz', 'dxy']]
                                 } for i in range(3)},
-                            #style_header = {'display': 'none'},
-                            css=[{'selector': 'tr:first-child','rule': 'display: none'}],
+                            style_header = {'display': 'none'},
+                            #css=[{'selector': 'tr:first-child','rule': 'display: none'}],
                             ),
                         html.Div('k-points'),
                         dash_table.DataTable(
