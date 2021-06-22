@@ -115,7 +115,7 @@ def parse_hopping_from_wannier90_hr(file):
     return hopp_dict, num_wann
         
 # ----------------------------------------------------------------------
-def parse_lattice_vectors_from_wannier90_wout(filename):
+def parse_lattice_vectors_from_wannier90_wout(file):
 
     r""" Wannier90 real space lattice vectors parser of ``*.wout`` files.
     
@@ -133,8 +133,7 @@ def parse_lattice_vectors_from_wannier90_wout(filename):
 
     """
 
-    with open(filename, 'r') as fd:
-        lines = fd.readlines()
+    lines = file.splitlines()
 
     # -- Find start of data in text file
     
@@ -151,7 +150,7 @@ def parse_lattice_vectors_from_wannier90_wout(filename):
     if not 'Lattice Vectors' in line:
         raise IOError
 
-    lines = "".join(lines[idx+1:idx+4])
+    lines = "\n".join(lines[idx+1:idx+4])
     array = np.loadtxt(StringIO(lines), usecols=(1, 2, 3))
 
     array *= unit
