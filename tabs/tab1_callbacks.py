@@ -4,46 +4,72 @@ import plotly.express as px
 import plotly.graph_objects as go
 import ast
 import inspect
+from dash.dependencies import Input, Output, State
 
-from load_data import load_config, load_w90_hr
+from load_data import load_config, load_w90_hr, load_w90_wout
+from tools.calc_akw import calc_tb_bands 
 from tabs.id_factory import id_factory
 
-def register_callbacks(app, data):
+def register_callbacks(app, data, tb_data, akw_data):
     id = id_factory('tab1')
 
+    # upload data
     @app.callback(
-        dash.dependencies.Output(id('data-storage'), 'data'),
-        [dash.dependencies.Input(id('data-storage'), 'data'),
-         dash.dependencies.Input(id('upload-file'), 'contents'),
-         dash.dependencies.Input(id('upload-file'), 'filename'),
-         dash.dependencies.Input(id('upload-w90'), 'contents')])
-    def update_data(data,config_contents,config_filename, w90_contents):  
+        Output(id('full-data'), 'data'),
+        [Input(id('full-data'), 'data'),
+         Input(id('upload-file'), 'contents'),
+         Input(id('upload-file'), 'filename'),
+         Input(id('upload-w90-hr'), 'contents'),
+         Input(id('upload-w90-wout'), 'contents')])
+    def update_data(data, config_contents, config_filename, w90_hr, w90_wout):
 
         if config_filename != None and not config_filename == data['config_filename']:
             print('loading config file from h5...')
             data = load_config(config_contents, config_filename)
 
-        if w90_contents != None:
+        if w90_hr != None:
             print('loading w90 hr file...')
+            data['hopping'], data['num_wann'] = load_w90_hr(w90_hr)
 
-            load_w90_hr(w90_contents)
+        if w90_hr != None:
+            print('loading w90 wout file...')
+            data['units'] = load_w90_wout(w90_wout)
 
         return data
 
+    # dashboard calculate TB
     @app.callback(
-        dash.dependencies.Output(id('k-points'), 'data'),
-        dash.dependencies.Input(id('add-kpoint'), 'n_clicks'),
-        dash.dependencies.State(id('k-points'), 'data'),
-        dash.dependencies.State(id('k-points'), 'columns'))
+        Output(id('tb-data'), 'data'),
+        [Input(id('calc-tb'), 'n_clicks'),
+         Input(id('full-data'), 'data'),
+         Input(id('add-spin'), 'value'),
+         Input(id('dft-mu'), 'value'),
+         Input(id('dft-orbital-order'), 'data')])
+    def calc_tb(n_clicks, data, add_spin, dft_mu, dft_orbital_order):
+        return
+        if n_clicks > 0:
+            n_orb = 3
+            add_local = [0.] * 3
+            tb_data = calc_tb_bands(data, n_orb, add_spin, dft_mu, add_local, dft_orbital_order)
+
+            return tb_data
+
+    # dashboard k-points
+    @app.callback(
+        Output(id('k-points'), 'data'),
+        Input(id('add-kpoint'), 'n_clicks'),
+        State(id('k-points'), 'data'),
+        State(id('k-points'), 'columns'))
     def add_row(n_clicks, rows, columns):
         if n_clicks > 0:
             rows.append({c['id']: '' for c in columns})
         return rows
     
+    # dashboard sigma upload
     @app.callback(
-         [dash.dependencies.Output(id('sigma-function'), 'style'),
-         dash.dependencies.Output(id('sigma-upload'), 'style')],
-        dash.dependencies.Input(id('choose-sigma'), 'value')
+         [Output(id('sigma-function'), 'style'),
+          Output(id('sigma-upload'), 'style')],
+         Input(id('choose-sigma'), 'value')
         )
     def toggle_update_sigma(sigma_radio_item):
         if sigma_radio_item == 'upload':
@@ -51,12 +77,13 @@ def register_callbacks(app, data):
         else:
             return [{'display': 'block'}] * 1 + [{'display': 'none'}]
 
+    # dashboard enter sigma
     @app.callback(
-        #[dash.dependencies.Output('sigma-function-output', 'children'),
-        # dash.dependencies.Output('sigma-function', 'sigma')],
-        dash.dependencies.Output(id('sigma-function-output'), 'children'),
-        dash.dependencies.Input(id('sigma-function-button'), 'n_clicks'),
-        dash.dependencies.State(id('sigma-function-input'), 'value')
+        #[Output('sigma-function-output', 'children'),
+        # Output('sigma-function', 'sigma')],
+        Output(id('sigma-function-output'), 'children'),
+        Input(id('sigma-function-button'), 'n_clicks'),
+        State(id('sigma-function-input'), 'value')
         )
     def update_sigma(n_clicks, value):
         if n_clicks > 0:
@@ -68,23 +95,23 @@ def register_callbacks(app, data):
 
             return 'You have entered: \n{}'.format(value)
 
+    # dashboard colors
     @app.callback(
-        dash.dependencies.Output(id('colorscale'), 'options'),
-        dash.dependencies.Input(id('colorscale-mode'), 'value')
+        Output(id('colorscale'), 'options'),
+        Input(id('colorscale-mode'), 'value')
         )
     def update_colorscales(mode):
         colorscales = [name for name, body in inspect.getmembers(getattr(px.colors, mode))
                 if isinstance(body, list) and len(name.rsplit('_')) == 1]
         return [{'label': key, 'value': key} for key in colorscales]
 
-    # make connections
+    # plot A(k,w)
     @app.callback(
-        dash.dependencies.Output('Akw', 'figure'),
-        [dash.dependencies.Input(id('tb-bands'), 'on'),
-         dash.dependencies.Input(id('akw'), 'on'),
-         dash.dependencies.Input(id('colorscale'), 'value'),
-         dash.dependencies.Input(id('data-storage'), 'data')])
-    #
+        Output('Akw', 'figure'),
+        [Input(id('tb-bands'), 'on'),
+         Input(id('akw'), 'on'),
+         Input(id('colorscale'), 'value'),
+         Input(id('full-data'), 'data')])
     def update_Akw(tb_bands, akw, colorscale, data):
         layout = go.Layout()
         fig = go.Figure(layout=layout)
@@ -120,16 +147,15 @@ def register_callbacks(app, data):
     
         return fig
     
-    
+    # plot EDC 
     @app.callback(
-        [dash.dependencies.Output('EDC', 'figure'),
-        dash.dependencies.Output('kpt_edc', 'value'),
-        dash.dependencies.Output('kpt_edc', 'max')],
-        [dash.dependencies.Input('kpt_edc', 'value'),
-        dash.dependencies.Input(id('data-storage'), 'data'),
-        dash.dependencies.Input('Akw', 'clickData')]
+        [Output('EDC', 'figure'),
+         Output('kpt_edc', 'value'),
+         Output('kpt_edc', 'max')],
+        [Input('kpt_edc', 'value'),
+         Input(id('full-data'), 'data'),
+         Input('Akw', 'clickData')]
         )
-    #
     def update_EDC(kpt_edc, data, click_coordinates):
         layout = go.Layout()
         fig = go.Figure(layout=layout)
@@ -155,15 +181,15 @@ def register_callbacks(app, data):
                           )
         return fig, kpt_edc, len(data['k_mesh'])-1
     
+    # plot MDC
     @app.callback(
-        [dash.dependencies.Output('MDC', 'figure'),
-        dash.dependencies.Output('w_mdc', 'value'),
-        dash.dependencies.Output('w_mdc', 'max')],
-        [dash.dependencies.Input('w_mdc', 'value'),
-         dash.dependencies.Input(id('data-storage'), 'data'),
-         dash.dependencies.Input('Akw', 'clickData')]
+        [Output('MDC', 'figure'),
+         Output('w_mdc', 'value'),
+         Output('w_mdc', 'max')],
+        [Input('w_mdc', 'value'),
+         Input(id('full-data'), 'data'),
+         Input('Akw', 'clickData')]
         )
-    #
     def update_MDC(w_mdc, data, click_coordinates):
         layout = go.Layout()
         fig = go.Figure(layout=layout)

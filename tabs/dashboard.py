@@ -7,7 +7,7 @@ import dash_table
 from tabs.id_factory import id_factory
 
 # layout
-def make_dashboard(data, tab_number):
+def make_dashboard(data, tb_data, akw_data, tab_number):
     id = id_factory(f'tab{tab_number}')
     col_part = '#F8F9F9'
     return dcc.Tab(
@@ -39,8 +39,9 @@ def make_dashboard(data, tab_number):
                     # section 2
                     html.Hr(),
                     html.Div(children=[
+                        html.H5('TB Hamiltonian'),
                         dcc.Upload(
-                            id=id('upload-w90'),
+                            id=id('upload-w90-hr'),
                             children=html.Div(['drop or ', html.A('select files')]),
                             style={
                                 'width': '90%',
@@ -54,7 +55,21 @@ def make_dashboard(data, tab_number):
                             },
                             multiple=False
                         ),
-                        html.H5('TB Hamiltonian'),
+                        dcc.Upload(
+                            id=id('upload-w90-wout'),
+                            children=html.Div(['drop or ', html.A('select files')]),
+                            style={
+                                'width': '90%',
+                                'height': '60px',
+                                'lineHeight': '60px',
+                                'borderWidth': '1px',
+                                'borderStyle': 'dashed',
+                                'borderRadius': '5px',
+                                'textAlign': 'center',
+                                'margin': '10px'
+                            },
+                            multiple=False
+                        ),
                         html.Div([
                             html.P('add spin:',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                 ),
@@ -93,6 +108,7 @@ def make_dashboard(data, tab_number):
                             row_deletable=True
                             ),
                         html.Button('Add k-point', id=id('add-kpoint'), n_clicks=0),
+                        html.Button('Calculate TB bands', id=id('calc-tb'), n_clicks=0),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
                                'padding': '10px'}),
@@ -180,7 +196,9 @@ def make_dashboard(data, tab_number):
                                'borderRadius': '15px',
                                'padding': '10px'}),
                     #html.Hr(),
-                    dcc.Store(id=id('data-storage'), data = data),
+                    dcc.Store(id=id('tb-data'), data = tb_data),
+                    dcc.Store(id=id('akw-data'), data = akw_data),
+                    dcc.Store(id=id('full-data'), data = data),
             ], style={
                 'padding-left': '1%',
                 'padding-right': '1%',

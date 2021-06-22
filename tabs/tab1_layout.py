@@ -6,12 +6,12 @@ import dash_daq as daq
 from tabs.dashboard import make_dashboard
 
 # layout
-def layout(data):
+def layout(data, tb_data, akw_data):
     return dcc.Tab(
         label='spectral function A(k,ω)',
         children=[
             # column 1
-            make_dashboard(data, 1),
+            make_dashboard(data, tb_data, akw_data, 1),
             # column 2
             html.Div([
                 html.H3('A(k,ω)', style={'textAlign': 'center'}),
