@@ -40,36 +40,36 @@ def make_dashboard(data, tb_data, akw_data, tab_number):
                     html.Hr(),
                     html.Div(children=[
                         html.H5('TB Hamiltonian'),
-                        dcc.Upload(
-                            id=id('upload-w90-hr'),
-                            children=html.Div(['drop or ', html.A('select files')]),
-                            style={
-                                'width': '90%',
-                                'height': '60px',
-                                'lineHeight': '60px',
-                                'borderWidth': '1px',
-                                'borderStyle': 'dashed',
-                                'borderRadius': '5px',
-                                'textAlign': 'center',
-                                'margin': '10px'
-                            },
-                            multiple=False
-                        ),
-                        dcc.Upload(
-                            id=id('upload-w90-wout'),
-                            children=html.Div(['drop or ', html.A('select files')]),
-                            style={
-                                'width': '90%',
-                                'height': '60px',
-                                'lineHeight': '60px',
-                                'borderWidth': '1px',
-                                'borderStyle': 'dashed',
-                                'borderRadius': '5px',
-                                'textAlign': 'center',
-                                'margin': '10px'
-                            },
-                            multiple=False
-                        ),
+                        html.Div([
+                            html.Div([dcc.Upload(
+                                id=id('upload-w90-hr'),
+                                children=html.A('w90_hr'),
+                                style={
+                                    'width': '90%',
+                                    'height': '60px',
+                                    'lineHeight': '60px',
+                                    'borderWidth': '1px',
+                                    'borderStyle': 'dashed',
+                                    'borderRadius': '5px',
+                                    'textAlign': 'center',
+                                    'margin': '10px'
+                                },
+                                multiple=False)], style={'width': '49%', 'display': 'inline-block'}),
+                            html.Div([dcc.Upload(
+                                id=id('upload-w90-wout'),
+                                children=html.A('w90_wout'),
+                                style={
+                                    'width': '90%',
+                                    'height': '60px',
+                                    'lineHeight': '60px',
+                                    'borderWidth': '1px',
+                                    'borderStyle': 'dashed',
+                                    'borderRadius': '5px',
+                                    'textAlign': 'center',
+                                    'margin': '10px'
+                                },
+                                multiple=False)], style={'width': '49%', 'display': 'inline-block'})
+                        ]),
                         html.Div([
                             html.P('add spin:',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                 ),

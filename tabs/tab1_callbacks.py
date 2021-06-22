@@ -1,5 +1,6 @@
 import numpy as np
 import dash
+import dash_html_components as html
 import plotly.express as px
 import plotly.graph_objects as go
 import ast
@@ -10,7 +11,7 @@ from load_data import load_config, load_w90_hr, load_w90_wout
 from tools.calc_akw import calc_tb_bands 
 from tabs.id_factory import id_factory
 
-def register_callbacks(app, data, tb_data, akw_data):
+def register_callbacks(app):
     id = id_factory('tab1')
 
     # upload data
@@ -18,41 +19,51 @@ def register_callbacks(app, data, tb_data, akw_data):
         Output(id('full-data'), 'data'),
         [Input(id('full-data'), 'data'),
          Input(id('upload-file'), 'contents'),
-         Input(id('upload-file'), 'filename'),
-         Input(id('upload-w90-hr'), 'contents'),
-         Input(id('upload-w90-wout'), 'contents')])
-    def update_data(data, config_contents, config_filename, w90_hr, w90_wout):
+         Input(id('upload-file'), 'filename')])
+    def update_data(data, config_contents, config_filename):
 
         if config_filename != None and not config_filename == data['config_filename']:
             print('loading config file from h5...')
             data = load_config(config_contents, config_filename)
 
-        if w90_hr != None:
-            print('loading w90 hr file...')
-            data['hopping'], data['num_wann'] = load_w90_hr(w90_hr)
-
-        if w90_hr != None:
-            print('loading w90 wout file...')
-            data['units'] = load_w90_wout(w90_wout)
-
         return data
 
     # dashboard calculate TB
     @app.callback(
-        Output(id('tb-data'), 'data'),
-        [Input(id('calc-tb'), 'n_clicks'),
-         Input(id('full-data'), 'data'),
+        [Output(id('tb-data'), 'data'),
+         Output(id('upload-w90-hr'), 'children'),
+         Output(id('upload-w90-wout'), 'children')],
+        [Input(id('upload-w90-hr'), 'contents'),
+         Input(id('upload-w90-hr'), 'children'),
+         Input(id('upload-w90-wout'), 'contents'),
+         Input(id('upload-w90-wout'), 'children'),
+         Input(id('calc-tb'), 'n_clicks'),
+         Input(id('tb-data'), 'data'),
          Input(id('add-spin'), 'value'),
          Input(id('dft-mu'), 'value'),
          Input(id('dft-orbital-order'), 'data')])
-    def calc_tb(n_clicks, data, add_spin, dft_mu, dft_orbital_order):
-        return
+    def calc_tb(w90_hr, w90_hr_button, w90_wout, w90_wout_button, n_clicks, tb_data, add_spin, dft_mu, dft_orbital_order):
+
+        if w90_hr != None and not 'loaded_hr' in tb_data:
+            print('loading w90 hr file...')
+            hopping, num_wann = load_w90_hr(w90_hr)
+            tb_data['loaded_hr'] = True
+
+            return tb_data, html.Div(['*.hr <br/>found']), w90_wout_button
+
+        if w90_wout != None and not 'loaded_wout' in tb_data:
+            print('loading w90 wout file...')
+            tb_data['units'] = load_w90_wout(w90_wout)
+            tb_data['loaded_wout'] = True
+
+            return tb_data, w90_hr_button, html.Div(['*.wout <br/> loaded'])
+
         if n_clicks > 0:
             n_orb = 3
             add_local = [0.] * 3
-            tb_data = calc_tb_bands(data, n_orb, add_spin, dft_mu, add_local, dft_orbital_order)
+            tb_data['bands'] = calc_tb_bands(data, n_orb, add_spin, dft_mu, add_local, dft_orbital_order)
 
-            return tb_data
+        return tb_data, w90_hr_button, w90_wout_button
 
     # dashboard k-points
     @app.callback(

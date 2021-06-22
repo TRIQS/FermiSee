@@ -12,7 +12,7 @@ data = load_config(None, 'example.h5')
 tb_data = {}
 akw_data = {}
 app.layout = layout(data, tb_data, akw_data)
-tab1_callbacks(app, data, tb_data, akw_data)
+tab1_callbacks(app)
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=9375, host='0.0.0.0')

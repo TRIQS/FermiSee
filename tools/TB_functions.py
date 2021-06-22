@@ -1,4 +1,4 @@
-from triqs_tprf.wannier90 import *
+from tools.wannier90 import *
 from triqs_tprf.tight_binding import *
 from triqs.lattice.tight_binding import energies_on_bz_path, energy_matrix_on_bz_path
 import skimage.measure
