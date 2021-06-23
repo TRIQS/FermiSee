@@ -34,15 +34,18 @@ def register_callbacks(app):
          Output(id('upload-w90-hr'), 'children'),
          Output(id('upload-w90-wout'), 'children')],
         [Input(id('upload-w90-hr'), 'contents'),
+         Input(id('upload-w90-hr'), 'filename'),
          Input(id('upload-w90-hr'), 'children'),
          Input(id('upload-w90-wout'), 'contents'),
+         Input(id('upload-w90-wout'), 'filename'),
          Input(id('upload-w90-wout'), 'children'),
          Input(id('calc-tb'), 'n_clicks'),
          Input(id('tb-data'), 'data'),
          Input(id('add-spin'), 'value'),
          Input(id('dft-mu'), 'value'),
          Input(id('dft-orbital-order'), 'data')])
-    def calc_tb(w90_hr, w90_hr_button, w90_wout, w90_wout_button, n_clicks, tb_data, add_spin, dft_mu, dft_orbital_order):
+    def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
+                w90_wout_button, n_clicks, tb_data, add_spin, dft_mu, dft_orbital_order):
 
         if w90_hr != None and not 'loaded_hr' in tb_data:
             print('loading w90 hr file...')
@@ -52,14 +55,14 @@ def register_callbacks(app):
             tb_data['hopping'] = hopping
             tb_data['loaded_hr'] = True
 
-            return tb_data, html.Div(['filename']), w90_wout_button
+            return tb_data, html.Div([w90_hr_name]), w90_wout_button
 
         if w90_wout != None and not 'loaded_wout' in tb_data:
             print('loading w90 wout file...')
             tb_data['units'] = load_w90_wout(w90_wout)
             tb_data['loaded_wout'] = True
 
-            return tb_data, w90_hr_button, html.Div(['filename'])
+            return tb_data, w90_hr_button, html.Div([w90_wout_name])
 
         if n_clicks > 0:
             n_orb = 3
