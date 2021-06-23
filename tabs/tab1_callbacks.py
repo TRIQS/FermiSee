@@ -47,7 +47,7 @@ def register_callbacks(app):
         if w90_hr != None and not 'loaded_hr' in tb_data:
             print('loading w90 hr file...')
             hopping, num_wann = load_w90_hr(w90_hr)
-            hopping = {key: value.tolist() for key, value in hopping.items()}
+            hopping = {str(key): value.real.tolist() for key, value in hopping.items()}
             tb_data['num_wann'] = num_wann
             tb_data['hopping'] = hopping
             tb_data['loaded_hr'] = True
