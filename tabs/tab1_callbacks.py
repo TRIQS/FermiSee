@@ -23,7 +23,7 @@ def register_callbacks(app):
          Input(id('upload-file'), 'filename')])
     def update_data(data, config_contents, config_filename):
 
-        if config_filename != None and not config_filename == data['config_filename']:
+        if config_filename != None:
             print('loading config file from h5...')
             data = load_config(config_contents, config_filename)
             data['use'] = True
