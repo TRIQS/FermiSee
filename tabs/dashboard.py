@@ -119,8 +119,7 @@ def make_dashboard(data, tb_data, akw_data, tab_number):
                     # section 3
                     html.Hr(),
                     html.Div(children=[
-                        html.H5('self-energy Σ(k,ω)'),
-                        html.Div('Choose Σ(k,ω):'),
+                        html.H5('Self-energy'),
                         dcc.RadioItems(
                             id=id('choose-sigma'),
                             options=[{'label': i, 'value': i} for i in ['upload', 'enter manually']],
@@ -155,6 +154,11 @@ def make_dashboard(data, tb_data, akw_data, tab_number):
                             html.Button('Submit', id=id('sigma-function-button'), n_clicks=0),
                             html.Div(id=id('sigma-function-output'), style={'whiteSpace': 'pre-line'}),
                         ]),
+                        dcc.Input(id=id('eta'),
+                            type='number',
+                            value='0.01',
+                            step='0.005',
+                            placeholder='broadening η'),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
                                'padding': '10px'}),
