@@ -161,7 +161,7 @@ def make_dashboard(data, tb_data, akw_data, tab_number):
                     # section 4
                     html.Hr(),
                     html.Div(children=[
-                        html.H5('spectral function A(k,ω)'),
+                        html.H5('Layout'),
                         html.Div([
                             html.P('show TB bands:',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                 ),
