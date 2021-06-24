@@ -80,7 +80,7 @@ def register_callbacks(app):
 
                 print(k_points)
 
-            add_local = [0.] * data['n_wf']
+            add_local = [0.] * tb_data['n_wf']
             k_mesh = {'n_k': 20, 'k_path': k_points, 'kz': 0.0}
             tb_data['k_mesh'], e_mat, tb = calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, dft_orbital_order, k_mesh, fermi_slice=False)
             tb_data['eps_nuk'], evec_nuk = get_tb_bands(e_mat)
