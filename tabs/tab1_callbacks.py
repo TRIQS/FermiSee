@@ -50,35 +50,44 @@ def register_callbacks(app):
          Input(id('dft-orbital-order'), 'data')])
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
                 w90_wout_button, tb_switch, n_clicks, tb_data, add_spin, dft_mu, k_points, dft_orbital_order):
+        ctx = dash.callback_context
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        print(trigger_id)
 
-        if w90_hr != None and not 'loaded_hr' in tb_data:
+        #if w90_hr != None and not 'loaded_hr' in tb_data:
+        if trigger_id == id('upload-w90-hr'):
             print('loading w90 hr file...')
-            hopping, num_wann = load_w90_hr(w90_hr)
+            hopping, n_wf = load_w90_hr(w90_hr)
             hopping = {str(key): value.real.tolist() for key, value in hopping.items()}
-            tb_data['num_wann'] = num_wann
+            tb_data['n_wf'] = n_wf
             tb_data['hopping'] = hopping
             tb_data['loaded_hr'] = True
 
             return tb_data, html.Div([w90_hr_name]), w90_wout_button, tb_switch 
 
-        if w90_wout != None and not 'loaded_wout' in tb_data:
+        #if w90_wout != None and not 'loaded_wout' in tb_data:
+        if trigger_id == id('upload-w90-wout'):
             print('loading w90 wout file...')
             tb_data['units'] = load_w90_wout(w90_wout)
             tb_data['loaded_wout'] = True
 
             return tb_data, w90_hr_button, html.Div([w90_wout_name]), tb_switch
 
-        if n_clicks > 0:
-            n_orb = 3
-            add_local = [0.] * 3
+        else:
+            if not n_clicks > 0:
+                return tb_data, w90_hr_button, w90_wout_button, tb_switch
+            if trigger_id == id('k-points'):
+
+                print(k_points)
+
+            add_local = [0.] * data['n_wf']
             k_mesh = {'n_k': 20, 'k_path': k_points, 'kz': 0.0}
-            fermi_slice = False
-            tb_data['k_mesh'], e_mat, tb = calc_tb_bands(tb_data, n_orb, add_spin, float(dft_mu), add_local, dft_orbital_order, k_mesh, fermi_slice)
+            tb_data['k_mesh'], e_mat, tb = calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, dft_orbital_order, k_mesh, fermi_slice=False)
             tb_data['eps_nuk'], evec_nuk = get_tb_bands(e_mat)
             tb_data['eps_nuk'] = tb_data['eps_nuk'].tolist()
             tb_data['use'] = True
 
-        return tb_data, w90_hr_button, w90_wout_button, {'on': True}
+            return tb_data, w90_hr_button, w90_wout_button, {'on': True}
 
     # dashboard k-points
     @app.callback(

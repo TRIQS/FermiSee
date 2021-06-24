@@ -346,11 +346,11 @@ def _get_TBL(hopping, units, num_wann, extend_to_spin=False, add_local=None, add
                     orbital_names = [str(i) for i in range(num_wann)])
     return TBL
 
-def calc_tb_bands(data, n_orb, add_spin, mu, add_local, orbital_order, k_mesh, fermi_slice):
+def calc_tb_bands(data, add_spin, mu, add_local, orbital_order, k_mesh, fermi_slice):
 
     # set up Wannier Hamiltonian
-    n_orb_rescale = 2 * n_orb if add_spin else n_orb
-    change_of_basis = _change_basis(n_orb, orbital_order, orbital_order)
+    n_orb_rescale = 2 * data['n_wf'] if add_spin else data['n_wf']
+    change_of_basis = _change_basis(data['n_wf'], orbital_order, orbital_order)
     H_add_loc = np.zeros((n_orb_rescale, n_orb_rescale), dtype=complex)
     H_add_loc += np.diag([-mu]*n_orb_rescale)
     if add_spin: H_add_loc += _lambda_matrix_w90_t2g(add_local)
@@ -360,7 +360,7 @@ def calc_tb_bands(data, n_orb, add_spin, mu, add_local, orbital_order, k_mesh, f
     # print local H(R)
     h_of_r = tb.hopping_dict()[(0,0,0)][2:5,2:5] if add_spin else tb.hopping_dict()[(0,0,0)]
     h_of_r = np.einsum('ij, jk -> ik', np.linalg.inv(change_of_basis), np.einsum('ij, jk -> ik', h_of_r, change_of_basis))
-    _print_matrix(h_of_r, n_orb, 'H(R=0)')
+    _print_matrix(h_of_r, data['n_wf'], 'H(R=0)')
 
     # bands info
     k_path = k_mesh['k_path']
