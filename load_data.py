@@ -85,8 +85,8 @@ def load_sigma_h5(contents , filename, orbital_order):
         h5.create_group('self_energy')
         h5['self_energy']['Sigma'] = Sigma
         h5['self_energy']['w_mesh'] = getX(Sigma.mesh).tolist()
-        h5['self_energy']['nw'] = len(getX(Sigma.mesh).tolist())
-        h5['self_energy']['norb'] = Sigma['up_0'].target_shape[0]
+        h5['self_energy']['n_w'] = len(getX(Sigma.mesh).tolist())
+        h5['self_energy']['n_orb'] = Sigma['up_0'].target_shape[0]
         h5['self_energy']['dc'] = dc[0]['up'][0,0]
         h5['self_energy']['dmft_mu'] = dmft_mu
         h5['self_energy']['orbital_order'] = ['dxz', 'dyz', 'dxy']
@@ -99,13 +99,14 @@ def load_sigma_h5(contents , filename, orbital_order):
 
     Sigma = ar['self_energy']['Sigma']
     orbital_order_dmft = ar['self_energy']['orbital_order']
-    n_orb = ar['self_energy']['norb']
+    n_orb = ar['self_energy']['n_orb']
     dc = ar['self_energy']['dc']
     w_mesh = ar['self_energy']['w_mesh']
-    nw = ar['self_energy']['nw']
 
     # setup w_dict
-    w_dict = {'w_mesh' : w_mesh, 'n_w' : nw, 'window' : [w_mesh[0],w_mesh[-1]]}
+    w_dict = {'w_mesh' : w_mesh, 
+              'n_w' : ar['self_energy']['n_w'], 
+              'window' : [w_mesh[0],w_mesh[-1]]}
     # TODO able to choose these
     spin = 'up'
     block = 0
