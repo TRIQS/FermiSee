@@ -68,7 +68,7 @@ def load_w90_hr(contents):
     hopping, n_wf = tb_w90.parse_hopping_from_wannier90_hr(w90_hr_stream)
     #print('number of Wannier orbitals {}'.format(num_wann))
 
-    return hopping, num_wann 
+    return hopping, n_wf
 
 def load_w90_wout(contents):
     content_type, content_string = contents.split(',')
