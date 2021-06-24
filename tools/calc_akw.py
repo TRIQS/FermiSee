@@ -325,15 +325,15 @@ def plot_kslice(fig, ax, alatt_k_w, tb_data, w_dict, n_orb, tb_dict, tb=True, al
 
     return ax
 
-def _get_TBL(hopping, units, num_wann, extend_to_spin=False, add_local=None, add_field=None, renormalize=None):
+def _get_TBL(hopping, units, n_wf, extend_to_spin=False, add_local=None, add_field=None, renormalize=None):
 
     if extend_to_spin:
-    	hopping, num_wann = extend_wannier90_to_spin(hopping, num_wann)
+    	hopping, n_wf = extend_wannier90_to_spin(hopping, n_wf)
     if add_local is not None:
         hopping[(0,0,0)] += add_local
     if renormalize is not None:
         assert len(np.shape(renormalize)) == 1, 'Give Z as a vector'
-        assert len(renormalize) == num_wann, 'Give Z as a vector of size n_orb (times two if SOC)'
+        assert len(renormalize) == n_wf, 'Give Z as a vector of size n_orb (times two if SOC)'
         
         Z_mat = np.diag(np.sqrt(renormalize))
         for R in hopping:
@@ -342,8 +342,8 @@ def _get_TBL(hopping, units, num_wann, extend_to_spin=False, add_local=None, add
     if add_field is not None:
         hopping[(0,0,0)] += add_field
 
-    TBL = TBLattice(units = units, hopping = hopping, orbital_positions = [(0,0,0)]*num_wann,
-                    orbital_names = [str(i) for i in range(num_wann)])
+    TBL = TBLattice(units = units, hopping = hopping, orbital_positions = [(0,0,0)]*n_wf,
+                    orbital_names = [str(i) for i in range(n_wf)])
     return TBL
 
 def calc_tb_bands(data, add_spin, mu, add_local, orbital_order, k_mesh, fermi_slice):
@@ -356,7 +356,7 @@ def calc_tb_bands(data, add_spin, mu, add_local, orbital_order, k_mesh, fermi_sl
     if add_spin: H_add_loc += _lambda_matrix_w90_t2g(add_local)
 
     hopping = {eval(key): np.array(value, dtype=complex) for key, value in data['hopping'].items()}
-    tb = _get_TBL(hopping, data['units'], data['num_wann'], extend_to_spin=add_spin, add_local=H_add_loc)
+    tb = _get_TBL(hopping, data['units'], data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
     # print local H(R)
     h_of_r = tb.hopping_dict()[(0,0,0)][2:5,2:5] if add_spin else tb.hopping_dict()[(0,0,0)]
     h_of_r = np.einsum('ij, jk -> ik', np.linalg.inv(change_of_basis), np.einsum('ij, jk -> ik', h_of_r, change_of_basis))
