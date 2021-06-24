@@ -4,6 +4,7 @@ import io
 from h5 import HDFArchive
 
 import tools.wannier90 as tb_w90
+import tools.calc_akw as calc_akw
 
 def _get_tb_bands(k_mesh, e_mat, k_points,):
     
@@ -77,6 +78,47 @@ def load_w90_wout(contents):
 
     return units 
 
+def load_sigma_h5(contents , filename, orbital_order):
+    '''
+    example to store a suitable sigma:
+    with HDFArchive(path,'w') as h5:
+        h5.create_group('self_energy')
+        h5['self_energy']['Sigma'] = Sigma
+        h5['self_energy']['w_mesh'] = getX(Sigma.mesh).tolist()
+        h5['self_energy']['nw'] = len(getX(Sigma.mesh).tolist())
+        h5['self_energy']['norb'] = Sigma['up_0'].target_shape[0]
+        h5['self_energy']['dc'] = dc[0]['up'][0,0]
+        h5['self_energy']['dmft_mu'] = dmft_mu
+        h5['self_energy']['orbital_order'] = ['dxz', 'dyz', 'dxy']
+    '''
+    data = {'config_filename': filename}
+
+    content_type, content_string = contents.split(',')
+    h5_bytestream = base64.b64decode(content_string)
+    ar = HDFArchive(h5_bytestream)
+
+    Sigma = ar['self_energy']['Sigma']
+    orbital_order_dmft = ar['self_energy']['orbital_order']
+    n_orb = ar['self_energy']['norb']
+    dc = ar['self_energy']['dc']
+    w_mesh = ar['self_energy']['w_mesh']
+    nw = ar['self_energy']['nw']
+
+    # setup w_dict
+    w_dict = {'w_mesh' : w_mesh, 'n_w' : nw, 'window' : [w_mesh[0],w_mesh[-1]]}
+    # TODO able to choose these
+    spin = 'up'
+    block = 0
+
+    # convert orbital order to list:
+    orbital_order = list(orbital_order[0].values())
+    sigma_interpolated = calc_akw.sigma_from_dmft(n_orb, orbital_order, Sigma, spin, block, orbital_order_dmft, dc, w_dict)
+
+    data['sigma_re'] = sigma_interpolated.real.tolist()
+    data['sigma_im'] = sigma_interpolated.imag.tolist()
+    data['w_dict'] = w_dict
+
+    return data
 
 
 

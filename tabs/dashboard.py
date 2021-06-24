@@ -7,7 +7,7 @@ import dash_table
 from tabs.id_factory import id_factory
 
 # layout
-def make_dashboard(data, tb_data, akw_data, tab_number):
+def make_dashboard(data, tb_data, akw_data, sigma_data, tab_number):
     id = id_factory(f'tab{tab_number}')
     col_part = '#F8F9F9'
     return dcc.Tab(
@@ -208,6 +208,7 @@ def make_dashboard(data, tb_data, akw_data, tab_number):
                     dcc.Store(id=id('tb-data'), data = tb_data),
                     dcc.Store(id=id('akw-data'), data = akw_data),
                     dcc.Store(id=id('full-data'), data = data),
+                    dcc.Store(id=id('sigma-data'), data = sigma_data),
             ], style={
                 'padding-left': '1%',
                 'padding-right': '1%',

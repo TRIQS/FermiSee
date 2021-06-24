@@ -8,7 +8,7 @@ import ast
 import inspect
 from dash.dependencies import Input, Output, State
 
-from load_data import load_config, load_w90_hr, load_w90_wout
+from load_data import load_config, load_w90_hr, load_w90_wout, load_sigma_h5
 from tools.calc_akw import calc_tb_bands, get_tb_bands 
 from tabs.id_factory import id_factory
 
@@ -116,15 +116,32 @@ def register_callbacks(app):
     
     # dashboard sigma upload
     @app.callback(
-         [Output(id('sigma-function'), 'style'),
-          Output(id('sigma-upload'), 'style')],
-         Input(id('choose-sigma'), 'value')
+         [Output(id('sigma-data'), 'data'),
+          Output(id('sigma-function'), 'style'),
+          Output(id('sigma-upload'), 'style'),
+          Output(id('sigma-upload-box'), 'children')
+        ],
+         [Input(id('sigma-data'), 'data'),
+         Input(id('choose-sigma'), 'value'),
+         Input(id('sigma-upload-box'), 'contents'),
+         Input(id('sigma-upload-box'), 'filename'),
+         Input(id('sigma-upload-box'), 'children'),
+         Input(id('dft-orbital-order'), 'data')]
         )
-    def toggle_update_sigma(sigma_radio_item):
+    def toggle_update_sigma(sigma_data, sigma_radio_item, sigma_content, sigma_filename, sigma_button, dft_orbital_order):
         if sigma_radio_item == 'upload':
-            return [{'display': 'none'}] * 1 + [{'display': 'block'}]
+
+            if sigma_content != None:
+                print('loading Sigma from file...')
+                sigma_data = load_sigma_h5(sigma_content, sigma_filename, dft_orbital_order)
+                print('successfully loaded sigma from file')
+                sigma_button = html.Div([sigma_filename])
+            else:
+                sigma_button = sigma_button
+            
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button
         else:
-            return [{'display': 'block'}] * 1 + [{'display': 'none'}]
+            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button
 
     # dashboard enter sigma
     @app.callback(

@@ -15,6 +15,7 @@ from matplotlib.colors import LogNorm
 from matplotlib import cm, colors
 from scipy.optimize import brentq
 from scipy.interpolate import interp1d
+import itertools
 from triqs.gf import BlockGf
 import matplotlib.pyplot as plt
 
@@ -64,42 +65,23 @@ def _print_matrix(matrix, n_orb, text):
     for row in matrix:
         print((' '*4 + fmt).format(*row))
 
-def _sigma_from_dmft(n_orb, orbital_order, with_sigma, spin, block, orbital_order_dmft, eta=0.0, **specs):
+def sigma_from_dmft(n_orb, orbital_order, sigma, spin, block, orbital_order_dmft, dc, w_dict, linearize= False):
 
-    if with_sigma == 'calc':
-        print('Setting Sigma from {}'.format(specs['dmft_path']))
-        
-        with HDFArchive(specs['dmft_path'],'r') as ar:
-            sigma = ar['DMFT_results'][specs['it']]['Sigma_freq_0']
-            dc = ar['DMFT_results'][specs['it']]['DC_pot'][0][spin][0,0]
-            mu = ar['DMFT_results'][specs['it']]['chemical_potential_post']
-            dft_mu = ar['DMFT_results']['it_1']['chemical_potential_pre']
-        
-    else:
-        print('Setting Sigma from memory')
-        
-        sigma = with_sigma
-        dc = specs['dc'][0][spin][0,0]
-        mu = specs['dmft_mu']
-        dft_mu = 0
+    dft_mu = 0
 
-    block_spin = spin + '_' + str(block) if with_sigma == 'calc' else spin
+    block_spin = spin + '_' + str(block) # if with_sigma == 'calc' else spin
     SOC = True if spin == 'ud' else False
     w_mesh_dmft = [x.real for x in sigma[block_spin].mesh]
+    w_mesh = w_dict['w_mesh']
     sigma_mat = {block_spin: sigma[block_spin].data.real - np.eye(n_orb) * dc + 1j * sigma[block_spin].data.imag}
 
     # rotate sigma from orbital_order_dmft to orbital_order
     change_of_basis = _change_basis(n_orb, orbital_order, orbital_order_dmft)
     sigma_mat[block_spin] = np.einsum('ij, kjl -> kil', np.linalg.inv(change_of_basis), np.einsum('ijk, kl -> ijl', sigma_mat[block_spin], change_of_basis))
 
-    # set up mesh
-    w_dict = specs['w_mesh']
-    w_mesh = np.linspace(*w_dict['window'], w_dict['n_w'])
-    w_dict.update({'w_mesh': w_mesh})
-
     sigma_interpolated = np.zeros((n_orb, n_orb, w_dict['n_w']), dtype=complex)
     
-    if specs['linearize']:
+    if linearize:
         print('Linearizing Sigma at zero frequency:')
         eta = eta * 1j
         iw0 = np.where(np.sign(w_mesh_dmft) == True)[0][0]-1
@@ -120,7 +102,7 @@ def _sigma_from_dmft(n_orb, orbital_order, with_sigma, spin, block, orbital_orde
             if ct1 != ct2 and not SOC: continue
             sigma_interpolated[ct1,ct2] = interpolate_sigma(w_mesh, w_mesh_dmft, ct1, ct2)
     
-    return sigma_interpolated, mu, dft_mu, eta, w_dict
+    return sigma_interpolated
 
 def _sigma_from_model(n_orb, orbital_order, zeroth_order, first_order, efermi, eta=0.0, **w):
     
@@ -400,7 +382,7 @@ def get_dmft_bands(n_orb, with_sigma=False, fermi_slice=False, solve=False, orbi
         # get sigma
         if with_sigma == 'model': delta_sigma, mu, dft_mu, eta, w_dict = _sigma_from_model(n_orb, orbital_order, **specs)
         # else is from dmft or memory:
-        else: delta_sigma, mu, dft_mu, eta, w_dict = _sigma_from_dmft(n_orb, orbital_order, with_sigma, **specs)
+        else: delta_sigma, mu, dft_mu, eta, w_dict = sigma_from_dmft(n_orb, orbital_order, with_sigma, **specs)
         
         # calculate alatt
         if not fermi_slice:

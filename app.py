@@ -11,8 +11,9 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets,server=serve
 
 data = {'use': False}
 tb_data = {'use': False}
+sigma_data = {'use': False}
 akw_data = {'use': False}
-app.layout = layout(data, tb_data, akw_data)
+app.layout = layout(data, tb_data, akw_data, sigma_data)
 tab1_callbacks(app)
 
 if __name__ == '__main__':
