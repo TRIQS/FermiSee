@@ -233,7 +233,7 @@ def get_tb_bands(e_mat):
     for ik in range(np.shape(e_mat)[2]):
         e_val[:,ik], e_vec[:,:,ik] = np.linalg.eigh(e_mat[:,:,ik])
 
-    return e_val, e_vec
+    return e_val.real, e_vec
 
 def _get_tb_kslice(tb, dft_mu, **specs):
 

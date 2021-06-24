@@ -8,10 +8,10 @@ server = Flask(__name__)
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets,server=server)
-data = {}
 data = load_config(None, 'example.h5')
-tb_data = {}
-akw_data = {}
+data = {'use': False}
+tb_data = {'use': False}
+akw_data = {'use': False}
 app.layout = layout(data, tb_data, akw_data)
 tab1_callbacks(app)
 

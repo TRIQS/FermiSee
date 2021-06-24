@@ -39,7 +39,7 @@ def layout(data, tb_data, akw_data):
                     dcc.Slider(
                         id='kpt_edc',
                         min=0,
-                        max=len(data['k_mesh'])-1,
+                        #max=len(data['k_mesh'])-1,
                         value=0,
                         #marks={str(year): str(year) for year in df['Year'].unique()},
                         step=1,
@@ -64,8 +64,8 @@ def layout(data, tb_data, akw_data):
                     dcc.Slider(
                         id='w_mdc',
                         min=0,
-                        max=len(data['freq_mesh'])-1,
-                        value=np.argmin(np.abs(np.array(data['freq_mesh']))),
+                        #max=len(data['freq_mesh'])-1,
+                        #value=np.argmin(np.abs(np.array(data['freq_mesh']))),
                         #marks={str(year): str(year) for year in df['Year'].unique()},
                         step=1,
                         updatemode='drag',

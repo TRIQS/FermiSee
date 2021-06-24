@@ -167,7 +167,7 @@ def make_dashboard(data, tb_data, akw_data, tab_number):
                                 ),
                             daq.BooleanSwitch(
                                 id=id('tb-bands'),
-                                on=True,
+                                on=False,
                                 color='#005eb0',
                                 style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
                             ),
@@ -178,7 +178,7 @@ def make_dashboard(data, tb_data, akw_data, tab_number):
                                 ),
                             daq.BooleanSwitch(
                                 id=id('akw'),
-                                on=True,
+                                on=False,
                                 color='#005eb0',
                                 style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
                             ),
