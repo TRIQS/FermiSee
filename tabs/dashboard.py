@@ -81,7 +81,11 @@ def make_dashboard(data, tb_data, akw_data, tab_number):
                             ),
                         ], style={'padding': '5px 5px'}
                         ),
-                        dcc.Input(id=id('dft-mu'), type='number', placeholder='chemical potential μ'),
+                        dcc.Input(id=id('dft-mu'),
+                            type='number',
+                            value='0.',
+                            step='0.01',
+                            placeholder='chemical potential μ'),
                         html.Div('orbital order'),
                         dash_table.DataTable(
                             id=id('dft-orbital-order'), editable=True,

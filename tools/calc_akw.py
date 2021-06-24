@@ -226,9 +226,9 @@ def _calc_kslice(n_orb, mu, eta, e_mat, sigma, solve, **w_dict):
 
     return alatt_k_w
 
-def _get_tb_bands(k_mesh, e_mat, k_points, **specs):
+def get_tb_bands(e_mat):
 
-    e_val = np.zeros((e_mat.shape[0], k_mesh.shape[0]), dtype=complex)
+    e_val = np.zeros((e_mat.shape[0], e_mat.shape[2]), dtype=complex)
     e_vec = np.zeros(np.shape(e_mat), dtype=complex)
     for ik in range(np.shape(e_mat)[2]):
         e_val[:,ik], e_vec[:,:,ik] = np.linalg.eigh(e_mat[:,:,ik])
@@ -285,7 +285,7 @@ def plot_bands(fig, ax, alatt_k_w, tb_data, w_dict, n_orb, dft_mu, tb=True, alat
             colorbar.set_label(r'$A(k, \omega)$')
 
     if tb:
-        eps_nuk, evec_nuk = _get_tb_bands(**tb_data)
+        #eps_nuk, evec_nuk = _get_tb_bands(**tb_data)
         for band in range(n_orb):
             orbital_projected = [0] if not plot_dict['proj_on_orb'] else np.real(evec_nuk[plot_dict['proj_on_orb'], band] * evec_nuk[plot_dict['proj_on_orb'], band].conjugate())
             ax.scatter(tb_data['k_mesh'], eps_nuk[band].real - dft_mu, c=cm.plasma(orbital_projected), s=1, label=r'tight-binding', zorder=1.)
@@ -346,7 +346,7 @@ def _get_TBL(hopping, units, num_wann, extend_to_spin=False, add_local=None, add
                     orbital_names = [str(i) for i in range(num_wann)])
     return TBL
 
-def calc_tb_bands(data, n_orb, w90_path, add_spin, mu, add_local, orbital_order):
+def calc_tb_bands(data, n_orb, add_spin, mu, add_local, orbital_order, k_mesh, fermi_slice):
 
     # set up Wannier Hamiltonian
     n_orb_rescale = 2 * n_orb if add_spin else n_orb
@@ -355,34 +355,37 @@ def calc_tb_bands(data, n_orb, w90_path, add_spin, mu, add_local, orbital_order)
     H_add_loc += np.diag([-mu]*n_orb_rescale)
     if add_spin: H_add_loc += _lambda_matrix_w90_t2g(add_local)
 
-    tb = _get_TBL(data['hopping'], data['units'], data['num_wann'], extend_to_spin=add_spin, add_local=H_add_loc)
+    hopping = {eval(key): np.array(value, dtype=complex) for key, value in data['hopping'].items()}
+    tb = _get_TBL(hopping, data['units'], data['num_wann'], extend_to_spin=add_spin, add_local=H_add_loc)
     # print local H(R)
     h_of_r = tb.hopping_dict()[(0,0,0)][2:5,2:5] if add_spin else tb.hopping_dict()[(0,0,0)]
     h_of_r = np.einsum('ij, jk -> ik', np.linalg.inv(change_of_basis), np.einsum('ij, jk -> ik', h_of_r, change_of_basis))
     _print_matrix(h_of_r, n_orb, 'H(R=0)')
 
     # bands info
-    w90_paths = list(map(lambda section: (np.array(specs[section[0]]), np.array(specs[section[1]])), specs['bands_path']))
-    if not fermi_slice: w90_paths.append((w90_paths[-1][1], w90_paths[-1][1]))
-    k_points_labels = [k[0] for k in specs['bands_path']] + [specs['bands_path'][-1][1]]
+    k_path = k_mesh['k_path']
+    k_path = [list(map(lambda item: (k[item]), k.keys())) for k in k_path] # turn dict into list
+    k_point_labels = [k.pop(0) for k in k_path] # remove first time, which is label
+    k_path = [(np.array(k), np.array(k_path[ct+1])) for ct, k in enumerate(k_path) if ct+1 < len(k_path)] # turn into tuples
+    if not fermi_slice: k_path.append((k_path[-1][-1], k_path[-1][-1])) # add last k-point
 
     # calculate tight-binding eigenvalues
     if not fermi_slice:
-        k_array, k_points, e_mat = energy_matrix_on_bz_paths(w90_paths, tb, n_pts=specs['n_k'])
+        k_disc, k_points, e_mat = energy_matrix_on_bz_paths(k_path, tb, n_pts=k_mesh['n_k'])
         if add_spin: e_mat = e_mat[2:5,2:5]
         e_mat = np.einsum('ij, jkl -> ikl', np.linalg.inv(change_of_basis), np.einsum('ijk, jm -> imk', e_mat, change_of_basis))
     else:
-        e_mat = np.zeros((n_orb_rescale, n_orb_rescale, specs['n_k'], specs['n_k']), dtype=complex)
-        final_x, final_y = w90_paths[1]
-        Z = np.array(specs['Z'])
-        for ik_y in range(specs['n_k']):
-            path_along_x = [(final_y/(specs['n_k']-1)*ik_y +specs['kz']*Z, final_x+final_y/(specs['n_k']-1)*ik_y+specs['kz']*Z)]
-            _, _, e_mat[:,:,:,ik_y] = energy_matrix_on_bz_paths(path_along_x, tb, n_pts=specs['n_k'])
+        e_mat = np.zeros((n_orb_rescale, n_orb_rescale, k_mesh['n_k'], k_mesh['n_k']), dtype=complex)
+        final_x, final_y = k_path[1]
+        Z = np.array(k_mesh['Z'])
+        for ik_y in range(k_mesh['n_k']):
+            path_along_x = [(final_y / (k_mesh['n_k'] - 1) * ik_y + k_mesh['kz'] * Z, final_x + final_y / (k_mesh['n_k'] - 1) * ik_y + k_mesh['kz'] * Z)]
+            _, _, e_mat[:,:,:,ik_y] = energy_matrix_on_bz_paths(path_along_x, tb, n_pts=k_mesh['n_k'])
         k_array = k_points = [0,1]
         if add_spin: e_mat = e_mat[2:5,2:5]
         e_mat = np.einsum('ij, jklm -> iklm', np.linalg.inv(change_of_basis), np.einsum('ijkl, jm -> imkl', e_mat, change_of_basis))
 
-    return {'k_mesh': k_array, 'k_points': k_points, 'k_points_labels': k_points_labels, 'e_mat': e_mat, 'tb': tb}
+    return {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels}, e_mat, tb
 
 def get_dmft_bands(n_orb, with_sigma=False, fermi_slice=False, solve=False, orbital_order=['dxz', 'dyz', 'dxy'], **specs):
     
