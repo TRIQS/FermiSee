@@ -1,4 +1,5 @@
 import numpy as np
+from itertools import product
 import dash
 import dash_html_components as html
 import plotly.express as px
@@ -76,9 +77,9 @@ def register_callbacks(app):
         else:
             if not n_clicks > 0:
                 return tb_data, w90_hr_button, w90_wout_button, tb_switch
-            if trigger_id == id('k-points'):
-
-                print(k_points)
+            if trigger_id == id('k-points') and np.any([k_val in ['', None] for k in k_points for k_key, k_val in k.items()]):
+                return tb_data, w90_hr_button, w90_wout_button, tb_switch
+            print(k_points)
 
             add_local = [0.] * tb_data['n_wf']
             k_mesh = {'n_k': 20, 'k_path': k_points, 'kz': 0.0}
@@ -92,12 +93,24 @@ def register_callbacks(app):
     # dashboard k-points
     @app.callback(
         Output(id('k-points'), 'data'),
-        Input(id('add-kpoint'), 'n_clicks'),
+        [Input(id('add-kpoint'), 'n_clicks'),
+         Input(id('k-points'), 'data')],
         State(id('k-points'), 'data'),
         State(id('k-points'), 'columns'))
-    def add_row(n_clicks, rows, columns):
-        if n_clicks > 0:
+    def add_row(n_clicks, data, rows, columns):
+        ctx = dash.callback_context
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        print(trigger_id)
+
+        for row, col in product(rows, range(1,4)):
+            try:
+                row[id(f'column-{col}')] = float(row[id(f'column-{col}')])
+            except:
+                row[id(f'column-{col}')] = None
+
+        if trigger_id == id('add-kpoint'):
             rows.append({c['id']: '' for c in columns})
+        
         return rows
     
     # dashboard sigma upload
