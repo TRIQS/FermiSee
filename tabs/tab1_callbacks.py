@@ -9,7 +9,7 @@ import inspect
 from dash.dependencies import Input, Output, State
 
 from load_data import load_config, load_w90_hr, load_w90_wout, load_sigma_h5
-from tools.calc_akw import calc_tb_bands, get_tb_bands 
+from tools.calc_akw import calc_tb_bands, get_tb_bands, calc_alatt 
 from tabs.id_factory import id_factory
 
 
@@ -44,6 +44,10 @@ def register_callbacks(app):
             if not sigma_data['use'] or not tb_data['use']:
                 print('here')
                 return data, akw_switch#, not tb_alert
+
+            solve = False
+            data = calc_alatt(tb_data, sigma_data, solve)
+
             akw_switch = {'on': True}
 
         return data, akw_switch#, tb_alert 

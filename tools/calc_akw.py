@@ -134,7 +134,7 @@ def _sigma_from_model(n_orb, orbital_order, zeroth_order, first_order, efermi, e
     
     return sigma_interpolated, mu, dft_mu, eta, w_dict
 
-def _calc_alatt(n_orb, mu, eta, e_mat, sigma, solve=False, **w_dict):
+def calc_alatt(tb_data, sigma_data, solve=False):
 
     # adjust to system size
     upscale = lambda quantity, n_orb: quantity * np.identity(n_orb)
