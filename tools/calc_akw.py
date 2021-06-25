@@ -35,6 +35,9 @@ def _linefit(x, y, interval, spacing=50, addspace=0.0):
     return x_cont, f_x(x_cont), fit
 
 def _lambda_matrix_w90_t2g(add_lambda):
+    """
+    Add local SOC term to H(R) for t2g shell
+    """
 
     lambda_x, lambda_y, lambda_z = add_lambda
 
@@ -50,6 +53,9 @@ def _lambda_matrix_w90_t2g(add_lambda):
     return lambda_matrix
 
 def _change_basis(n_orb, orbital_order_to, orbital_order_from):
+    """
+    Rotation between orbital basis
+    """
     
     change_of_basis = np.eye(n_orb)
     for ct, orb in enumerate(orbital_order_to):
@@ -59,6 +65,9 @@ def _change_basis(n_orb, orbital_order_to, orbital_order_from):
     return change_of_basis
 
 def _print_matrix(matrix, n_orb, text):
+    """
+    Pre-determined print command for matrices
+    """
 
     print('{}:'.format(text))
     fmt = '{:16.4f}' * n_orb
@@ -66,8 +75,9 @@ def _print_matrix(matrix, n_orb, text):
         print((' '*4 + fmt).format(*row))
 
 def sigma_from_dmft(n_orb, orbital_order, sigma, spin, block, orbital_order_dmft, dc, w_dict, linearize= False):
-
-    dft_mu = 0
+    """
+    Takes a sigma obtained from DMFT and interpolates on a given mesh
+    """
 
     block_spin = spin + '_' + str(block) # if with_sigma == 'calc' else spin
     SOC = True if spin == 'ud' else False
@@ -209,6 +219,9 @@ def _calc_kslice(n_orb, mu, eta, e_mat, sigma, solve, **w_dict):
     return alatt_k_w
 
 def get_tb_bands(e_mat):
+    """
+    Compute band eigenvalues and eigenvectors from matrix per k-point
+    """
 
     e_val = np.zeros((e_mat.shape[0], e_mat.shape[2]), dtype=complex)
     e_vec = np.zeros(np.shape(e_mat), dtype=complex)
@@ -231,28 +244,6 @@ def _get_tb_kslice(tb, dft_mu, **specs):
 
     return e_val, e_vec
 
-def _setup_plot_bands(ax, k_points, k_points_labels, w_dict):
-
-    ax.axhline(y=0,c='gray',ls='--',lw=0.8, zorder=0)
-    ax.set_ylabel(r'$\omega - \mu$ (eV)')
-#     ax.set_ylim(*w_dict['window'])
-    for ik in k_points:
-        ax.axvline(x=ik, linewidth=0.7, color='k',zorder=0.5)
-    ax.set_xticks(k_points)
-    ax.set_xlim(k_points[0], k_points[-1])
-    k_points_labels = [r'$\Gamma$' if k == 'G' else k for k in k_points_labels]
-    ax.set_xticklabels(k_points_labels)
-    
-def _setup_plot_kslice(ax, k_points, w_dict):
-
-    ax.set_aspect(1)
-    ax.set_xlim(0,1)
-    ax.set_ylim(0,1)
-    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.set_xlabel(r'$k_xa/\pi$')
-    ax.set_ylabel(r'$k_ya/\pi$')
-    
 def plot_bands(fig, ax, alatt_k_w, tb_data, w_dict, n_orb, dft_mu, tb=True, alatt=False, **plot_dict):
     
     if alatt:
@@ -308,6 +299,9 @@ def plot_kslice(fig, ax, alatt_k_w, tb_data, w_dict, n_orb, tb_dict, tb=True, al
     return ax
 
 def _get_TBL(hopping, units, n_wf, extend_to_spin=False, add_local=None, add_field=None, renormalize=None):
+    """
+    get triqs tight-binding object from hoppings + units
+    """
 
     if extend_to_spin:
     	hopping, n_wf = extend_wannier90_to_spin(hopping, n_wf)
@@ -329,6 +323,9 @@ def _get_TBL(hopping, units, n_wf, extend_to_spin=False, add_local=None, add_fie
     return TBL
 
 def calc_tb_bands(data, add_spin, mu, add_local, orbital_order, k_mesh, fermi_slice):
+    """
+    calculate tight-binding bands based on a W90 Hamiltonian 
+    """
 
     # set up Wannier Hamiltonian
     n_orb_rescale = 2 * data['n_wf'] if add_spin else data['n_wf']

@@ -6,15 +6,6 @@ from h5 import HDFArchive
 import tools.wannier90 as tb_w90
 import tools.calc_akw as calc_akw
 
-def _get_tb_bands(k_mesh, e_mat, k_points,):
-    
-    e_val = np.zeros((e_mat.shape[0], k_mesh.shape[0]), dtype=complex)
-    e_vec = np.zeros(np.shape(e_mat), dtype=complex)
-    for ik in range(np.shape(e_mat)[2]):
-        e_val[:,ik], e_vec[:,:,ik] = np.linalg.eigh(e_mat[:,:,ik])
-
-    return e_val, e_vec
-
 
 def load_config(contents, h5_filename):
     data = {'config_filename': h5_filename}
@@ -43,7 +34,8 @@ def load_config(contents, h5_filename):
     if not contents:
         del ar
 
-    data['eps_nuk'], evec_nuk = _get_tb_bands(data['k_mesh'], e_mat, data['k_points'])
+    # calculate bands and distribute
+    data['eps_nuk'], evec_nuk = calc_akw.get_tb_bands(data['k_mesh'], e_mat, data['k_points'])
 
     # workaround to remove last point in k_mesh
     pts_per_kpt = int(len(data['k_mesh'])/(len(data['k_points'])-1))-1
@@ -97,6 +89,7 @@ def load_sigma_h5(contents , filename, orbital_order):
     h5_bytestream = base64.b64decode(content_string)
     ar = HDFArchive(h5_bytestream)
 
+    # extract from h5
     Sigma = ar['self_energy']['Sigma']
     orbital_order_dmft = ar['self_energy']['orbital_order']
     n_orb = ar['self_energy']['n_orb']

@@ -20,13 +20,22 @@ def register_callbacks(app):
         Output(id('full-data'), 'data'),
         [Input(id('full-data'), 'data'),
          Input(id('upload-file'), 'contents'),
-         Input(id('upload-file'), 'filename')])
-    def update_data(data, config_contents, config_filename):
+         Input(id('upload-file'), 'filename'),
+         Input(id('tb-data'), 'data'),
+         Input(id('sigma-data'), 'data'),
+         Input(id('sigma-upload-box'), 'children')])
+    def update_data(data, config_contents, config_filename, tb_data, sigma_data, sigma_button):
+        ctx = dash.callback_context
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        print(trigger_id)
 
         if config_filename != None:
             print('loading config file from h5...')
             data = load_config(config_contents, config_filename)
             data['use'] = True
+
+        if trigger_id == id('sigma-upload-box') and sigma_data['use'] and tb_data['use']:
+            print('here')
 
         return data
 
@@ -135,6 +144,7 @@ def register_callbacks(app):
                 print('loading Sigma from file...')
                 sigma_data = load_sigma_h5(sigma_content, sigma_filename, dft_orbital_order)
                 print('successfully loaded sigma from file')
+                sigma_data['use'] = True
                 sigma_button = html.Div([sigma_filename])
             else:
                 sigma_button = sigma_button
