@@ -12,19 +12,25 @@ from load_data import load_config, load_w90_hr, load_w90_wout, load_sigma_h5
 from tools.calc_akw import calc_tb_bands, get_tb_bands 
 from tabs.id_factory import id_factory
 
+
 def register_callbacks(app):
     id = id_factory('tab1')
 
     # upload data
     @app.callback(
-        Output(id('full-data'), 'data'),
+        [Output(id('full-data'), 'data'),
+         Output(id('akw-bands'), 'on')],
+         #Output(id('tb-alert'), 'is_open')],
         [Input(id('full-data'), 'data'),
          Input(id('upload-file'), 'contents'),
          Input(id('upload-file'), 'filename'),
          Input(id('tb-data'), 'data'),
          Input(id('sigma-data'), 'data'),
-         Input(id('sigma-upload-box'), 'children')])
-    def update_data(data, config_contents, config_filename, tb_data, sigma_data, sigma_button):
+         Input(id('akw-bands'), 'on'),
+         Input(id('calc-akw'), 'n_clicks')],
+         #State(id('tb-alert'), 'is_open'),
+        )
+    def update_data(data, config_contents, config_filename, tb_data, sigma_data, akw_switch, click_akw):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -34,10 +40,13 @@ def register_callbacks(app):
             data = load_config(config_contents, config_filename)
             data['use'] = True
 
-        if trigger_id == id('sigma-upload-box') and sigma_data['use'] and tb_data['use']:
-            print('here')
+        if trigger_id == id('calc-akw'):
+            if not sigma_data['use'] or not tb_data['use']:
+                print('here')
+                return data, akw_switch#, not tb_alert
+            akw_switch = {'on': True}
 
-        return data
+        return data, akw_switch#, tb_alert 
 
     # dashboard calculate TB
     @app.callback(
@@ -59,7 +68,7 @@ def register_callbacks(app):
          Input(id('k-points'), 'data'),
          Input(id('dft-orbital-order'), 'data')])
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
-                w90_wout_button, tb_switch, n_clicks, tb_data, add_spin, dft_mu, k_points, dft_orbital_order):
+                w90_wout_button, tb_switch, click_tb, tb_data, add_spin, dft_mu, k_points, dft_orbital_order):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -84,7 +93,7 @@ def register_callbacks(app):
             return tb_data, w90_hr_button, html.Div([w90_wout_name]), tb_switch
 
         else:
-            if not n_clicks > 0:
+            if not click_tb > 0:
                 return tb_data, w90_hr_button, w90_wout_button, tb_switch
             if np.any([k_val in ['', None] for k in k_points for k_key, k_val in k.items()]):
                 return tb_data, w90_hr_button, w90_wout_button, tb_switch
@@ -185,7 +194,7 @@ def register_callbacks(app):
     @app.callback(
         Output('Akw', 'figure'),
         [Input(id('tb-bands'), 'on'),
-         Input(id('akw'), 'on'),
+         Input(id('akw-bands'), 'on'),
          Input(id('colorscale'), 'value'),
          Input(id('tb-data'), 'data'),
          Input(id('full-data'), 'data')])
