@@ -3,11 +3,12 @@ from load_data import load_config
 from layout import layout
 from tabs.tab1_callbacks import register_callbacks as tab1_callbacks
 from flask import Flask
+import dash_bootstrap_components as dbc
 
 server = Flask(__name__)
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets,server=server)
+app = dash.Dash(__name__, external_stylesheets=[external_stylesheets],server=server)
 
 data = {'use': False}
 tb_data = {'use': False}

@@ -3,6 +3,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_daq as daq
 import dash_table
+import dash_bootstrap_components as dbc
 
 from tabs.id_factory import id_factory
 
@@ -160,6 +161,9 @@ def make_dashboard(data, tb_data, akw_data, sigma_data, tab_number):
                             value='0.01',
                             step='0.005',
                             placeholder='broadening η'),
+                        dbc.Alert('Complete TB section first.', id=id('tb-alert'), dismissable=True, 
+                                  color='warning', fade=False, is_open=False),
+                        html.Button('Calculate A(k,ω)', id=id('calc-akw'), n_clicks=0),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
                                'padding': '10px'}),
@@ -182,7 +186,7 @@ def make_dashboard(data, tb_data, akw_data, sigma_data, tab_number):
                             html.P('show A(k,ω):',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                 ),
                             daq.BooleanSwitch(
-                                id=id('akw'),
+                                id=id('akw-bands'),
                                 on=False,
                                 color='#005eb0',
                                 style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
