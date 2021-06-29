@@ -126,7 +126,8 @@ def make_dashboard(data, tb_data, akw_data, sigma_data, tab_number):
                             id=id('choose-sigma'),
                             options=[{'label': i, 'value': i} for i in ['upload', 'enter manually']],
                             value='upload',
-                            labelStyle={'display': 'inline-block'}
+                            inputStyle={"margin-right": "5px"},
+                            labelStyle={'display': 'inline-block', 'margin-left':'5px'}
                         ),
                         html.Div(id=id('sigma-upload'), children=[
                             dcc.Upload(
@@ -160,13 +161,15 @@ def make_dashboard(data, tb_data, akw_data, sigma_data, tab_number):
                             type='number',
                             value='0.01',
                             step='0.005',
-                            placeholder='broadening η'),
+                            placeholder='broadening η',
+                            style={'width': '80%','margin-bottom': '10px'}),
                         dbc.Alert('Complete TB section first.', id=id('tb-alert'), dismissable=True, 
                                   color='warning', fade=False, is_open=False),
                         html.Button('Calculate A(k,ω)', id=id('calc-akw'), n_clicks=0),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
-                               'padding': '10px'}),
+                               'padding': '10px'}
+                    ),
                     # section 4
                     html.Hr(),
                     html.Div(children=[
@@ -198,7 +201,8 @@ def make_dashboard(data, tb_data, akw_data, sigma_data, tab_number):
                             id=id('colorscale-mode'),
                             options=[{'label': i, 'value': i} for i in ['sequential', 'diverging']],
                             value='diverging',
-                            labelStyle={'display': 'inline-block'}
+                            inputStyle={"margin-right": "5px"},
+                            labelStyle={'display': 'inline-block', 'margin-left':'5px'}
                         ),
                         dcc.Dropdown(
                             id=id('colorscale'),
