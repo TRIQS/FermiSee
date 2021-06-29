@@ -45,7 +45,10 @@ def register_callbacks(app):
                 return akw_data, akw_switch, not tb_alert
 
             solve = False
-            akw_data = calc_alatt(tb_data, sigma_data, solve)
+            akw_data['dmft_mu'] = 13.
+            akw_data['eta'] = 0.01
+            akw_data = calc_alatt(tb_data, sigma_data, akw_data, solve)
+            print(akw_data)
 
             akw_switch = {'on': True}
 
@@ -107,6 +110,9 @@ def register_callbacks(app):
             add_local = [0.] * tb_data['n_wf']
             k_mesh = {'n_k': 30, 'k_path': k_points, 'kz': 0.0}
             tb_data['k_mesh'], e_mat, tb = calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, dft_orbital_order, k_mesh, fermi_slice=False)
+            # calculate Hamiltonian
+            tb_data['e_mat'] = e_mat.real.tolist()
+            # compute eigenvalues too
             tb_data['eps_nuk'], evec_nuk = get_tb_bands(e_mat)
             tb_data['eps_nuk'] = tb_data['eps_nuk'].tolist()
             tb_data['use'] = True

@@ -134,12 +134,15 @@ def _sigma_from_model(n_orb, orbital_order, zeroth_order, first_order, efermi, e
     
     return sigma_interpolated, mu, dft_mu, eta, w_dict
 
-def calc_alatt(tb_data, sigma_data, solve=False):
+def calc_alatt(tb_data, sigma_data, akw_data, solve=False):
 
     # adjust to system size
     upscale = lambda quantity, n_orb: quantity * np.identity(n_orb)
-    mu = upscale(mu, n_orb)
-    eta = upscale(eta, n_orb)
+    mu = upscale(akw_data['dmft_mu'], tb_data['n_wf'])
+    eta = upscale(1j * akw_data['eta'], tb_data['n_wf'])
+    sigma = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
+    e_mat = np.array(tb_data['e_mat'])
+    w_dict = sigma_data['w_dict']
 
     n_k = e_mat.shape[2]
     
@@ -148,6 +151,7 @@ def calc_alatt(tb_data, sigma_data, solve=False):
         invert_and_trace = lambda w, eta, mu, e_mat, sigma: -1.0/np.pi * np.trace( np.linalg.inv( w + eta + mu - e_mat - sigma ).imag )
 
         for iw, ik in itertools.product(range(w_dict['n_w']), range(n_k)):
+            print(ik)
             alatt_k_w[ik, iw] = invert_and_trace(upscale(w_dict['w_mesh'][iw], n_orb), eta, mu, e_mat[:,:,ik], sigma[:,:,iw])
     else:
         alatt_k_w = np.zeros((n_k, w_dict['n_w'], n_orb))

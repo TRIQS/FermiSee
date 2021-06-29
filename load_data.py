@@ -94,6 +94,7 @@ def load_sigma_h5(contents , filename, orbital_order):
     orbital_order_dmft = ar['self_energy']['orbital_order']
     n_orb = ar['self_energy']['n_orb']
     dc = ar['self_energy']['dc']
+    dmft_mu = ar['self_energy']['dmft_mu']
     w_mesh = ar['self_energy']['w_mesh']
 
     # setup w_dict
@@ -111,6 +112,7 @@ def load_sigma_h5(contents , filename, orbital_order):
     data['sigma_re'] = sigma_interpolated.real.tolist()
     data['sigma_im'] = sigma_interpolated.imag.tolist()
     data['w_dict'] = w_dict
+    print(sigma_interpolated.shape)
 
     return data
 
