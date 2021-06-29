@@ -248,74 +248,106 @@ def register_callbacks(app):
     
         return fig
     
-    ## plot EDC 
-    #@app.callback(
-    #    [Output('EDC', 'figure'),
-    #     Output('kpt_edc', 'value'),
-    #     Output('kpt_edc', 'max')],
-    #    [Input('kpt_edc', 'value'),
-    #     Input(id('full-data'), 'data'),
-    #     Input('Akw', 'clickData')]
-    #    )
-    #def update_EDC(kpt_edc, data, click_coordinates):
-    #    layout = go.Layout()
-    #    fig = go.Figure(layout=layout)
-    #    ctx = dash.callback_context
-    #    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    #    if trigger_id == 'Akw':
-    #        new_kpt = click_coordinates['points'][0]['x']
-    #        kpt_edc = np.argmin(np.abs(np.array(data['k_mesh']) - new_kpt))
-    #    
-    #    fig.add_trace(go.Scattergl(x=data['freq_mesh'], y=np.array(data['Akw'])[kpt_edc,:], mode='lines',
-    #        line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=True, name='k = {:.3f}'.format(data['k_mesh'][kpt_edc]),
-    #                          hoverinfo='x+y+text'
-    #                          ))
+    # plot EDC 
+    @app.callback(
+       [Output('EDC', 'figure'),
+        Output('kpt_edc', 'value'),
+        Output('kpt_edc', 'max')],
+       [Input(id('tb-bands'), 'on'),
+        Input(id('akw-bands'), 'on'),
+        Input('kpt_edc', 'value'),
+        Input(id('akw-data'), 'data'),
+        Input(id('tb-data'), 'data'),
+        Input('Akw', 'clickData')]
+       )
+    def update_EDC(tb_bands, akw, kpt_edc, akw_data, tb_data, click_coordinates):
+        layout = go.Layout()
+        fig = go.Figure(layout=layout)
+        ctx = dash.callback_context
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        # if tb_bands:
+        #     fig.add_trace(go.Scattergl(x=akw_data['freq_mesh'], y=np.array(akw_data['Akw'])[kpt_edc,:], mode='lines',
+        #         line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=True, name='k = {:.3f}'.format(akw_data['k_mesh'][kpt_edc]),
+        #                             hoverinfo='x+y+text'
+        #                             ))
+            
+        #     fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
+        #                         hovermode='closest',
+        #                         xaxis_range=[akw_data['freq_mesh'][0], akw_data['freq_mesh'][-1]],
+        #                         yaxis_range=[0, akw_data['max_Akw']],
+        #                         xaxis_title='ω (eV)',
+        #                         yaxis_title='A(ω)',
+        #                         font=dict(size=16),
+        #                         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
+        #                         )       
+        if akw:
+            if trigger_id == 'Akw':
+                new_kpt = click_coordinates['points'][0]['x']
+                kpt_edc = np.argmin(np.abs(np.array(akw_data['k_mesh']) - new_kpt))
+            
+            fig.add_trace(go.Scattergl(x=akw_data['freq_mesh'], y=np.array(akw_data['Akw'])[kpt_edc,:], mode='lines',
+                line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=True, name='k = {:.3f}'.format(akw_data['k_mesh'][kpt_edc]),
+                                    hoverinfo='x+y+text'
+                                    ))
+            
+            fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
+                                hovermode='closest',
+                                xaxis_range=[akw_data['freq_mesh'][0], akw_data['freq_mesh'][-1]],
+                                yaxis_range=[0, akw_data['max_Akw']],
+                                xaxis_title='ω (eV)',
+                                yaxis_title='A(ω)',
+                                font=dict(size=16),
+                                legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
+                                )
+        
+        if akw:
+            return fig, kpt_edc, len(akw_data['k_mesh'])-1
+        else:
+            return fig, 0, 1
     #
-    #    fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
-    #                      hovermode='closest',
-    #                      xaxis_range=[data['freq_mesh'][0], data['freq_mesh'][-1]],
-    #                      yaxis_range=[0, data['max_Akw']],
-    #                      xaxis_title='ω (eV)',
-    #                      yaxis_title='A(ω)',
-    #                      font=dict(size=16),
-    #                      legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
-    #                      )
-    #    return fig, kpt_edc, len(data['k_mesh'])-1
-    #
-    ## plot MDC
-    #@app.callback(
-    #    [Output('MDC', 'figure'),
-    #     Output('w_mdc', 'value'),
-    #     Output('w_mdc', 'max')],
-    #    [Input('w_mdc', 'value'),
-    #     Input(id('full-data'), 'data'),
-    #     Input('Akw', 'clickData')]
-    #    )
-    #def update_MDC(w_mdc, data, click_coordinates):
-    #    layout = go.Layout()
-    #    fig = go.Figure(layout=layout)
-    #    ctx = dash.callback_context
-    #    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    #    if trigger_id == 'Akw':
-    #        new_w = click_coordinates['points'][0]['y']
-    #        w_mdc = np.argmin(np.abs(np.array(data['freq_mesh']) - new_w))
-    #
-    #    fig.add_trace(go.Scattergl(x=data['k_mesh'], y=np.array(data['Akw'])[:, w_mdc], mode='lines',
-    #        line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=True, name='ω = {:.3f} eV'.format(data['freq_mesh'][w_mdc]),
-    #                          hoverinfo='x+y+text'
-    #                          ))
-    #
-    #    fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
-    #                      hovermode='closest',
-    #                      xaxis_range=[data['k_mesh'][0], data['k_mesh'][-1]],
-    #                    #   yaxis_range=[0, 1.05 * np.max(np.array(data['Akw'])[:, w_mdc])],
-    #                      yaxis_range=[0, data['max_Akw']],
-    #                      xaxis_title='k',
-    #                      yaxis_title='A(k)',
-    #                      font=dict(size=16),
-    #                      xaxis=dict(ticktext=['γ' if k == 'g' else k for k in data['k_points_labels']],tickvals=data['k_points']),
-    #                      legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
-    #                      )
-    #    return fig, w_mdc, len(data['freq_mesh'])-1
+    # plot MDC
+    @app.callback(
+       [Output('MDC', 'figure'),
+        Output('w_mdc', 'value'),
+        Output('w_mdc', 'max')],
+       [Input(id('tb-bands'), 'on'),
+        Input(id('akw-bands'), 'on'),
+        Input('w_mdc', 'value'),
+        Input(id('akw-data'), 'data'),
+        Input(id('tb-data'), 'data'),
+        Input('Akw', 'clickData')]
+       )
+    def update_MDC(tb_bands, akw, w_mdc, akw_data, tb_data, click_coordinates):
+        layout = go.Layout()
+        fig = go.Figure(layout=layout)
+        ctx = dash.callback_context
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        if akw:
+            if trigger_id == 'Akw':
+                new_w = click_coordinates['points'][0]['y']
+                w_mdc = np.argmin(np.abs(np.array(akw_data['freq_mesh']) - new_w))
+        
+            fig.add_trace(go.Scattergl(x=akw_data['k_mesh'], y=np.array(akw_data['Akw'])[:, w_mdc], mode='lines',
+                line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=True, name='ω = {:.3f} eV'.format(akw_data['freq_mesh'][w_mdc]),
+                                hoverinfo='x+y+text'
+                                ))
+        
+            fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
+                            hovermode='closest',
+                            xaxis_range=[akw_data['k_mesh'][0], akw_data['k_mesh'][-1]],
+                        #   yaxis_range=[0, 1.05 * np.max(np.array(akw_data['Akw'])[:, w_mdc])],
+                            yaxis_range=[0, akw_data['max_Akw']],
+                            xaxis_title='k',
+                            yaxis_title='A(k)',
+                            font=dict(size=16),
+                            xaxis=dict(ticktext=['γ' if k == 'g' else k for k in akw_data['k_points_labels']],tickvals=akw_data['k_points']),
+                            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
+                            )
+        if akw:
+            return fig, w_mdc, len(akw_data['freq_mesh'])-1
+        else:
+            return fig, 0, 1
 
 
