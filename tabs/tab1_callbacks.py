@@ -19,8 +19,8 @@ def register_callbacks(app):
     # upload data
     @app.callback(
         [Output(id('full-data'), 'data'),
-         Output(id('akw-bands'), 'on')],
-         #Output(id('tb-alert'), 'is_open')],
+         Output(id('akw-bands'), 'on'),
+         Output(id('tb-alert'), 'is_open')],
         [Input(id('full-data'), 'data'),
          Input(id('upload-file'), 'contents'),
          Input(id('upload-file'), 'filename'),
@@ -28,9 +28,9 @@ def register_callbacks(app):
          Input(id('sigma-data'), 'data'),
          Input(id('akw-bands'), 'on'),
          Input(id('calc-akw'), 'n_clicks')],
-         #State(id('tb-alert'), 'is_open'),
+         State(id('tb-alert'), 'is_open'),
         )
-    def update_data(data, config_contents, config_filename, tb_data, sigma_data, akw_switch, click_akw):
+    def update_data(data, config_contents, config_filename, tb_data, sigma_data, akw_switch, click_akw, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -43,14 +43,14 @@ def register_callbacks(app):
         if trigger_id == id('calc-akw'):
             if not sigma_data['use'] or not tb_data['use']:
                 print('here')
-                return data, akw_switch#, not tb_alert
+                return data, akw_switch, not tb_alert
 
             solve = False
             data = calc_alatt(tb_data, sigma_data, solve)
 
             akw_switch = {'on': True}
 
-        return data, akw_switch#, tb_alert 
+        return data, akw_switch, tb_alert 
 
     # dashboard calculate TB
     @app.callback(
