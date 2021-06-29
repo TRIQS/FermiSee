@@ -8,7 +8,7 @@ import dash_table
 from tabs.id_factory import id_factory
 
 # layout
-def make_dashboard(data, tb_data, akw_data, sigma_data, tab_number):
+def make_dashboard(tb_data, akw_data, sigma_data, tab_number):
     id = id_factory(f'tab{tab_number}')
     col_part = '#F8F9F9'
     return dcc.Tab(
@@ -165,7 +165,7 @@ def make_dashboard(data, tb_data, akw_data, sigma_data, tab_number):
                             style={'width': '80%','margin-bottom': '10px'}),
                         dbc.Alert('Complete TB section first.', id=id('tb-alert'), dismissable=True, 
                                   color='warning', fade=False, is_open=False),
-                        html.Button('Calculate A(k,ω)', id=id('calc-akw'), n_clicks=0),
+                        html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
                                'padding': '10px'}
@@ -215,7 +215,6 @@ def make_dashboard(data, tb_data, akw_data, sigma_data, tab_number):
                     #html.Hr(),
                     dcc.Store(id=id('tb-data'), data = tb_data),
                     dcc.Store(id=id('akw-data'), data = akw_data),
-                    dcc.Store(id=id('full-data'), data = data),
                     dcc.Store(id=id('sigma-data'), data = sigma_data),
             ], style={
                 'padding-left': '1%',

@@ -16,12 +16,12 @@ from tabs.id_factory import id_factory
 def register_callbacks(app):
     id = id_factory('tab1')
 
-    # upload data
+    # upload akw data
     @app.callback(
-        [Output(id('full-data'), 'data'),
+        [Output(id('akw-data'), 'data'),
          Output(id('akw-bands'), 'on'),
          Output(id('tb-alert'), 'is_open')],
-        [Input(id('full-data'), 'data'),
+        [Input(id('akw-data'), 'data'),
          Input(id('upload-file'), 'contents'),
          Input(id('upload-file'), 'filename'),
          Input(id('tb-data'), 'data'),
@@ -30,27 +30,26 @@ def register_callbacks(app):
          Input(id('calc-akw'), 'n_clicks')],
          State(id('tb-alert'), 'is_open'),
         )
-    def update_data(data, config_contents, config_filename, tb_data, sigma_data, akw_switch, click_akw, tb_alert):
+    def update_data(akw_data, config_contents, config_filename, tb_data, sigma_data, akw_switch, click_akw, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
 
         if config_filename != None:
             print('loading config file from h5...')
-            data = load_config(config_contents, config_filename)
-            data['use'] = True
+            akw_data = load_config(config_contents, config_filename)
+            akw_data['use'] = True
 
         if trigger_id == id('calc-akw'):
             if not sigma_data['use'] or not tb_data['use']:
-                print('here')
-                return data, akw_switch, not tb_alert
+                return akw_data, akw_switch, not tb_alert
 
             solve = False
-            data = calc_alatt(tb_data, sigma_data, solve)
+            akw_data = calc_alatt(tb_data, sigma_data, solve)
 
             akw_switch = {'on': True}
 
-        return data, akw_switch, tb_alert 
+        return akw_data, akw_switch, tb_alert 
 
     # dashboard calculate TB
     @app.callback(
@@ -201,8 +200,8 @@ def register_callbacks(app):
          Input(id('akw-bands'), 'on'),
          Input(id('colorscale'), 'value'),
          Input(id('tb-data'), 'data'),
-         Input(id('full-data'), 'data')])
-    def update_Akw(tb_bands, akw, colorscale, tb_data, full_data):
+         Input(id('akw-data'), 'data')])
+    def update_Akw(tb_bands, akw, colorscale, tb_data, akw_data):
         
         # initialize general figure environment
         layout = go.Layout()
@@ -213,7 +212,6 @@ def register_callbacks(app):
         fig.update_traces(xaxis='x', hoverinfo='none')
 
         # decide which data to show for TB
-        if full_data['use']: tb_temp = full_data
         if tb_data['use']: tb_temp = tb_data
         if not 'tb_temp' in locals():
             return fig
@@ -229,8 +227,7 @@ def register_callbacks(app):
                               ))
 
         # decide which data to show for A(k,w)
-        if full_data['use']: akw_temp = full_data
-        #if akw_data['use']: akw_temp = akw_data
+        if akw_data['use']: akw_temp = akw_data
         if not 'akw_temp' in locals():
             return fig
 
