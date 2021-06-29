@@ -350,7 +350,8 @@ def calc_tb_bands(data, add_spin, mu, add_local, orbital_order, k_mesh, fermi_sl
     k_path = [list(map(lambda item: (k[item]), k.keys())) for k in k_path] # turn dict into list
     k_point_labels = [k.pop(0) for k in k_path] # remove first time, which is label
     k_path = [(np.array(k), np.array(k_path[ct+1])) for ct, k in enumerate(k_path) if ct+1 < len(k_path)] # turn into tuples
-    if not fermi_slice: k_path.append((k_path[-1][-1], k_path[-1][-1])) # add last k-point
+    # this is no longer necessary since we fixed this in the energy_matrix_on_bz_paths function
+    # if not fermi_slice: k_path.append((k_path[-1][-1], k_path[-1][-1])) # add last k-point
 
     # calculate tight-binding eigenvalues
     if not fermi_slice:

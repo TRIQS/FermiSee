@@ -64,12 +64,18 @@ def energy_matrix_on_bz_paths(paths, TBL, n_pts=50):
     k_length = 0. # accumulative k-path length
 
     for pidx, (ki, kf) in enumerate(paths):
+        
+        # if this is the last section, add the endpoint!
+        if pidx == len(paths)-1:
+             endpoint = True
+        else: 
+            endpoint = False
 
         s, e = pidx * n_pts, (pidx+1) * n_pts
         E[:,:, s:e] = energy_matrix_on_bz_path(TBL.tb, ki, kf, n_pts)
 
         dk = np.dot(k_mat.T, (ki - kf))
-        a = np.linspace(0., 1., num=n_pts, endpoint=False)
+        a = np.linspace(0., 1., num=n_pts, endpoint=endpoint)
         k_vec = a[:, None] * dk[None, :]
 
         k[s:e] = np.linalg.norm(k_vec, axis=1) + k_length

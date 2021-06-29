@@ -108,6 +108,7 @@ def register_callbacks(app):
                 dft_mu = 0.0
 
             add_local = [0.] * tb_data['n_wf']
+
             k_mesh = {'n_k': 30, 'k_path': k_points, 'kz': 0.0}
             tb_data['k_mesh'], e_mat, tb = calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, dft_orbital_order, k_mesh, fermi_slice=False)
             # calculate Hamiltonian
@@ -231,6 +232,15 @@ def register_callbacks(app):
                             line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=False, text=f'tb band {band}',
                             hoverinfo='x+y+text'
                             ))
+            if not akw:
+                fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
+                          clickmode='event+select',
+                          hovermode='closest',
+                          yaxis_range=[np.min(np.array(tb_temp['eps_nuk'][0]))-(0.03*np.min(np.array(tb_temp['eps_nuk'][0]))), 
+                                        np.max(np.array(tb_temp['eps_nuk'][-1]))+(0.03*np.max(np.array(tb_temp['eps_nuk'][-1])))],
+                          yaxis_title='ω (eV)',
+                          xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
+                          font=dict(size=16))
 
         # decide which data to show for A(k,w)
         if akw_data['use']: akw_temp = akw_data
@@ -243,13 +253,13 @@ def register_callbacks(app):
             fig.add_trace(go.Heatmap(x=akw_temp['k_mesh'], y=akw_temp['freq_mesh'], z=z_data,
                           colorscale=colorscale,reversescale=False, showscale=False,
                           zmin=np.min(z_data), zmax=np.max(z_data)))
-    
-        fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
+
+            fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                           clickmode='event+select',
                           hovermode='closest',
                           yaxis_range=[akw_data['freq_mesh'][0], akw_data['freq_mesh'][-1]],
                           yaxis_title='ω (eV)',
-                          xaxis=dict(ticktext=['γ' if k == 'g' else k for k in akw_data['k_points_labels']],tickvals=akw_data['k_points']),
+                          xaxis=dict(ticktext=['γ' if k == 'g' else k for k in tb_data['k_mesh']['k_points_labels']],tickvals=tb_data['k_mesh']['k_points']),
                           font=dict(size=16))
     
         return fig
@@ -289,8 +299,8 @@ def register_callbacks(app):
                                             y=[0,300], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), 
                                             showlegend=False, hoverinfo='x+y+text'
                                         ))
-
-            fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
+            if not akw:
+                fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                                 hovermode='closest',
                                 xaxis_range=[np.min(np.array(tb_temp['eps_nuk'][0]))-(0.03*np.min(np.array(tb_temp['eps_nuk'][0]))), 
                                              np.max(np.array(tb_temp['eps_nuk'][-1]))+(0.03*np.max(np.array(tb_temp['eps_nuk'][-1])))],
@@ -344,6 +354,37 @@ def register_callbacks(app):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
+        # if tb_bands:
+        #     # decide which data to show for TB
+        #     if tb_data['use']: tb_temp = tb_data
+        #     if not 'tb_temp' in locals():
+        #         return fig
+
+        #     k_mesh = tb_temp['k_mesh']
+        #     for band in range(len(tb_temp['eps_nuk'])):
+        #         if band == 0:
+        #             y = np.min(np.abs(np.array(tb_temp['eps_nuk'][band]) - w_mdc))
+        #             fig.add_trace(go.Scattergl(x=[k_mesh['k_disc'][0],k_mesh['k_disc'][-1]], 
+        #                                  y=[y,y], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), 
+        #                                  showlegend=True, name='ω = {:.3f} eV'.format(akw_data['freq_mesh'][w_mdc]),
+        #                             hoverinfo='x+y+text'
+        #                             ))
+        #         # else:
+        #         #     fig.add_trace(go.Scattergl(x=[tb_temp['eps_nuk'][band][kpt_edc],tb_temp['eps_nuk'][band][kpt_edc]], 
+        #         #                             y=[0,300], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), 
+        #         #                             showlegend=False, hoverinfo='x+y+text'
+        #                                 # ))
+        #     if not akw:
+        #         fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
+        #                         hovermode='closest',
+        #                         xaxis_range=[k_mesh['k_points'][0], k_mesh['k_points'][-1]],
+        #                         yaxis_range=[0, 1],
+        #                         xaxis_title='ω (eV)',
+        #                         yaxis_title='A(ω)',
+        #                         font=dict(size=16),
+        #                         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
+        #                         )       
+
         if akw:
             if trigger_id == 'Akw':
                 new_w = click_coordinates['points'][0]['y']
@@ -367,6 +408,8 @@ def register_callbacks(app):
                             )
         if akw:
             return fig, w_mdc, len(akw_data['freq_mesh'])-1
+        # elif tb_bands:
+        #     return fig, w_mdc, np.max(np.array(tb_temp['eps_nuk'][-1]))+(0.03*np.max(np.array(tb_temp['eps_nuk'][-1])))
         else:
             return fig, 0, 1
 
