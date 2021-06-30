@@ -112,6 +112,7 @@ def load_sigma_h5(contents , filename, orbital_order):
     data['sigma_re'] = sigma_interpolated.real.tolist()
     data['sigma_im'] = sigma_interpolated.imag.tolist()
     data['w_dict'] = w_dict
+    data['dmft_mu'] = dmft_mu
     print(sigma_interpolated.shape)
 
     return data

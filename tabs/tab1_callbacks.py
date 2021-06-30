@@ -46,7 +46,7 @@ def register_callbacks(app):
                 return akw_data, akw_switch, not tb_alert
 
             solve = False
-            akw_data['dmft_mu'] = 13.
+            akw_data['dmft_mu'] = sigma_data['dmft_mu']
             akw_data['eta'] = 0.01
             akw = calc_alatt(tb_data, sigma_data, akw_data, solve)
             akw_data['Akw'] = akw.tolist()
