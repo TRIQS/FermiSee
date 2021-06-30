@@ -47,8 +47,9 @@ def register_callbacks(app):
             solve = False
             akw_data['dmft_mu'] = 13.
             akw_data['eta'] = 0.01
-            akw_data = calc_alatt(tb_data, sigma_data, akw_data, solve)
-            print(akw_data)
+            akw = calc_alatt(tb_data, sigma_data, akw_data, solve)
+            akw_data['Akw'] = akw.tolist()
+            akw_data['use'] = True
 
             akw_switch = {'on': True}
 
@@ -207,8 +208,10 @@ def register_callbacks(app):
          Input(id('akw-bands'), 'on'),
          Input(id('colorscale'), 'value'),
          Input(id('tb-data'), 'data'),
-         Input(id('akw-data'), 'data')])
-    def update_Akw(tb_bands, akw, colorscale, tb_data, akw_data):
+         Input(id('akw-data'), 'data'),
+         Input(id('sigma-data'), 'data')])
+    def update_Akw(tb_bands, akw, colorscale, tb_data, akw_data, sigma_data):
+        print(akw_data.keys())
         
         # initialize general figure environment
         layout = go.Layout()
@@ -250,16 +253,17 @@ def register_callbacks(app):
         if akw:
             # kw_x, kw_y = np.meshgrid(data.tb_data['k_mesh'], w_mesh['w_mesh'])
             z_data = np.log(np.array(akw_temp['Akw']).T)
-            fig.add_trace(go.Heatmap(x=akw_temp['k_mesh'], y=akw_temp['freq_mesh'], z=z_data,
-                          colorscale=colorscale,reversescale=False, showscale=False,
-                          zmin=np.min(z_data), zmax=np.max(z_data)))
+            w_mesh = sigma_data['w_dict']['w_mesh']
+            fig.add_trace(go.Heatmap(x=k_mesh['k_disc'], y=w_mesh, z=z_data,
+                                     colorscale=colorscale, reversescale=False, showscale=False,
+                                     zmin=np.min(z_data), zmax=np.max(z_data)))
 
             fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                           clickmode='event+select',
                           hovermode='closest',
-                          yaxis_range=[akw_data['freq_mesh'][0], akw_data['freq_mesh'][-1]],
+                          yaxis_range=[w_mesh[0], w_mesh[-1]],
                           yaxis_title='ω (eV)',
-                          xaxis=dict(ticktext=['γ' if k == 'g' else k for k in tb_data['k_mesh']['k_points_labels']],tickvals=tb_data['k_mesh']['k_points']),
+                          xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']], tickvals=k_mesh['k_points']),
                           font=dict(size=16))
     
         return fig
