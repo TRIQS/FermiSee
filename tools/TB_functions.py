@@ -41,7 +41,8 @@ def energies_on_bz_paths(paths, tb_lattice, n_pts=50):
         k[s:e] = np.linalg.norm(k_vec, axis=1) + k_length
         k_length += np.linalg.norm(dk)
 
-    K = np.concatenate((k[::n_pts], [2 * k[-1] - k[-2]])) # add last point for K-grid
+    #K = np.concatenate((k[::n_pts], [2 * k[-1] - k[-2]])) # add last point for K-grid
+    K = np.concatenate((k[::n_pts], [k[-1]])) # add last point for K-grid
 
     return k, K, E
 
@@ -81,7 +82,7 @@ def energy_matrix_on_bz_paths(paths, TBL, n_pts=50):
         k[s:e] = np.linalg.norm(k_vec, axis=1) + k_length
         k_length += np.linalg.norm(dk)
 
-    K = np.concatenate((k[::n_pts], [2 * k[-1] - k[-2]])) # add last point for K-grid
+    K = np.concatenate((k[::n_pts], [k[-1]])) # add last point for K-grid
 
     return k, K, E
 

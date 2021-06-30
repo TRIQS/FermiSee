@@ -27,11 +27,12 @@ def register_callbacks(app):
          Input(id('tb-data'), 'data'),
          Input(id('sigma-data'), 'data'),
          Input(id('akw-bands'), 'on'),
+         Input(id('dft-mu'), 'value'),
          Input(id('k-points'), 'data'),
          Input(id('calc-akw'), 'n_clicks')],
          State(id('tb-alert'), 'is_open'),
         )
-    def update_data(akw_data, config_contents, config_filename, tb_data, sigma_data, akw_switch, k_points, click_akw, tb_alert):
+    def update_data(akw_data, config_contents, config_filename, tb_data, sigma_data, akw_switch, dft_mu, k_points, click_akw, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -41,7 +42,7 @@ def register_callbacks(app):
             akw_data = load_config(config_contents, config_filename)
             akw_data['use'] = True
 
-        if trigger_id == id('calc-akw') or ( trigger_id == id('k-points') and click_akw > 0 ):
+        if trigger_id in (id('calc-akw'), id('dft-mu')) or ( trigger_id == id('k-points') and click_akw > 0 ):
             if not sigma_data['use'] or not tb_data['use']:
                 return akw_data, akw_switch, not tb_alert
 
@@ -259,13 +260,16 @@ def register_callbacks(app):
                                      colorscale=colorscale, reversescale=False, showscale=False,
                                      zmin=np.min(z_data), zmax=np.max(z_data)))
 
+            print(k_mesh['k_disc'])
+            print(k_mesh['k_points'])
             fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
-                          clickmode='event+select',
-                          hovermode='closest',
-                          yaxis_range=[w_mesh[0], w_mesh[-1]],
-                          yaxis_title='ω (eV)',
-                          xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']], tickvals=k_mesh['k_points']),
-                          font=dict(size=16))
+                              clickmode='event+select',
+                              hovermode='closest',
+                              yaxis_range=[w_mesh[0], w_mesh[-1]],
+                              yaxis_title='ω (eV)',
+                              xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
+                              xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']], tickvals=k_mesh['k_points']),
+                              font=dict(size=16))
     
         return fig
     
