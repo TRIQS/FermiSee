@@ -344,7 +344,7 @@ def register_callbacks(app):
                 kpt_edc = np.argmin(np.abs(np.array(k_mesh['k_disc']) - new_kpt))
             
             fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Akw'])[kpt_edc,:], mode='lines',
-                line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=True, name='k = {:.3f}'.format(k_mesh['k_disc'][kpt_edc]),
+                line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=False,
                                     hoverinfo='x+y+text'
                                     ))
             
