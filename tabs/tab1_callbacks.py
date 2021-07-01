@@ -32,7 +32,8 @@ def register_callbacks(app):
          Input(id('calc-akw'), 'n_clicks')],
          State(id('tb-alert'), 'is_open'),
         )
-    def update_data(akw_data, config_contents, config_filename, tb_data, sigma_data, akw_switch, dft_mu, k_points, click_akw, tb_alert):
+    def update_data(akw_data, config_contents, config_filename, tb_data, 
+                    sigma_data, akw_switch, dft_mu, k_points, click_akw, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -41,6 +42,9 @@ def register_callbacks(app):
             print('loading config file from h5...')
             akw_data = load_config(config_contents, config_filename)
             akw_data['use'] = True
+
+        if trigger_id == id('dft-mu') and not sigma_data['use']:
+            return akw_data, akw_switch, tb_alert
 
         if trigger_id in (id('calc-akw'), id('dft-mu')) or ( trigger_id == id('k-points') and click_akw > 0 ):
             if not sigma_data['use'] or not tb_data['use']:
@@ -119,6 +123,8 @@ def register_callbacks(app):
             # compute eigenvalues too
             tb_data['eps_nuk'], evec_nuk = get_tb_bands(e_mat)
             tb_data['eps_nuk'] = tb_data['eps_nuk'].tolist()
+            tb_data['bnd_low'] = np.min(np.array(tb_data['eps_nuk'][0]))
+            tb_data['bnd_high'] = np.max(np.array(tb_data['eps_nuk'][-1]))
             tb_data['use'] = True
 
             return tb_data, w90_hr_button, w90_wout_button, {'on': True}
@@ -241,8 +247,9 @@ def register_callbacks(app):
                 fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                           clickmode='event+select',
                           hovermode='closest',
-                          yaxis_range=[np.min(np.array(tb_temp['eps_nuk'][0]))-(0.03*np.min(np.array(tb_temp['eps_nuk'][0]))), 
-                                        np.max(np.array(tb_temp['eps_nuk'][-1]))+(0.03*np.max(np.array(tb_temp['eps_nuk'][-1])))],
+                          xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
+                          yaxis_range=[tb_data['bnd_low']- 0.02*abs(tb_data['bnd_low']) , 
+                                       tb_data['bnd_high']+ 0.02*abs(tb_data['bnd_high'])],
                           yaxis_title='ω (eV)',
                           xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
                           font=dict(size=16))
@@ -260,8 +267,6 @@ def register_callbacks(app):
                                      colorscale=colorscale, reversescale=False, showscale=False,
                                      zmin=np.min(z_data), zmax=np.max(z_data)))
 
-            print(k_mesh['k_disc'])
-            print(k_mesh['k_points'])
             fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                               clickmode='event+select',
                               hovermode='closest',
@@ -312,8 +317,8 @@ def register_callbacks(app):
             if not akw:
                 fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                                 hovermode='closest',
-                                xaxis_range=[np.min(np.array(tb_temp['eps_nuk'][0]))-(0.03*np.min(np.array(tb_temp['eps_nuk'][0]))), 
-                                             np.max(np.array(tb_temp['eps_nuk'][-1]))+(0.03*np.max(np.array(tb_temp['eps_nuk'][-1])))],
+                                xaxis_range=[tb_data['bnd_low']- 0.02*abs(tb_data['bnd_low']) , 
+                                             tb_data['bnd_high']+ 0.02*abs(tb_data['bnd_high'])],
                                 yaxis_range=[0, 1],
                                 xaxis_title='ω (eV)',
                                 yaxis_title='A(ω)',
