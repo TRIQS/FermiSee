@@ -32,7 +32,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
       rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
 # Install Python dependencies.
-RUN pip3 install dash dash-daq dash-bootstrap-components
+RUN pip3 install dash dash-daq dash-bootstrap-components dash-extensions
 
 # triqs
 RUN cd / && mkdir -p source \

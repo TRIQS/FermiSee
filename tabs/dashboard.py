@@ -4,6 +4,7 @@ import dash_html_components as html
 import dash_bootstrap_components as dbc
 import dash_daq as daq
 import dash_table
+from dash_extensions import Download as ext_Download
 
 from tabs.id_factory import id_factory
 
@@ -85,7 +86,8 @@ def make_dashboard(tb_data, akw_data, sigma_data, tab_number):
                         dcc.Input(id=id('dft-mu'),
                             type='number',
                             value='0.',
-                            step='0.01',
+                            step='0.0001',
+                            debounce=True,
                             placeholder='chemical potential μ'),
                         # html.Div('orbital order'),
                         html.Div([
@@ -216,7 +218,7 @@ def make_dashboard(tb_data, akw_data, sigma_data, tab_number):
                     html.Hr(),
                     html.Div(children=[
                         html.Button("Download config", id=id('dwn_button')),
-                        dcc.Download(id=id('download_h5')),
+                        ext_Download(id=id('download_h5')),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
                                'padding': '10px'}),

@@ -2,11 +2,13 @@ import numpy as np
 from itertools import product
 import dash
 import dash_html_components as html
+from flask import send_file
 import plotly.express as px
 import plotly.graph_objects as go
 import ast
 import inspect
-import io
+import base64
+from dash_extensions.snippets import send_bytes
 from dash.dependencies import Input, Output, State
 from h5 import HDFArchive
 
@@ -453,10 +455,14 @@ def register_callbacks(app):
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         # check if the download button was pressed
         if trigger_id == id('dwn_button'):
-            # return_data = io.BytesIO()
-            return_data = HDFArchive()
-            return_data['test'] = 0.0
-            return dcc.send_file(return_data, attachment_filename='spectrometer.h5')
+            return_data = HDFArchive(descriptor = None, open_flag='a')
+            return_data['tb_data'] = tb_data
+            return_data['akw_data'] = akw_data
+            return_data['sigma_data'] = sigma_data
+
+            content = base64.b64encode(return_data.as_bytes()).decode()
+
+            return dict(content=content, filename='spectrometer.h5', base64=True)
         else:
             return None
         
