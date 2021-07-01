@@ -6,7 +6,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import ast
 import inspect
+import io
 from dash.dependencies import Input, Output, State
+from h5 import HDFArchive
 
 from load_data import load_config, load_w90_hr, load_w90_wout, load_sigma_h5
 from tools.calc_akw import calc_tb_bands, get_tb_bands, calc_alatt 
@@ -31,6 +33,7 @@ def register_callbacks(app):
          Input(id('k-points'), 'data'),
          Input(id('calc-akw'), 'n_clicks')],
          State(id('tb-alert'), 'is_open'),
+         prevent_initial_call=True
         )
     def update_data(akw_data, config_contents, config_filename, tb_data, 
                     sigma_data, akw_switch, dft_mu, k_points, click_akw, tb_alert):
@@ -79,7 +82,8 @@ def register_callbacks(app):
          Input(id('add-spin'), 'value'),
          Input(id('dft-mu'), 'value'),
          Input(id('k-points'), 'data'),
-         Input(id('dft-orbital-order'), 'data')])
+         Input(id('dft-orbital-order'), 'data')],
+         prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
                 w90_wout_button, tb_switch, click_tb, tb_data, add_spin, dft_mu, k_points, dft_orbital_order):
         ctx = dash.callback_context
@@ -135,7 +139,8 @@ def register_callbacks(app):
         [Input(id('add-kpoint'), 'n_clicks'),
          Input(id('k-points'), 'data')],
         State(id('k-points'), 'data'),
-        State(id('k-points'), 'columns'))
+        State(id('k-points'), 'columns'),
+        prevent_initial_call=True)
     def add_row(n_clicks, data, rows, columns):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -163,7 +168,8 @@ def register_callbacks(app):
          Input(id('sigma-upload-box'), 'contents'),
          Input(id('sigma-upload-box'), 'filename'),
          Input(id('sigma-upload-box'), 'children'),
-         Input(id('dft-orbital-order'), 'data')]
+         Input(id('dft-orbital-order'), 'data')],
+         prevent_initial_call=False
         )
     def toggle_update_sigma(sigma_data, sigma_radio_item, sigma_content, sigma_filename, sigma_button, dft_orbital_order):
         if sigma_radio_item == 'upload':
@@ -187,7 +193,8 @@ def register_callbacks(app):
         # Output('sigma-function', 'sigma')],
         Output(id('sigma-function-output'), 'children'),
         Input(id('sigma-function-button'), 'n_clicks'),
-        State(id('sigma-function-input'), 'value')
+        State(id('sigma-function-input'), 'value'),
+    prevent_initial_call=True,
         )
     def update_sigma(n_clicks, value):
         if n_clicks > 0:
@@ -202,7 +209,8 @@ def register_callbacks(app):
     # dashboard colors
     @app.callback(
         Output(id('colorscale'), 'options'),
-        Input(id('colorscale-mode'), 'value')
+        Input(id('colorscale-mode'), 'value'),
+    prevent_initial_call=True,
         )
     def update_colorscales(mode):
         colorscales = [name for name, body in inspect.getmembers(getattr(px.colors, mode))
@@ -217,7 +225,8 @@ def register_callbacks(app):
          Input(id('colorscale'), 'value'),
          Input(id('tb-data'), 'data'),
          Input(id('akw-data'), 'data'),
-         Input(id('sigma-data'), 'data')])
+         Input(id('sigma-data'), 'data')],
+         prevent_initial_call=True)
     def update_Akw(tb_bands, akw, colorscale, tb_data, akw_data, sigma_data):
         print(akw_data.keys())
         
@@ -289,7 +298,8 @@ def register_callbacks(app):
         Input(id('akw-data'), 'data'),
         Input(id('tb-data'), 'data'),
         Input('Akw', 'clickData'),
-        Input(id('sigma-data'), 'data')])
+        Input(id('sigma-data'), 'data')],
+        prevent_initial_call=True)
     def update_EDC(tb_bands, akw, kpt_edc, akw_data, tb_data, click_coordinates, sigma_data):
         layout = go.Layout()
         fig = go.Figure(layout=layout)
@@ -363,7 +373,8 @@ def register_callbacks(app):
         Input(id('akw-data'), 'data'),
         Input(id('tb-data'), 'data'),
         Input('Akw', 'clickData'),
-        Input(id('sigma-data'), 'data')])
+        Input(id('sigma-data'), 'data')],
+        prevent_initial_call=True)
     def update_MDC(tb_bands, akw, w_mdc, akw_data, tb_data, click_coordinates, sigma_data):
         layout = go.Layout()
         fig = go.Figure(layout=layout)
@@ -406,7 +417,7 @@ def register_callbacks(app):
             w_mesh = sigma_data['w_dict']['w_mesh']
             if trigger_id == 'Akw':
                 new_w = click_coordinates['points'][0]['y']
-                w_mdc = np.argmin(np.abs(np.array(akw_data['freq_mesh']) - new_w))
+                w_mdc = np.argmin(np.abs(np.array(w_mesh) - new_w))
         
             fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=np.array(akw_data['Akw'])[:, w_mdc], mode='lines', line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]),
                                        showlegend=True, name='ω = {:.3f} eV'.format(w_mesh[w_mdc]), hoverinfo='x+y+text'))
@@ -428,5 +439,26 @@ def register_callbacks(app):
         #     return fig, w_mdc, np.max(np.array(tb_temp['eps_nuk'][-1]))+(0.03*np.max(np.array(tb_temp['eps_nuk'][-1])))
         else:
             return fig, 0, 1
+    
+    @app.callback(
+    Output(id('download_h5'), "data"),
+    [Input(id('dwn_button'), "n_clicks"),
+     Input(id('akw-data'), 'data'),
+     Input(id('tb-data'), 'data'),
+     Input(id('sigma-data'), 'data')],
+     prevent_initial_call=True,
+    )
+    def download_data(n_clicks,akw_data, tb_data, sigma_data):
+        ctx = dash.callback_context
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        # check if the download button was pressed
+        if trigger_id == id('dwn_button'):
+            # return_data = io.BytesIO()
+            return_data = HDFArchive()
+            return_data['test'] = 0.0
+            return dcc.send_file(return_data, attachment_filename='spectrometer.h5')
+        else:
+            return None
+        
 
 

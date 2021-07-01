@@ -212,6 +212,14 @@ def make_dashboard(tb_data, akw_data, sigma_data, tab_number):
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
                                'padding': '10px'}),
+                    # section 5
+                    html.Hr(),
+                    html.Div(children=[
+                        html.Button("Download config", id=id('dwn_button')),
+                        dcc.Download(id=id('download_h5')),
+                    ], style={'backgroundColor': col_part,
+                               'borderRadius': '15px',
+                               'padding': '10px'}),
                     #html.Hr(),
                     dcc.Store(id=id('tb-data'), data = tb_data),
                     dcc.Store(id=id('akw-data'), data = akw_data),
