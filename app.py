@@ -15,7 +15,8 @@ app.title = 'triqs_spectrometer'
 tb_data = {'use': False}
 sigma_data = {'use': False}
 akw_data = {'use': False}
-app.layout = layout(tb_data, akw_data, sigma_data)
+loaded_data = {}
+app.layout = layout(tb_data, akw_data, sigma_data, loaded_data)
 tab1_callbacks(app)
 
 if __name__ == '__main__':

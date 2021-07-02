@@ -20,14 +20,33 @@ from tabs.id_factory import id_factory
 def register_callbacks(app):
     id = id_factory('tab1')
 
+    @app.callback(
+        [Output(id('loaded-data'),'data'),
+         Output(id('config-alert'), 'is_open')],
+        [Input(id('upload-file'), 'contents'),
+         Input(id('upload-file'), 'filename'),
+         Input(id('loaded-data'), 'data')],
+         State(id('config-alert'), 'is_open'),
+         prevent_initial_call=True
+    )
+    def upload_config(config_contents, config_filename, loaded_data, config_alert):
+        if not config_filename:
+            return loaded_data, True
+
+        print('loading config file from h5...')
+        loaded_data = load_config(config_contents, config_filename, loaded_data)
+        if 'error' in loaded_data:
+            return loaded_data, True
+        
+        return loaded_data, False
+
+
     # upload akw data
     @app.callback(
         [Output(id('akw-data'), 'data'),
          Output(id('akw-bands'), 'on'),
          Output(id('tb-alert'), 'is_open')],
         [Input(id('akw-data'), 'data'),
-         Input(id('upload-file'), 'contents'),
-         Input(id('upload-file'), 'filename'),
          Input(id('tb-data'), 'data'),
          Input(id('sigma-data'), 'data'),
          Input(id('akw-bands'), 'on'),
@@ -37,16 +56,10 @@ def register_callbacks(app):
          State(id('tb-alert'), 'is_open'),
          prevent_initial_call=True
         )
-    def update_data(akw_data, config_contents, config_filename, tb_data, 
-                    sigma_data, akw_switch, dft_mu, k_points, click_akw, tb_alert):
+    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, click_akw, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
-
-        if config_filename != None:
-            print('loading config file from h5...')
-            akw_data = load_config(config_contents, config_filename)
-            akw_data['use'] = True
 
         if trigger_id == id('dft-mu') and not sigma_data['use']:
             return akw_data, akw_switch, tb_alert
@@ -131,6 +144,12 @@ def register_callbacks(app):
             tb_data['eps_nuk'] = tb_data['eps_nuk'].tolist()
             tb_data['bnd_low'] = np.min(np.array(tb_data['eps_nuk'][0]))
             tb_data['bnd_high'] = np.max(np.array(tb_data['eps_nuk'][-1]))
+            tb_data['dft_mu'] = dft_mu
+            if not add_spin:
+                tb_data['add_spin'] = False
+            else:
+                tb_data['add_spin'] = True
+            tb_data['dft_orbital_order'] = dft_orbital_order
             tb_data['use'] = True
 
             return tb_data, w90_hr_button, w90_wout_button, {'on': True}
@@ -344,8 +363,8 @@ def register_callbacks(app):
                 kpt_edc = np.argmin(np.abs(np.array(k_mesh['k_disc']) - new_kpt))
             
             fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Akw'])[kpt_edc,:], mode='lines',
-                line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=False,
-                                    hoverinfo='x+y+text'
+                line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
+                                       hoverinfo='x+y+text'
                                     ))
             
             fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
@@ -421,7 +440,7 @@ def register_callbacks(app):
                 new_w = click_coordinates['points'][0]['y']
                 w_mdc = np.argmin(np.abs(np.array(w_mesh) - new_w))
         
-            fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=np.array(akw_data['Akw'])[:, w_mdc], mode='lines', line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]),
+            fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=np.array(akw_data['Akw'])[:, w_mdc], mode='lines', line=go.scattergl.Line(color='#AB63FA'),
                                        showlegend=True, name='ω = {:.3f} eV'.format(w_mesh[w_mdc]), hoverinfo='x+y+text'))
         
             fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
