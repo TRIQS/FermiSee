@@ -35,7 +35,7 @@ def register_callbacks(app):
 
         print('loading config file from h5...')
         loaded_data = load_config(config_contents, config_filename, loaded_data)
-        if 'error' in loaded_data:
+        if loaded_data['error']:
             return loaded_data, True
         
         return loaded_data, False
@@ -84,7 +84,8 @@ def register_callbacks(app):
         [Output(id('tb-data'), 'data'),
          Output(id('upload-w90-hr'), 'children'),
          Output(id('upload-w90-wout'), 'children'),
-         Output(id('tb-bands'), 'on')],
+         Output(id('tb-bands'), 'on'),
+         Output(id('dft-mu'), 'value')],
         [Input(id('upload-w90-hr'), 'contents'),
          Input(id('upload-w90-hr'), 'filename'),
          Input(id('upload-w90-hr'), 'children'),
@@ -97,10 +98,12 @@ def register_callbacks(app):
          Input(id('add-spin'), 'value'),
          Input(id('dft-mu'), 'value'),
          Input(id('k-points'), 'data'),
-         Input(id('dft-orbital-order'), 'data')],
+         Input(id('dft-orbital-order'), 'data'),
+         Input(id('loaded-data'), 'data')],
          prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
-                w90_wout_button, tb_switch, click_tb, tb_data, add_spin, dft_mu, k_points, dft_orbital_order):
+                w90_wout_button, tb_switch, click_tb, tb_data, add_spin, dft_mu, 
+                k_points, dft_orbital_order, loaded_data):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -114,7 +117,7 @@ def register_callbacks(app):
             tb_data['hopping'] = hopping
             tb_data['loaded_hr'] = True
 
-            return tb_data, html.Div([w90_hr_name]), w90_wout_button, tb_switch 
+            return tb_data, html.Div([w90_hr_name]), w90_wout_button, tb_switch, dft_mu
 
         #if w90_wout != None and not 'loaded_wout' in tb_data:
         if trigger_id == id('upload-w90-wout'):
@@ -122,13 +125,19 @@ def register_callbacks(app):
             tb_data['units'] = load_w90_wout(w90_wout)
             tb_data['loaded_wout'] = True
 
-            return tb_data, w90_hr_button, html.Div([w90_wout_name]), tb_switch
+            return tb_data, w90_hr_button, html.Div([w90_wout_name]), tb_switch, dft_mu
+
+        if trigger_id == id('loaded-data'):
+            print('set uploaded data as tb_data')
+            tb_data = loaded_data['tb_data']
+            tb_data['use'] = True
+            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu']
 
         else:
             if not click_tb > 0:
-                return tb_data, w90_hr_button, w90_wout_button, tb_switch
+                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu
             if np.any([k_val in ['', None] for k in k_points for k_key, k_val in k.items()]):
-                return tb_data, w90_hr_button, w90_wout_button, tb_switch
+                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu
 
             if not isinstance(dft_mu, (float, int)):
                 dft_mu = 0.0
@@ -152,7 +161,7 @@ def register_callbacks(app):
             tb_data['dft_orbital_order'] = dft_orbital_order
             tb_data['use'] = True
 
-            return tb_data, w90_hr_button, w90_wout_button, {'on': True}
+            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu']
 
     # dashboard k-points
     @app.callback(
@@ -189,10 +198,23 @@ def register_callbacks(app):
          Input(id('sigma-upload-box'), 'contents'),
          Input(id('sigma-upload-box'), 'filename'),
          Input(id('sigma-upload-box'), 'children'),
-         Input(id('dft-orbital-order'), 'data')],
+         Input(id('dft-orbital-order'), 'data'),
+         Input(id('loaded-data'), 'data')],
          prevent_initial_call=False
         )
-    def toggle_update_sigma(sigma_data, sigma_radio_item, sigma_content, sigma_filename, sigma_button, dft_orbital_order):
+    def toggle_update_sigma(sigma_data, sigma_radio_item, sigma_content, sigma_filename, 
+                            sigma_button, dft_orbital_order, loaded_data):
+        ctx = dash.callback_context
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        print(trigger_id)
+               
+        if trigger_id == id('loaded-data'):
+            print('set uploaded data as sigma_data')
+            sigma_data = loaded_data['sigma_data']
+            sigma_data['use'] = True
+            sigma_button = html.Div([loaded_data['config_filename']])
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button
+
         if sigma_radio_item == 'upload':
 
             if sigma_content != None:
@@ -370,7 +392,7 @@ def register_callbacks(app):
             fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                                 hovermode='closest',
                                 xaxis_range=[w_mesh[0], w_mesh[-1]],
-                                yaxis_range=[0, 1.05 * np.max(np.array(akw_data['Akw']))],
+                                yaxis_range=[0, 1.01 * np.max(np.array(akw_data['Akw']))],
                                 xaxis_title='ω (eV)',
                                 yaxis_title='A(ω)',
                                 font=dict(size=16),
@@ -447,7 +469,7 @@ def register_callbacks(app):
                               hovermode='closest',
                               xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
                         #     yaxis_range=[0, 1.05 * np.max(np.array(akw_data['Akw'])[:, w_mdc])],
-                              yaxis_range=[0, 1.05 * np.max(np.array(akw_data['Akw']))],
+                              yaxis_range=[0, 1.01 * np.max(np.array(akw_data['Akw']))],
                               xaxis_title='k',
                               yaxis_title='A(k)',
                               font=dict(size=16),
