@@ -1,4 +1,5 @@
 import numpy as np
+from itertools import permutations
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
@@ -165,17 +166,14 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                         ], style={'padding': '5px 5px'}
                         ),
                         html.Div([
-                        dash_table.DataTable(
-                            id=id('dft-orbital-order'), editable=True,
-                            columns=[{'name': f'orbital order', 'id': id(f'oo-{i}'), 'clearable': False, 'presentation': 'dropdown'} for i in range(3)],
-                            data=[{id(f'oo-{i}'): key for i, key in enumerate(['dxz', 'dyz', 'dxy'])}],
-                            dropdown={id('oo-{}'.format(i)): {
-                                'options': [{'label': key, 'value': key} for key in ['dxz', 'dyz', 'dxy']]
-                                } for i in range(3)},
-                            merge_duplicate_headers=True,
-                            style_cell= {'width' : '50%'},
-                            style_header= {'textAlign': 'left'}
-                            )], style={'padding': '5px 5px'}),
+                            html.P('orbital order:',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'middle'}
+                                ),
+                            dcc.Dropdown(id=id('orbital-order'), value='(0,1,2)', placeholder='Select orbital order',
+                                         options=[{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([0,1,2])))],
+                                         style={'width': '60%','display': 'inline-block', 'vertical-align': 'middle'}),
+                        ], style={'display': 'flex','padding': '5px 5px'}
+                        ),
+                        dbc.Tooltip('Select orbital order of Σ with respect to W90 input Hamiltonian', target=id('orbital-order')),
                         dbc.Alert('Complete TB section first.', id=id('tb-alert'), dismissable=True, 
                                   color='warning', fade=False, is_open=False),
                         html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0),
@@ -208,6 +206,13 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                 style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
                             ),
                         ], style={'padding': '5px 5px'}
+                        ),
+                        dcc.RadioItems(
+                            id=id('akw-mode'),
+                            options=[{'label': i, 'value': i} for i in ['A(k,ω)', 'QP dispersion']],
+                            value='A(k,ω)',
+                            inputStyle={"margin-right": "5px"},
+                            labelStyle={'display': 'inline-block', 'margin-left':'5px'}
                         ),
                         html.Div('Colorscale:'),
                         dcc.RadioItems(

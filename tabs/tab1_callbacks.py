@@ -53,11 +53,12 @@ def register_callbacks(app):
          Input(id('dft-mu'), 'value'),
          Input(id('k-points'), 'data'),
          Input(id('n-k'), 'value'),
-         Input(id('calc-akw'), 'n_clicks')],
+         Input(id('calc-akw'), 'n_clicks'),
+         Input(id('akw-mode'), 'value')],
          State(id('tb-alert'), 'is_open'),
          prevent_initial_call=True
         )
-    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, n_k, k_points, click_akw, tb_alert):
+    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, n_k, k_points, click_akw, akw_mode, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -65,16 +66,17 @@ def register_callbacks(app):
         if trigger_id == id('dft-mu') and not sigma_data['use']:
             return akw_data, akw_switch, tb_alert
 
-        if trigger_id in (id('calc-akw'), id('dft-mu'), id('n-k')) or ( trigger_id == id('k-points') and click_akw > 0 ):
+        if trigger_id in (id('calc-akw'), id('dft-mu'), id('n-k'), id('akw-mode')) or ( trigger_id == id('k-points') and click_akw > 0 ):
             if not sigma_data['use'] or not tb_data['use']:
                 return akw_data, akw_switch, not tb_alert
 
-            solve = False
+            solve = True if akw_mode == 'QP dispersion' else False
             akw_data['dmft_mu'] = sigma_data['dmft_mu']
             akw_data['eta'] = 0.01
             akw = calc_alatt(tb_data, sigma_data, akw_data, solve)
             akw_data['Akw'] = akw.tolist()
             akw_data['use'] = True
+            akw_data['solve'] = solve
 
             akw_switch = {'on': True}
 
@@ -100,12 +102,11 @@ def register_callbacks(app):
          Input(id('dft-mu'), 'value'),
          Input(id('n-k'), 'value'),
          Input(id('k-points'), 'data'),
-         Input(id('dft-orbital-order'), 'data'),
          Input(id('loaded-data'), 'data')],
          prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
                 w90_wout_button, tb_switch, click_tb, tb_data, add_spin, dft_mu, n_k, 
-                k_points, dft_orbital_order, loaded_data):
+                k_points, loaded_data):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -151,6 +152,7 @@ def register_callbacks(app):
             add_local = [0.] * tb_data['n_wf']
 
             k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
+            dft_orbital_order = ['dxz', 'dyz', 'dxy']
             tb_data['k_mesh'], e_mat, tb = calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, dft_orbital_order, k_mesh, fermi_slice=False)
             # calculate Hamiltonian
             tb_data['e_mat'] = e_mat.real.tolist()
@@ -213,12 +215,11 @@ def register_callbacks(app):
          Input(id('sigma-upload-box'), 'contents'),
          Input(id('sigma-upload-box'), 'filename'),
          Input(id('sigma-upload-box'), 'children'),
-         Input(id('dft-orbital-order'), 'data'),
          Input(id('loaded-data'), 'data')],
          prevent_initial_call=False
         )
     def toggle_update_sigma(sigma_data, sigma_radio_item, sigma_content, sigma_filename, 
-                            sigma_button, dft_orbital_order, loaded_data):
+                            sigma_button, loaded_data):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -234,6 +235,7 @@ def register_callbacks(app):
 
             if sigma_content != None:
                 print('loading Sigma from file...')
+                dft_orbital_order = ['dxz', 'dyz', 'dxy']
                 sigma_data = load_sigma_h5(sigma_content, sigma_filename, dft_orbital_order)
                 print('successfully loaded sigma from file')
                 sigma_data['use'] = True
@@ -326,12 +328,17 @@ def register_callbacks(app):
             return fig
 
         if akw:
-            # kw_x, kw_y = np.meshgrid(data.tb_data['k_mesh'], w_mesh['w_mesh'])
-            z_data = np.log(np.array(akw_temp['Akw']).T)
             w_mesh = sigma_data['w_dict']['w_mesh']
-            fig.add_trace(go.Heatmap(x=k_mesh['k_disc'], y=w_mesh, z=z_data,
-                                     colorscale=colorscale, reversescale=False, showscale=False,
-                                     zmin=np.min(z_data), zmax=np.max(z_data)))
+            if akw_temp['solve']:
+                z_data = np.array(akw_temp['Akw'])
+                for orb in range(z_data.shape[2]):
+                    fig.add_trace(go.Contour(x=k_mesh['k_disc'], y=w_mesh, z=z_data[:,:,orb].T,
+                        colorscale=colorscale, contours=dict(start=0.1, end=1.5, coloring='lines'), contours_coloring='lines'))
+            else:
+                z_data = np.log(np.array(akw_temp['Akw']).T)
+                fig.add_trace(go.Heatmap(x=k_mesh['k_disc'], y=w_mesh, z=z_data,
+                                         colorscale=colorscale, reversescale=False, showscale=False,
+                                         zmin=np.min(z_data), zmax=np.max(z_data)))
 
             fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                               clickmode='event+select',
@@ -363,12 +370,13 @@ def register_callbacks(app):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
+        if tb_data['use']: tb_temp = tb_data
+        if not 'tb_temp' in locals():
+            return fig, 0, 1
+    
+        k_mesh = tb_temp['k_mesh']
+
         if tb_bands:
-            # decide which data to show for TB
-            if tb_data['use']: tb_temp = tb_data
-            k_mesh = tb_temp['k_mesh']
-            if not 'tb_temp' in locals():
-                return fig
             for band in range(len(tb_temp['eps_nuk'])):
                 if band == 0:
                     fig.add_trace(go.Scattergl(x=[tb_temp['eps_nuk'][band][kpt_edc],tb_temp['eps_nuk'][band][kpt_edc]], 
@@ -438,8 +446,13 @@ def register_callbacks(app):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-        if tb_bands:
-            k_mesh = tb_data['k_mesh']
+        if tb_data['use']: tb_temp = tb_data
+        if not 'tb_temp' in locals():
+            return fig, 0, 1
+    
+        k_mesh = tb_temp['k_mesh']
+
+        #if tb_bands:
         #     # decide which data to show for TB
         #     if tb_data['use']: tb_temp = tb_data
         #     if not 'tb_temp' in locals():
