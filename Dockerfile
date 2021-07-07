@@ -59,6 +59,6 @@ WORKDIR /fermisee
 COPY . ./
 
 # Finally, run gunicorn.
-# CMD [ "gunicorn", "--workers=4", "--threads=1", "-b 0.0.0.0:9375", "app:server"]
+CMD gunicorn --workers=4 --threads=1 -b 0.0.0.0:$PORT app:server
 # or run in debug mode
-CMD ["python3", "app.py"]
+# CMD ["python3", "app.py"]
