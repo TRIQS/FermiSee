@@ -171,21 +171,25 @@ def register_callbacks(app):
 
     # dashboard k-points
     @app.callback(
-        Output(id('k-points'), 'data'),
+        [Output(id('k-points'), 'data'),
+         Output(id('n-k'), 'value')],
         [Input(id('add-kpoint'), 'n_clicks'),
          Input(id('k-points'), 'data'),
+         Input(id('n-k'), 'value'),
          Input(id('loaded-data'), 'data')],
         State(id('k-points'), 'data'),
         State(id('k-points'), 'columns'),
         prevent_initial_call=True)
-    def add_row(n_clicks, data, loaded_data, rows, columns):
+    def add_row(n_clicks, n_k, data, loaded_data, rows, columns):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
         # if a full config has been uploaded update kpoints
         if trigger_id == id('loaded-data'):
             rows = loaded_data['tb_data']['k_mesh']['k_points_dash']
-            return rows
+            n_k = int(len(loaded_data['tb_data']['k_mesh']['k_disc'])/(len(loaded_data['tb_data']['k_mesh']['k_points'])-1))
+            print(n_k)
+            return rows, n_k
         
         for row, col in product(rows, range(1,4)):
             try:
@@ -196,7 +200,7 @@ def register_callbacks(app):
         if trigger_id == id('add-kpoint'):
             rows.append({c['id']: '' for c in columns})
         
-        return rows
+        return rows, n_k
     
     # dashboard sigma upload
     @app.callback(
