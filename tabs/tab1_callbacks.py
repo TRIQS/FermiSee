@@ -127,10 +127,12 @@ def register_callbacks(app):
 
             return tb_data, w90_hr_button, html.Div([w90_wout_name]), tb_switch, dft_mu
 
+        # if a full config has been uploaded
         if trigger_id == id('loaded-data'):
             print('set uploaded data as tb_data')
             tb_data = loaded_data['tb_data']
             tb_data['use'] = True
+
             return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu']
 
         else:
@@ -167,14 +169,20 @@ def register_callbacks(app):
     @app.callback(
         Output(id('k-points'), 'data'),
         [Input(id('add-kpoint'), 'n_clicks'),
-         Input(id('k-points'), 'data')],
+         Input(id('k-points'), 'data'),
+         Input(id('loaded-data'), 'data')],
         State(id('k-points'), 'data'),
         State(id('k-points'), 'columns'),
         prevent_initial_call=True)
-    def add_row(n_clicks, data, rows, columns):
+    def add_row(n_clicks, data, loaded_data, rows, columns):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
+        # if a full config has been uploaded update kpoints
+        if trigger_id == id('loaded-data'):
+            rows = loaded_data['tb_data']['k_mesh']['k_points_dash']
+            return rows
+        
         for row, col in product(rows, range(1,4)):
             try:
                 row[id(f'column-{col}')] = float(row[id(f'column-{col}')])
@@ -486,19 +494,17 @@ def register_callbacks(app):
     @app.callback(
     Output(id('download_h5'), "data"),
     [Input(id('dwn_button'), "n_clicks"),
-     Input(id('akw-data'), 'data'),
      Input(id('tb-data'), 'data'),
      Input(id('sigma-data'), 'data')],
      prevent_initial_call=True,
     )
-    def download_data(n_clicks,akw_data, tb_data, sigma_data):
+    def download_data(n_clicks, tb_data, sigma_data):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         # check if the download button was pressed
         if trigger_id == id('dwn_button'):
             return_data = HDFArchive(descriptor = None, open_flag='a')
             return_data['tb_data'] = tb_data
-            return_data['akw_data'] = akw_data
             return_data['sigma_data'] = sigma_data
 
             content = base64.b64encode(return_data.as_bytes()).decode()

@@ -20,18 +20,15 @@ def load_config(contents, h5_filename, data):
     if 'tb_data' in ar:
         data['tb_data'] = ar['tb_data']
 
-    if 'akw_data' in ar:
-        data['akw_data'] = ar['akw_data']
-
     if 'sigma_data' in ar:
         data['sigma_data'] = ar['sigma_data']
 
-    if not 'sigma_data' in ar and not 'tb_data' in ar and not 'akw_data' in ar:
+    if not 'sigma_data' in ar and not 'tb_data' in ar:
         print('error in loading file')
         data['error'] = True
     else:
         data['error'] = False
-        
+
     return data
 
 def load_w90_hr(contents):

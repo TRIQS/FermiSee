@@ -369,7 +369,8 @@ def calc_tb_bands(data, add_spin, mu, add_local, orbital_order, k_mesh, fermi_sl
         if add_spin: e_mat = e_mat[2:5,2:5]
         e_mat = np.einsum('ij, jklm -> iklm', np.linalg.inv(change_of_basis), np.einsum('ijkl, jm -> imkl', e_mat, change_of_basis))
 
-    return {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels}, e_mat, tb
+    k_mesh = {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels, 'k_points_dash': k_mesh['k_path']}
+    return k_mesh, e_mat, tb
 
 def get_dmft_bands(n_orb, with_sigma=False, fermi_slice=False, solve=False, orbital_order=['dxz', 'dyz', 'dxy'], **specs):
     

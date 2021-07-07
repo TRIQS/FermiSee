@@ -90,7 +90,8 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                             value='0.',
                             step='0.0001',
                             debounce=True,
-                            placeholder='chemical potential μ'),
+                            placeholder='chemical potential μ',
+                            style= {'width' : '90%'}),
                         # html.Div('orbital order'),
                         html.Div([
                         dash_table.DataTable(
@@ -101,6 +102,7 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                 'options': [{'label': key, 'value': key} for key in ['dxz', 'dyz', 'dxy']]
                                 } for i in range(3)},
                             merge_duplicate_headers=True,
+                            style_cell= {'width' : '50%'},
                             style_header= {'textAlign': 'left'}
                             )], style={'padding': '5px 5px'}),
                         html.Div('k-points'),
