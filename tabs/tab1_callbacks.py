@@ -188,7 +188,6 @@ def register_callbacks(app):
         if trigger_id == id('loaded-data'):
             rows = loaded_data['tb_data']['k_mesh']['k_points_dash']
             n_k = int(len(loaded_data['tb_data']['k_mesh']['k_disc'])/(len(loaded_data['tb_data']['k_mesh']['k_points'])-1))
-            print(n_k)
             return rows, n_k
         
         for row, col in product(rows, range(1,4)):
@@ -287,7 +286,6 @@ def register_callbacks(app):
          Input(id('sigma-data'), 'data')],
          prevent_initial_call=True)
     def update_Akw(tb_bands, akw, colorscale, tb_data, akw_data, sigma_data):
-        print(akw_data.keys())
         
         # initialize general figure environment
         layout = go.Layout()
@@ -512,9 +510,21 @@ def register_callbacks(app):
         # check if the download button was pressed
         if trigger_id == id('dwn_button'):
             return_data = HDFArchive(descriptor = None, open_flag='a')
-            return_data['tb_data'] = tb_data
-            return_data['sigma_data'] = sigma_data
 
+            # store everything as np arrays not as list to enable compression in h5 write!
+            tb_data_store = tb_data.copy()
+            tb_data_store['e_mat'] = np.array(tb_data['e_mat'])
+            tb_data_store['eps_nuk'] = np.array(tb_data['eps_nuk'])
+            tb_data_store['hopping'] = {str(key): np.array(value) for key, value in tb_data_store['hopping'].items()}
+            return_data['tb_data'] = tb_data_store
+
+            sigma_data_store = sigma_data.copy()
+            sigma_data_store['sigma'] = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
+            del sigma_data_store['sigma_re']
+            del sigma_data_store['sigma_im']
+            sigma_data_store['w_dict']['w_mesh'] = np.array(sigma_data['w_dict']['w_mesh'])
+            return_data['sigma_data'] = sigma_data_store
+            
             content = base64.b64encode(return_data.as_bytes()).decode()
 
             return dict(content=content, filename='spectrometer.h5', base64=True)

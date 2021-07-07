@@ -19,9 +19,16 @@ def load_config(contents, h5_filename, data):
 
     if 'tb_data' in ar:
         data['tb_data'] = ar['tb_data']
-
+        data['tb_data']['e_mat'] = data['tb_data']['e_mat'].tolist()
+        data['tb_data']['eps_nuk'] = data['tb_data']['eps_nuk'].tolist()
+        data['tb_data']['hopping'] = {str(key): value.tolist() for key, value in data['tb_data']['hopping'].items()}
+        
     if 'sigma_data' in ar:
         data['sigma_data'] = ar['sigma_data']
+        data['sigma_data']['sigma_re'] =  data['sigma_data']['sigma'].real.tolist()
+        data['sigma_data']['sigma_im'] =  data['sigma_data']['sigma'].imag.tolist()
+        del data['sigma_data']['sigma']
+        data['sigma_data']['w_dict']['w_mesh'] = data['sigma_data']['w_dict']['w_mesh'].tolist()
 
     if not 'sigma_data' in ar and not 'tb_data' in ar:
         print('error in loading file')
