@@ -39,7 +39,7 @@ RUN cd / && mkdir -p source \
     && cd /source && git clone -b unstable https://github.com/TRIQS/triqs triqs.src \
     && mkdir -p triqs.build && cd triqs.build \
     && cmake ../triqs.src -DCMAKE_INSTALL_PREFIX=/usr/local -DMPIEXEC_PREFLAGS='--allow-run-as-root' \
-    && make -j8 && ctest -j8 && make install \
+    && make -j8 && make install \
     && rm -rf /source
 
 ENV PYTHONPATH=/usr/local/lib/python3.9/site-packages:${PYTHONPATH} \
