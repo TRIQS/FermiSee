@@ -18,8 +18,13 @@
  ```
 
 ## questions:
-* should we try to avoid using triqs to make installation easier? 
-* decide on h5 data structure
-    * are we using tb_lattice to interpolate k meshes on the fly?
+* 
 
 ## ToDo list: 
+* multiple impurities
+* use rot_mat
+* generalize number of orbitals [Alex]
+* fix/remove orbital order [Sophie]
+* specfunc vs. quasiparticle dispersion [Sophie]
+* perhaps TB on MDC [Sophie]
+* Fermi surface [Sophie]
