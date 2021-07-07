@@ -8,3 +8,5 @@ services:
       .
     ports:
       - "9375:9375"
+    environment:
+      - PORT=9375
