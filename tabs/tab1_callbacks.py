@@ -52,11 +52,12 @@ def register_callbacks(app):
          Input(id('akw-bands'), 'on'),
          Input(id('dft-mu'), 'value'),
          Input(id('k-points'), 'data'),
+         Input(id('n-k'), 'value'),
          Input(id('calc-akw'), 'n_clicks')],
          State(id('tb-alert'), 'is_open'),
          prevent_initial_call=True
         )
-    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, click_akw, tb_alert):
+    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, n_k, k_points, click_akw, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -64,7 +65,7 @@ def register_callbacks(app):
         if trigger_id == id('dft-mu') and not sigma_data['use']:
             return akw_data, akw_switch, tb_alert
 
-        if trigger_id in (id('calc-akw'), id('dft-mu')) or ( trigger_id == id('k-points') and click_akw > 0 ):
+        if trigger_id in (id('calc-akw'), id('dft-mu'), id('n-k')) or ( trigger_id == id('k-points') and click_akw > 0 ):
             if not sigma_data['use'] or not tb_data['use']:
                 return akw_data, akw_switch, not tb_alert
 
@@ -97,12 +98,13 @@ def register_callbacks(app):
          Input(id('tb-data'), 'data'),
          Input(id('add-spin'), 'value'),
          Input(id('dft-mu'), 'value'),
+         Input(id('n-k'), 'value'),
          Input(id('k-points'), 'data'),
          Input(id('dft-orbital-order'), 'data'),
          Input(id('loaded-data'), 'data')],
          prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
-                w90_wout_button, tb_switch, click_tb, tb_data, add_spin, dft_mu, 
+                w90_wout_button, tb_switch, click_tb, tb_data, add_spin, dft_mu, n_k, 
                 k_points, dft_orbital_order, loaded_data):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -143,10 +145,12 @@ def register_callbacks(app):
 
             if not isinstance(dft_mu, (float, int)):
                 dft_mu = 0.0
+            if not isinstance(n_k, int):
+                n_k = 20
 
             add_local = [0.] * tb_data['n_wf']
 
-            k_mesh = {'n_k': 30, 'k_path': k_points, 'kz': 0.0}
+            k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
             tb_data['k_mesh'], e_mat, tb = calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, dft_orbital_order, k_mesh, fermi_slice=False)
             # calculate Hamiltonian
             tb_data['e_mat'] = e_mat.real.tolist()
@@ -245,7 +249,7 @@ def register_callbacks(app):
         Output(id('sigma-function-output'), 'children'),
         Input(id('sigma-function-button'), 'n_clicks'),
         State(id('sigma-function-input'), 'value'),
-    prevent_initial_call=True,
+        prevent_initial_call=True,
         )
     def update_sigma(n_clicks, value):
         if n_clicks > 0:
@@ -261,7 +265,7 @@ def register_callbacks(app):
     @app.callback(
         Output(id('colorscale'), 'options'),
         Input(id('colorscale-mode'), 'value'),
-    prevent_initial_call=True,
+        prevent_initial_call=False,
         )
     def update_colorscales(mode):
         colorscales = [name for name, body in inspect.getmembers(getattr(px.colors, mode))

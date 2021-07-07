@@ -85,26 +85,13 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                             ),
                         ], style={'padding': '5px 5px'}
                         ),
-                        dcc.Input(id=id('dft-mu'),
-                            type='number',
-                            value='0.',
-                            step='0.0001',
-                            debounce=True,
-                            placeholder='chemical potential μ',
-                            style= {'width' : '90%'}),
-                        # html.Div('orbital order'),
                         html.Div([
-                        dash_table.DataTable(
-                            id=id('dft-orbital-order'), editable=True,
-                            columns=[{'name': f'orbital order', 'id': id(f'oo-{i}'), 'clearable': False, 'presentation': 'dropdown'} for i in range(3)],
-                            data=[{id(f'oo-{i}'): key for i, key in enumerate(['dxz', 'dyz', 'dxy'])}],
-                            dropdown={id('oo-{}'.format(i)): {
-                                'options': [{'label': key, 'value': key} for key in ['dxz', 'dyz', 'dxy']]
-                                } for i in range(3)},
-                            merge_duplicate_headers=True,
-                            style_cell= {'width' : '50%'},
-                            style_header= {'textAlign': 'left'}
-                            )], style={'padding': '5px 5px'}),
+                            html.P('μ (eV):',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
+                                ),
+                            dcc.Input(id=id('dft-mu'), type='number', value='0.', step='0.0001',
+                                debounce=True, placeholder='chemical potential μ', style= {'width' : '60%'}),
+                        ], style={'padding': '5px 5px'}
+                        ),
                         html.Div('k-points'),
                         dash_table.DataTable(
                             id=id('k-points'),
@@ -120,6 +107,13 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                             row_deletable=True
                             ),
                         html.Button('Add k-point', id=id('add-kpoint'), n_clicks=0),
+                        html.Div([
+                            html.P('#k-points:',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
+                                ),
+                            dcc.Input(id=id('n-k'), value='20', step=1, placeholder='number of k-points',
+                                      type='number', debounce=True, style= {'width' : '60%'}),
+                        ], style={'padding': '5px 5px'}
+                        ),
                         html.Button('Calculate TB bands', id=id('calc-tb'), n_clicks=0),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
@@ -163,12 +157,25 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                             html.Button('Submit', id=id('sigma-function-button'), n_clicks=0),
                             html.Div(id=id('sigma-function-output'), style={'whiteSpace': 'pre-line'}),
                         ]),
-                        dcc.Input(id=id('eta'),
-                            type='number',
-                            value='0.01',
-                            step='0.005',
-                            placeholder='broadening η',
-                            style={'width': '80%','margin-bottom': '10px'}),
+                        html.Div([
+                            html.P('η (eV):',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
+                                ),
+                            dcc.Input(id=id('eta'), type='number', value='0.01', step='0.005',
+                                placeholder='broadening η', style={'width': '60%','margin-bottom': '10px'}),
+                        ], style={'padding': '5px 5px'}
+                        ),
+                        html.Div([
+                        dash_table.DataTable(
+                            id=id('dft-orbital-order'), editable=True,
+                            columns=[{'name': f'orbital order', 'id': id(f'oo-{i}'), 'clearable': False, 'presentation': 'dropdown'} for i in range(3)],
+                            data=[{id(f'oo-{i}'): key for i, key in enumerate(['dxz', 'dyz', 'dxy'])}],
+                            dropdown={id('oo-{}'.format(i)): {
+                                'options': [{'label': key, 'value': key} for key in ['dxz', 'dyz', 'dxy']]
+                                } for i in range(3)},
+                            merge_duplicate_headers=True,
+                            style_cell= {'width' : '50%'},
+                            style_header= {'textAlign': 'left'}
+                            )], style={'padding': '5px 5px'}),
                         dbc.Alert('Complete TB section first.', id=id('tb-alert'), dismissable=True, 
                                   color='warning', fade=False, is_open=False),
                         html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0),
