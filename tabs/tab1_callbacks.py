@@ -58,7 +58,7 @@ def register_callbacks(app):
          State(id('tb-alert'), 'is_open'),
          prevent_initial_call=True
         )
-    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, n_k, k_points, click_akw, akw_mode, tb_alert):
+    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, n_k, click_akw, akw_mode, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -176,13 +176,12 @@ def register_callbacks(app):
         [Output(id('k-points'), 'data'),
          Output(id('n-k'), 'value')],
         [Input(id('add-kpoint'), 'n_clicks'),
-         Input(id('k-points'), 'data'),
          Input(id('n-k'), 'value'),
          Input(id('loaded-data'), 'data')],
         State(id('k-points'), 'data'),
         State(id('k-points'), 'columns'),
         prevent_initial_call=True)
-    def add_row(n_clicks, n_k, data, loaded_data, rows, columns):
+    def add_row(n_clicks, n_k, loaded_data, rows, columns):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
@@ -331,9 +330,11 @@ def register_callbacks(app):
             w_mesh = sigma_data['w_dict']['w_mesh']
             if akw_temp['solve']:
                 z_data = np.array(akw_temp['Akw'])
-                for orb in range(z_data.shape[2]):
-                    fig.add_trace(go.Contour(x=k_mesh['k_disc'], y=w_mesh, z=z_data[:,:,orb].T,
-                        colorscale=colorscale, contours=dict(start=0.1, end=1.5, coloring='lines'), contours_coloring='lines'))
+                for orb in range(z_data.shape[1]):
+                    #fig.add_trace(go.Contour(x=k_mesh['k_disc'], y=w_mesh, z=z_data[:,:,orb].T,
+                    #    colorscale=colorscale, contours=dict(start=0.1, end=1.5, coloring='lines'), ncontours=1, contours_coloring='lines'))
+                    fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=z_data[:,orb].T, showlegend=False, mode='markers',
+                                               marker_color=px.colors.sequential.Viridis[0]))
             else:
                 z_data = np.log(np.array(akw_temp['Akw']).T)
                 fig.add_trace(go.Heatmap(x=k_mesh['k_disc'], y=w_mesh, z=z_data,

@@ -154,14 +154,13 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False):
         for iw, ik in itertools.product(range(w_dict['n_w']), range(n_k)):
             alatt_k_w[ik, iw] = invert_and_trace(upscale(w_dict['w_mesh'][iw], n_orb), eta, mu, e_mat[:,:,ik], sigma[:,:,iw])
     else:
-        alatt_k_w = np.zeros((n_k, w_dict['n_w'], n_orb))
+        alatt_k_w = np.zeros((n_k, n_orb))
         kslice = np.zeros((w_dict['n_w'], n_orb))
         kslice_interp = lambda orb: interp1d(w_dict['w_mesh'], kslice[:, orb])
 
         for ik in range(n_k):
             for iw, w in enumerate(w_dict['w_mesh']):
                 np.fill_diagonal(sigma[:,:,iw], np.diag(sigma[:,:,iw]).real)
-                #sigma[:,:,iw] = sigma[:,:,iw].real                         
                 kslice[iw], _ = np.linalg.eigh( upscale(w, n_orb) + eta + mu - e_mat[:,:,ik] - sigma[:,:,iw])
                 
             for orb in range(n_orb):
@@ -169,7 +168,7 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False):
                 try:
                     x0 = brentq( kslice_interp(orb), w_min, w_max)
                     w_bin = int( (x0 - w_min) / ((w_max - w_min)/ w_dict['n_w']) )
-                    alatt_k_w[ik, w_bin, orb] += 1
+                    alatt_k_w[ik, orb] = w_dict['w_mesh'][w_bin]
                 except ValueError:
                     pass
 
