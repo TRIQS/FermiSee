@@ -165,13 +165,12 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                 placeholder='broadening η', style={'width': '60%','margin-bottom': '10px'}),
                         ], style={'padding': '5px 5px'}
                         ),
-                        html.Div([
+                        html.Div(
                             dcc.Dropdown(id=id('orbital-order'), value='(0,1,2)', placeholder='Select orbital order',
                                          options=[{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([0,1,2])))],
-                                         style={'width': '100%'}),
-                        ], style={'padding': '5px 5px'}
+                                         style={'width': '100%'}), id=id('orbital-order-tooltip')
                         ),
-                        dbc.Tooltip('Select orbital order of Σ with respect to W90 input Hamiltonian', target=id('orbital-order')),
+                        dbc.Tooltip('Select orbital order of Σ with respect to W90 input Hamiltonian', target=id('orbital-order-tooltip')),
                         dbc.Alert('Complete TB section first.', id=id('tb-alert'), dismissable=True, 
                                   color='warning', fade=False, is_open=False),
                         html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0),
