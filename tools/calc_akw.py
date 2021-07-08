@@ -370,34 +370,3 @@ def calc_tb_bands(data, add_spin, mu, add_local, orbital_order, k_mesh, fermi_sl
 
     k_mesh = {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels, 'k_points_dash': k_mesh['k_path']}
     return k_mesh, e_mat, tb
-
-def get_dmft_bands(n_orb, with_sigma=False, fermi_slice=False, solve=False, orbital_order=['dxz', 'dyz', 'dxy'], **specs):
-    
-    # dmft output
-    if with_sigma:
-        sigma_types = ['calc', 'model']
-        if isinstance(with_sigma, str):
-            if with_sigma not in sigma_types: raise ValueError('Invalid sigma type. Expected one of: {}'.format(sigma_types))
-        elif not isinstance(with_sigma, BlockGf):
-            raise ValueError('Invalid sigma type. Expected BlockGf.')
-
-        # get sigma
-        if with_sigma == 'model': delta_sigma, mu, dft_mu, eta, w_dict = _sigma_from_model(n_orb, orbital_order, **specs)
-        # else is from dmft or memory:
-        else: delta_sigma, mu, dft_mu, eta, w_dict = sigma_from_dmft(n_orb, orbital_order, with_sigma, **specs)
-        
-        # calculate alatt
-        if not fermi_slice:
-            alatt_k_w = _calc_alatt(n_orb, mu, eta, e_mat, delta_sigma, solve, **w_dict)
-        else:
-            alatt_k_w = _calc_kslice(n_orb, mu, eta, e_mat, delta_sigma, solve, **w_dict)       
-    else:
-        dft_mu = mu
-        w_dict = {}
-        w_dict['w_mesh'] = None
-        w_dict['window'] = None
-        alatt_k_w = None
-
-    
-    return {'k_mesh': k_array, 'k_points': k_points, 'k_points_labels': k_points_labels, 'e_mat': e_mat, 'tb': tb}, alatt_k_w, w_dict, dft_mu
-

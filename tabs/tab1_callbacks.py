@@ -54,11 +54,12 @@ def register_callbacks(app):
          Input(id('k-points'), 'data'),
          Input(id('n-k'), 'value'),
          Input(id('calc-akw'), 'n_clicks'),
+         Input(id('orbital-order'), 'value'),
          Input(id('akw-mode'), 'value')],
          State(id('tb-alert'), 'is_open'),
          prevent_initial_call=True
         )
-    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, n_k, click_akw, akw_mode, tb_alert):
+    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, n_k, click_akw, orbital_order, akw_mode, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
