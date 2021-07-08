@@ -170,7 +170,9 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                          options=[{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([0,1,2])))],
                                          style={'width': '100%'}), id=id('orbital-order-tooltip')
                         ),
-                        dbc.Tooltip('Select orbital order of Σ with respect to W90 input Hamiltonian', target=id('orbital-order-tooltip')),
+                        dbc.Tooltip('Select orbital order of Σ with respect to W90 input Hamiltonian', 
+                                     target=id('orbital-order-tooltip'),
+                                     style={'maxWidth': 300, 'width': 300, 'font-size': 14}),
                         dbc.Alert('Complete TB section first.', id=id('tb-alert'), dismissable=True, 
                                   color='warning', fade=False, is_open=False),
                         html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0),
