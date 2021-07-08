@@ -166,12 +166,10 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                         ], style={'padding': '5px 5px'}
                         ),
                         html.Div([
-                            html.P('orbital order:',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'middle'}
-                                ),
                             dcc.Dropdown(id=id('orbital-order'), value='(0,1,2)', placeholder='Select orbital order',
                                          options=[{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([0,1,2])))],
-                                         style={'width': '60%','display': 'inline-block', 'vertical-align': 'middle'}),
-                        ], style={'display': 'flex','padding': '5px 5px'}
+                                         style={'width': '100%'}),
+                        ], style={'padding': '5px 5px'}
                         ),
                         dbc.Tooltip('Select orbital order of Σ with respect to W90 input Hamiltonian', target=id('orbital-order')),
                         dbc.Alert('Complete TB section first.', id=id('tb-alert'), dismissable=True, 
