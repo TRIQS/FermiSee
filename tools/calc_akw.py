@@ -340,8 +340,6 @@ def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice):
     tb = _get_TBL(hopping, data['units'], data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
     # print local H(R)
     h_of_r = tb.hopping_dict()[(0,0,0)][2:5,2:5] if add_spin else tb.hopping_dict()[(0,0,0)]
-    # remove in future when change of basis is obsolete
-    # h_of_r = np.einsum('ij, jk -> ik', np.linalg.inv(change_of_basis), np.einsum('ij, jk -> ik', h_of_r, change_of_basis))
     _print_matrix(h_of_r, data['n_wf'], 'H(R=0)')
 
     # bands info
@@ -349,14 +347,12 @@ def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice):
     k_path = [list(map(lambda item: (k[item]), k.keys())) for k in k_path] # turn dict into list
     k_point_labels = [k.pop(0) for k in k_path] # remove first time, which is label
     k_path = [(np.array(k), np.array(k_path[ct+1])) for ct, k in enumerate(k_path) if ct+1 < len(k_path)] # turn into tuples
-    # this is no longer necessary since we fixed this in the energy_matrix_on_bz_paths function
-    # if not fermi_slice: k_path.append((k_path[-1][-1], k_path[-1][-1])) # add last k-point
+
 
     # calculate tight-binding eigenvalues
     if not fermi_slice:
         k_disc, k_points, e_mat = energy_matrix_on_bz_paths(k_path, tb, n_pts=k_mesh['n_k'])
         if add_spin: e_mat = e_mat[2:5,2:5]
-        # e_mat = np.einsum('ij, jkl -> ikl', np.linalg.inv(change_of_basis), np.einsum('ijk, jm -> imk', e_mat, change_of_basis))
     else:
         e_mat = np.zeros((n_orb_rescale, n_orb_rescale, k_mesh['n_k'], k_mesh['n_k']), dtype=complex)
         final_x, final_y = k_path[1]
@@ -366,7 +362,6 @@ def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice):
             _, _, e_mat[:,:,:,ik_y] = energy_matrix_on_bz_paths(path_along_x, tb, n_pts=k_mesh['n_k'])
         k_array = k_points = [0,1]
         if add_spin: e_mat = e_mat[2:5,2:5]
-        # e_mat = np.einsum('ij, jklm -> iklm', np.linalg.inv(change_of_basis), np.einsum('ijkl, jm -> imkl', e_mat, change_of_basis))
 
     k_mesh = {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels, 'k_points_dash': k_mesh['k_path']}
     return k_mesh, e_mat, tb
