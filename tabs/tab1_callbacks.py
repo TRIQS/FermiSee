@@ -212,19 +212,22 @@ def register_callbacks(app):
           Output(id('sigma-function'), 'style'),
           Output(id('sigma-upload'), 'style'),
           Output(id('sigma-upload-box'), 'children'),
-          Output(id('orbital-order'), 'value')
+          Output(id('orbital-order'), 'value'),
+          Output(id('orb-alert'), 'is_open')
         ],
          [Input(id('sigma-data'), 'data'),
+         Input(id('tb-data'), 'data'),
          Input(id('choose-sigma'), 'value'),
          Input(id('sigma-upload-box'), 'contents'),
          Input(id('sigma-upload-box'), 'filename'),
          Input(id('sigma-upload-box'), 'children'),
          Input(id('loaded-data'), 'data'),
          Input(id('orbital-order'), 'value')],
+         State(id('orb-alert'), 'is_open'),
          prevent_initial_call=False
         )
-    def toggle_update_sigma(sigma_data, sigma_radio_item, sigma_content, sigma_filename, 
-                            sigma_button, loaded_data, orbital_order):
+    def toggle_update_sigma(sigma_data, tb_data, sigma_radio_item, sigma_content, sigma_filename, 
+                            sigma_button, loaded_data, orbital_order, orb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -236,20 +239,23 @@ def register_callbacks(app):
             sigma_button = html.Div([loaded_data['config_filename']])
 
             # somehow the orbital order is transformed back to lists all the time, so make sure here that it is a tuple!
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order']))
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order'])), orb_alert
 
         if trigger_id == id('orbital-order'):
             orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
             print('the orbital order has changed', orbital_order)
             if sigma_data['use'] == True:
                 sigma_data = reorder_sigma(sigma_data, new_order=orbital_order, old_order=sigma_data['orbital_order'])
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order))
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert
 
         if sigma_radio_item == 'upload':
 
             if sigma_content != None and trigger_id == id('sigma-upload-box'):
                 print('loading Sigma from file...')
                 sigma_data = load_sigma_h5(sigma_content, sigma_filename)
+                # check if number of orbitals match and reject data if no match
+                if sigma_data['n_orb'] != tb_data['n_wf']:
+                    return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), not orb_alert
                 print('successfully loaded sigma from file')
                 sigma_data['use'] = True
                 orbital_order = sigma_data['orbital_order']
@@ -257,9 +263,9 @@ def register_callbacks(app):
             else:
                 sigma_button = sigma_button
                 
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order))
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert
         else:
-            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(orbital_order)
+            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(orbital_order), orb_alert
 
     # dashboard enter sigma
     @app.callback(

@@ -97,6 +97,7 @@ def load_sigma_h5(contents , filename, orbital_order = None):
     data['w_dict'] = w_dict
     data['dmft_mu'] = dmft_mu
     data['orbital_order'] = orbital_order
+    data['n_orb'] = n_orb
     print(sigma_interpolated.shape)
 
     return data
