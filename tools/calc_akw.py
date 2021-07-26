@@ -8,6 +8,7 @@ either calculating the bandstructure or Fermi slice.
 Written by Sophie Beck, 2021
 """
 
+from numpy import dtype
 from tools.TB_functions import *
 from h5 import HDFArchive
 from matplotlib.ticker import MaxNLocator, AutoMinorLocator
@@ -134,7 +135,7 @@ def _sigma_from_model(n_orb, orbital_order, zeroth_order, first_order, efermi, e
     
     return sigma_interpolated, mu, dft_mu, eta, w_dict
 
-def calc_alatt(tb_data, sigma_data, akw_data, solve=False):
+def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
 
     # adjust to system size
     upscale = lambda quantity, n_orb: quantity * np.identity(n_orb)
@@ -142,7 +143,10 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False):
     mu = upscale(akw_data['dmft_mu'], n_orb)
     eta = upscale(1j * akw_data['eta'], n_orb)
     sigma = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
+    sigma_rot = np.zeros(sigma.shape, dtype=complex)
     e_mat = np.array(tb_data['e_mat'])
+    if band_basis:
+        e_vecs = np.array(tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
     w_dict = sigma_data['w_dict']
 
     n_k = e_mat.shape[2]
@@ -152,7 +156,14 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False):
         invert_and_trace = lambda w, eta, mu, e_mat, sigma: -1.0/np.pi * np.trace( np.linalg.inv( w + eta + mu - e_mat - sigma ).imag )
 
         for iw, ik in itertools.product(range(w_dict['n_w']), range(n_k)):
-            alatt_k_w[ik, iw] = invert_and_trace(upscale(w_dict['w_mesh'][iw], n_orb), eta, mu, e_mat[:,:,ik], sigma[:,:,iw])
+            # if evecs are given transform sigma into band basis
+            if band_basis:
+                sigma_rot[:,:,iw] = np.dot(e_vecs[:,:,ik].conjugate().transpose(), np.dot(sigma[:,:,iw], e_vecs[:,:,ik]))
+                alatt_k_w[ik, iw] = invert_and_trace(upscale(w_dict['w_mesh'][iw], n_orb), eta, mu, e_mat[:,:,ik], sigma_rot[:,:,iw])
+            else:
+                alatt_k_w[ik, iw] = invert_and_trace(upscale(w_dict['w_mesh'][iw], n_orb), eta, mu, e_mat[:,:,ik], sigma[:,:,iw])
+
+            
     else:
         alatt_k_w = np.zeros((n_k, n_orb))
         kslice = np.zeros((w_dict['n_w'], n_orb))
@@ -325,7 +336,7 @@ def _get_TBL(hopping, units, n_wf, extend_to_spin=False, add_local=None, add_fie
                     orbital_names = [str(i) for i in range(n_wf)])
     return TBL
 
-def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice):
+def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice, band_basis = False):
     """
     calculate tight-binding bands based on a W90 Hamiltonian 
     """
@@ -353,8 +364,19 @@ def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice):
     if not fermi_slice:
         k_disc, k_points, e_mat = energy_matrix_on_bz_paths(k_path, tb, n_pts=k_mesh['n_k'])
         if add_spin: e_mat = e_mat[2:5,2:5]
+
+        if band_basis:
+            e_vecs = np.zeros(e_mat.shape, dtype=complex)
+            for ik in range(np.shape(e_mat)[2]):
+                evals, e_vecs[:,:,ik] = np.linalg.eigh(e_mat[:,:,ik])
+                e_mat[:,:,ik] = np.zeros(e_mat[:,:,ik].shape)
+                np.fill_diagonal(e_mat[:,:,ik],evals)
+        else:
+            e_vecs = np.array([None])
+
     else:
         e_mat = np.zeros((n_orb_rescale, n_orb_rescale, k_mesh['n_k'], k_mesh['n_k']), dtype=complex)
+        e_vecs = np.array([None])
         final_x, final_y = k_path[1]
         Z = np.array(k_mesh['Z'])
         for ik_y in range(k_mesh['n_k']):
@@ -364,9 +386,9 @@ def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice):
         if add_spin: e_mat = e_mat[2:5,2:5]
 
     k_mesh = {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels, 'k_points_dash': k_mesh['k_path']}
-    return k_mesh, e_mat, tb
+    return k_mesh, e_mat, e_vecs, tb
 
-def get_dmft_bands(n_orb, with_sigma=False, fermi_slice=False, solve=False, orbital_order=(0,1,2), **specs):
+def get_dmft_bands(n_orb, with_sigma=False, fermi_slice=False, solve=False, orbital_order=(0,1,2), band_basis=False, **specs):
     
     # dmft output
     if with_sigma:
@@ -383,9 +405,9 @@ def get_dmft_bands(n_orb, with_sigma=False, fermi_slice=False, solve=False, orbi
         
         # calculate alatt
         if not fermi_slice:
-            alatt_k_w = _calc_alatt(n_orb, mu, eta, e_mat, delta_sigma, solve, **w_dict)
+            alatt_k_w = _calc_alatt(n_orb, mu, eta, e_mat, delta_sigma, solve, band_basis,**w_dict)
         else:
-            alatt_k_w = _calc_kslice(n_orb, mu, eta, e_mat, delta_sigma, solve, **w_dict)       
+            alatt_k_w = _calc_kslice(n_orb, mu, eta, e_mat, delta_sigma, solve, band_basis **w_dict)       
     else:
         dft_mu = mu
         w_dict = {}

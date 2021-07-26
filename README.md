@@ -23,8 +23,6 @@
 ## ToDo list: 
 * multiple impurities
 * use rot_mat
-* generalize number of orbitals [Alex]
-* fix/remove orbital order [Sophie]
 * specfunc vs. quasiparticle dispersion [Sophie]
 * perhaps TB on MDC [Sophie]
 * Fermi surface [Sophie]

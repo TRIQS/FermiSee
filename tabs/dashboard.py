@@ -136,8 +136,8 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                 children=html.Div(['drop or ', html.A('select files')]),
                                 style={
                                     'width': '90%',
-                                    'height': '60px',
-                                    'lineHeight': '60px',
+                                    'height': '40px',
+                                    'lineHeight': '40px',
                                     'borderWidth': '1px',
                                     'borderStyle': 'dashed',
                                     'borderRadius': '5px',
@@ -177,6 +177,21 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                   color='warning', fade=True, is_open=False),
                         dbc.Alert('# of orbitals does not match (Σ vs. H(r))', id=id('orb-alert'), dismissable=True, 
                                   color='warning', fade=True, is_open=False),
+                        html.Div([
+                            html.P('band basis:',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
+                                ),
+                            daq.BooleanSwitch(
+                                id=id('band-basis'),
+                                on=False,
+                                color='#005eb0',
+                                style={'width': '25%', 
+                                'display': 'inline-block', 'vertical-align': 'middle'}
+                            ),
+                            dbc.Tooltip('calculate A(k,w) in orbital (off) or band basis (on)', 
+                                     target=id('band-basis-tooltip'),
+                                     style={'maxWidth': 300, 'width': 300, 'font-size': 14}),
+                        ],id=id('band-basis-tooltip'), style={'padding': '5px 5px'}
+                        ),
                         html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',

@@ -56,11 +56,12 @@ def register_callbacks(app):
          Input(id('n-k'), 'value'),
          Input(id('calc-akw'), 'n_clicks'),
          Input(id('calc-tb'), 'n_clicks'),
-         Input(id('akw-mode'), 'value')],
+         Input(id('akw-mode'), 'value'),
+         Input(id('band-basis'), 'on')],
          State(id('tb-alert'), 'is_open'),
          prevent_initial_call=True
         )
-    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, n_k, click_tb, click_akw, akw_mode, tb_alert):
+    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, n_k, click_tb, click_akw, akw_mode, band_basis, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -75,7 +76,7 @@ def register_callbacks(app):
             solve = True if akw_mode == 'QP dispersion' else False
             akw_data['dmft_mu'] = sigma_data['dmft_mu']
             akw_data['eta'] = 0.01
-            akw = calc_alatt(tb_data, sigma_data, akw_data, solve)
+            akw = calc_alatt(tb_data, sigma_data, akw_data, solve, band_basis)
             akw_data['Akw'] = akw.tolist()
             akw_data['use'] = True
             akw_data['solve'] = solve
@@ -91,7 +92,8 @@ def register_callbacks(app):
          Output(id('upload-w90-wout'), 'children'),
          Output(id('tb-bands'), 'on'),
          Output(id('dft-mu'), 'value'),
-         Output(id('orbital-order'), 'options')],
+         Output(id('orbital-order'), 'options'),
+         Output(id('band-basis'), 'on')],
         [Input(id('upload-w90-hr'), 'contents'),
          Input(id('upload-w90-hr'), 'filename'),
          Input(id('upload-w90-hr'), 'children'),
@@ -106,11 +108,12 @@ def register_callbacks(app):
          Input(id('n-k'), 'value'),
          Input(id('k-points'), 'data'),
          Input(id('loaded-data'), 'data'),
-         Input(id('orbital-order'),'options')],
+         Input(id('orbital-order'),'options'),
+         Input(id('band-basis'), 'on')],
          prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
                 w90_wout_button, tb_switch, click_tb, tb_data, add_spin, dft_mu, n_k, 
-                k_points, loaded_data, orb_options):
+                k_points, loaded_data, orb_options, band_basis):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -125,7 +128,7 @@ def register_callbacks(app):
             tb_data['loaded_hr'] = True
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
-            return tb_data, html.Div([w90_hr_name]), w90_wout_button, tb_switch, dft_mu, orb_options
+            return tb_data, html.Div([w90_hr_name]), w90_wout_button, tb_switch, dft_mu, orb_options, band_basis
 
         #if w90_wout != None and not 'loaded_wout' in tb_data:
         if trigger_id == id('upload-w90-wout'):
@@ -133,7 +136,7 @@ def register_callbacks(app):
             tb_data['units'] = load_w90_wout(w90_wout)
             tb_data['loaded_wout'] = True
 
-            return tb_data, w90_hr_button, html.Div([w90_wout_name]), tb_switch, dft_mu, orb_options
+            return tb_data, w90_hr_button, html.Div([w90_wout_name]), tb_switch, dft_mu, orb_options, band_basis
 
         # if a full config has been uploaded
         if trigger_id == id('loaded-data'):
@@ -142,13 +145,13 @@ def register_callbacks(app):
             tb_data['use'] = True
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
-            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu'], orb_options
+            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu'], orb_options, tb_data['band_basis']
 
         else:
-            if not click_tb > 0:
-                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, orb_options
+            if not click_tb > 0 and not tb_data['use']:
+                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, orb_options, band_basis
             if np.any([k_val in ['', None] for k in k_points for k_key, k_val in k.items()]):
-                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, orb_options
+                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, orb_options, band_basis
 
             if not isinstance(dft_mu, (float, int)):
                 dft_mu = 0.0
@@ -158,22 +161,27 @@ def register_callbacks(app):
             add_local = [0.] * tb_data['n_wf']
 
             k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
-            tb_data['k_mesh'], e_mat, tb = calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, k_mesh, fermi_slice=False)
+            tb_data['k_mesh'], e_mat, e_vecs, tb = calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, k_mesh, fermi_slice=False, band_basis=band_basis)
             # calculate Hamiltonian
             tb_data['e_mat'] = e_mat.real.tolist()
-            # compute eigenvalues too
-            tb_data['eps_nuk'], evec_nuk = get_tb_bands(e_mat)
-            tb_data['eps_nuk'] = tb_data['eps_nuk'].tolist()
-            tb_data['bnd_low'] = np.min(np.array(tb_data['eps_nuk'][0]))
-            tb_data['bnd_high'] = np.max(np.array(tb_data['eps_nuk'][-1]))
+            if band_basis:
+                tb_data['evecs_re'] = e_vecs.real.tolist()
+                tb_data['evecs_im'] = e_vecs.imag.tolist()
+                tb_data['eps_nuk'] = np.einsum('iij -> ij', e_mat).real.tolist()
+            else:
+                tb_data['eps_nuk'], evec_nuk = get_tb_bands(e_mat)
+                tb_data['eps_nuk'] = tb_data['eps_nuk'].tolist()
+            tb_data['bnd_low'] = np.min(np.array(tb_data['eps_nuk'][0])).real
+            tb_data['bnd_high'] = np.max(np.array(tb_data['eps_nuk'][-1])).real
             tb_data['dft_mu'] = dft_mu
+            tb_data['band_basis'] = band_basis
             if not add_spin:
                 tb_data['add_spin'] = False
             else:
                 tb_data['add_spin'] = True
             tb_data['use'] = True
 
-            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu'], orb_options
+            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu'], orb_options, band_basis
 
     # dashboard k-points
     @app.callback(
@@ -262,10 +270,11 @@ def register_callbacks(app):
                 sigma_button = html.Div([sigma_filename])
             else:
                 sigma_button = sigma_button
-                
+                orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
+
             return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert
         else:
-            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(orbital_order), orb_alert
+            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert
 
     # dashboard enter sigma
     @app.callback(
@@ -549,6 +558,9 @@ def register_callbacks(app):
             # store everything as np arrays not as list to enable compression in h5 write!
             tb_data_store = tb_data.copy()
             tb_data_store['e_mat'] = np.array(tb_data['e_mat'])
+            tb_data_store['e_vecs'] = np.array(tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
+            del tb_data_store['evecs_re']
+            del tb_data_store['evecs_im']
             tb_data_store['eps_nuk'] = np.array(tb_data['eps_nuk'])
             tb_data_store['hopping'] = {str(key): np.array(value) for key, value in tb_data_store['hopping'].items()}
             return_data['tb_data'] = tb_data_store
