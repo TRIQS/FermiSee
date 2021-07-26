@@ -6,6 +6,7 @@ from flask import send_file
 import plotly.express as px
 import plotly.graph_objects as go
 import ast
+from itertools import permutations
 import inspect
 import base64
 from dash_extensions.snippets import send_bytes
@@ -89,7 +90,8 @@ def register_callbacks(app):
          Output(id('upload-w90-hr'), 'children'),
          Output(id('upload-w90-wout'), 'children'),
          Output(id('tb-bands'), 'on'),
-         Output(id('dft-mu'), 'value')],
+         Output(id('dft-mu'), 'value'),
+         Output(id('orbital-order'), 'options')],
         [Input(id('upload-w90-hr'), 'contents'),
          Input(id('upload-w90-hr'), 'filename'),
          Input(id('upload-w90-hr'), 'children'),
@@ -103,11 +105,12 @@ def register_callbacks(app):
          Input(id('dft-mu'), 'value'),
          Input(id('n-k'), 'value'),
          Input(id('k-points'), 'data'),
-         Input(id('loaded-data'), 'data')],
+         Input(id('loaded-data'), 'data'),
+         Input(id('orbital-order'),'options')],
          prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
                 w90_wout_button, tb_switch, click_tb, tb_data, add_spin, dft_mu, n_k, 
-                k_points, loaded_data):
+                k_points, loaded_data, orb_options):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -120,8 +123,9 @@ def register_callbacks(app):
             tb_data['n_wf'] = n_wf
             tb_data['hopping'] = hopping
             tb_data['loaded_hr'] = True
+            orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
-            return tb_data, html.Div([w90_hr_name]), w90_wout_button, tb_switch, dft_mu
+            return tb_data, html.Div([w90_hr_name]), w90_wout_button, tb_switch, dft_mu, orb_options
 
         #if w90_wout != None and not 'loaded_wout' in tb_data:
         if trigger_id == id('upload-w90-wout'):
@@ -129,21 +133,22 @@ def register_callbacks(app):
             tb_data['units'] = load_w90_wout(w90_wout)
             tb_data['loaded_wout'] = True
 
-            return tb_data, w90_hr_button, html.Div([w90_wout_name]), tb_switch, dft_mu
+            return tb_data, w90_hr_button, html.Div([w90_wout_name]), tb_switch, dft_mu, orb_options
 
         # if a full config has been uploaded
         if trigger_id == id('loaded-data'):
             print('set uploaded data as tb_data')
             tb_data = loaded_data['tb_data']
             tb_data['use'] = True
+            orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
-            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu']
+            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu'], orb_options
 
         else:
             if not click_tb > 0:
-                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu
+                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, orb_options
             if np.any([k_val in ['', None] for k in k_points for k_key, k_val in k.items()]):
-                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu
+                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, orb_options
 
             if not isinstance(dft_mu, (float, int)):
                 dft_mu = 0.0
@@ -168,7 +173,7 @@ def register_callbacks(app):
                 tb_data['add_spin'] = True
             tb_data['use'] = True
 
-            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu']
+            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu'], orb_options
 
     # dashboard k-points
     @app.callback(
@@ -229,6 +234,7 @@ def register_callbacks(app):
             sigma_data = loaded_data['sigma_data']
             sigma_data['use'] = True
             sigma_button = html.Div([loaded_data['config_filename']])
+
             # somehow the orbital order is transformed back to lists all the time, so make sure here that it is a tuple!
             return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order']))
 
