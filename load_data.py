@@ -29,6 +29,7 @@ def load_config(contents, h5_filename, data):
         data['sigma_data']['sigma_im'] =  data['sigma_data']['sigma'].imag.tolist()
         del data['sigma_data']['sigma']
         data['sigma_data']['w_dict']['w_mesh'] = data['sigma_data']['w_dict']['w_mesh'].tolist()
+        data['sigma_data']['orbital_order'] = tuple(data['sigma_data']['orbital_order'])
 
     if not 'sigma_data' in ar and not 'tb_data' in ar:
         print('error in loading file')
@@ -53,7 +54,7 @@ def load_w90_wout(contents):
 
     return units 
 
-def load_sigma_h5(contents , filename, orbital_order):
+def load_sigma_h5(contents , filename, orbital_order = None):
     '''
     example to store a suitable sigma:
     with HDFArchive(path,'w') as h5:
@@ -64,7 +65,7 @@ def load_sigma_h5(contents , filename, orbital_order):
         h5['self_energy']['n_orb'] = Sigma['up_0'].target_shape[0]
         h5['self_energy']['dc'] = dc[0]['up'][0,0]
         h5['self_energy']['dmft_mu'] = dmft_mu
-        h5['self_energy']['orbital_order'] = ['dxz', 'dyz', 'dxy']
+        h5['self_energy']['orbital_order'] = (0,1,2)
     '''
     data = {'config_filename': filename}
 
@@ -74,7 +75,7 @@ def load_sigma_h5(contents , filename, orbital_order):
 
     # extract from h5
     Sigma = ar['self_energy']['Sigma']
-    orbital_order_dmft = ar['self_energy']['orbital_order']
+    orbital_order = ar['self_energy']['orbital_order']
     n_orb = ar['self_energy']['n_orb']
     dc = ar['self_energy']['dc']
     dmft_mu = ar['self_energy']['dmft_mu']
@@ -89,13 +90,13 @@ def load_sigma_h5(contents , filename, orbital_order):
     block = 0
 
     # convert orbital order to list:
-    orbital_order = list(orbital_order[0].values())
-    sigma_interpolated = calc_akw.sigma_from_dmft(n_orb, orbital_order, Sigma, spin, block, orbital_order_dmft, dc, w_dict)
+    sigma_interpolated = calc_akw.sigma_from_dmft(n_orb, orbital_order, Sigma, spin, block, dc, w_dict)
 
     data['sigma_re'] = sigma_interpolated.real.tolist()
     data['sigma_im'] = sigma_interpolated.imag.tolist()
     data['w_dict'] = w_dict
     data['dmft_mu'] = dmft_mu
+    data['orbital_order'] = orbital_order
     print(sigma_interpolated.shape)
 
     return data

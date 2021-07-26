@@ -74,7 +74,7 @@ def _print_matrix(matrix, n_orb, text):
     for row in matrix:
         print((' '*4 + fmt).format(*row))
 
-def sigma_from_dmft(n_orb, orbital_order, sigma, spin, block, orbital_order_dmft, dc, w_dict, linearize= False):
+def sigma_from_dmft(n_orb, orbital_order, sigma, spin, block, dc, w_dict, linearize= False):
     """
     Takes a sigma obtained from DMFT and interpolates on a given mesh
     """
@@ -85,8 +85,8 @@ def sigma_from_dmft(n_orb, orbital_order, sigma, spin, block, orbital_order_dmft
     w_mesh = w_dict['w_mesh']
     sigma_mat = {block_spin: sigma[block_spin].data.real - np.eye(n_orb) * dc + 1j * sigma[block_spin].data.imag}
 
-    # rotate sigma from orbital_order_dmft to orbital_order
-    change_of_basis = _change_basis(n_orb, orbital_order, orbital_order_dmft)
+    # rotate sigma from orbital_order_dmft to orbital_order, where 0,1,2 is the basis given by the Wannier Ham
+    change_of_basis = _change_basis(n_orb, orbital_order,  (0,1,2))
     sigma_mat[block_spin] = np.einsum('ij, kjl -> kil', np.linalg.inv(change_of_basis), np.einsum('ijk, kl -> ijl', sigma_mat[block_spin], change_of_basis))
 
     sigma_interpolated = np.zeros((n_orb, n_orb, w_dict['n_w']), dtype=complex)
@@ -325,14 +325,13 @@ def _get_TBL(hopping, units, n_wf, extend_to_spin=False, add_local=None, add_fie
                     orbital_names = [str(i) for i in range(n_wf)])
     return TBL
 
-def calc_tb_bands(data, add_spin, mu, add_local, orbital_order, k_mesh, fermi_slice):
+def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice):
     """
     calculate tight-binding bands based on a W90 Hamiltonian 
     """
 
     # set up Wannier Hamiltonian
     n_orb_rescale = 2 * data['n_wf'] if add_spin else data['n_wf']
-    change_of_basis = _change_basis(data['n_wf'], orbital_order, orbital_order)
     H_add_loc = np.zeros((n_orb_rescale, n_orb_rescale), dtype=complex)
     H_add_loc += np.diag([-mu]*n_orb_rescale)
     if add_spin: H_add_loc += _lambda_matrix_w90_t2g(add_local)
@@ -341,7 +340,8 @@ def calc_tb_bands(data, add_spin, mu, add_local, orbital_order, k_mesh, fermi_sl
     tb = _get_TBL(hopping, data['units'], data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
     # print local H(R)
     h_of_r = tb.hopping_dict()[(0,0,0)][2:5,2:5] if add_spin else tb.hopping_dict()[(0,0,0)]
-    h_of_r = np.einsum('ij, jk -> ik', np.linalg.inv(change_of_basis), np.einsum('ij, jk -> ik', h_of_r, change_of_basis))
+    # remove in future when change of basis is obsolete
+    # h_of_r = np.einsum('ij, jk -> ik', np.linalg.inv(change_of_basis), np.einsum('ij, jk -> ik', h_of_r, change_of_basis))
     _print_matrix(h_of_r, data['n_wf'], 'H(R=0)')
 
     # bands info
@@ -356,7 +356,7 @@ def calc_tb_bands(data, add_spin, mu, add_local, orbital_order, k_mesh, fermi_sl
     if not fermi_slice:
         k_disc, k_points, e_mat = energy_matrix_on_bz_paths(k_path, tb, n_pts=k_mesh['n_k'])
         if add_spin: e_mat = e_mat[2:5,2:5]
-        e_mat = np.einsum('ij, jkl -> ikl', np.linalg.inv(change_of_basis), np.einsum('ijk, jm -> imk', e_mat, change_of_basis))
+        # e_mat = np.einsum('ij, jkl -> ikl', np.linalg.inv(change_of_basis), np.einsum('ijk, jm -> imk', e_mat, change_of_basis))
     else:
         e_mat = np.zeros((n_orb_rescale, n_orb_rescale, k_mesh['n_k'], k_mesh['n_k']), dtype=complex)
         final_x, final_y = k_path[1]
@@ -366,7 +366,49 @@ def calc_tb_bands(data, add_spin, mu, add_local, orbital_order, k_mesh, fermi_sl
             _, _, e_mat[:,:,:,ik_y] = energy_matrix_on_bz_paths(path_along_x, tb, n_pts=k_mesh['n_k'])
         k_array = k_points = [0,1]
         if add_spin: e_mat = e_mat[2:5,2:5]
-        e_mat = np.einsum('ij, jklm -> iklm', np.linalg.inv(change_of_basis), np.einsum('ijkl, jm -> imkl', e_mat, change_of_basis))
+        # e_mat = np.einsum('ij, jklm -> iklm', np.linalg.inv(change_of_basis), np.einsum('ijkl, jm -> imkl', e_mat, change_of_basis))
 
     k_mesh = {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels, 'k_points_dash': k_mesh['k_path']}
     return k_mesh, e_mat, tb
+
+def get_dmft_bands(n_orb, with_sigma=False, fermi_slice=False, solve=False, orbital_order=(0,1,2), **specs):
+    
+    # dmft output
+    if with_sigma:
+        sigma_types = ['calc', 'model']
+        if isinstance(with_sigma, str):
+            if with_sigma not in sigma_types: raise ValueError('Invalid sigma type. Expected one of: {}'.format(sigma_types))
+        elif not isinstance(with_sigma, BlockGf):
+            raise ValueError('Invalid sigma type. Expected BlockGf.')
+
+        # get sigma
+        if with_sigma == 'model': delta_sigma, mu, dft_mu, eta, w_dict = _sigma_from_model(n_orb, orbital_order, **specs)
+        # else is from dmft or memory:
+        else: delta_sigma, mu, dft_mu, eta, w_dict = sigma_from_dmft(n_orb, orbital_order, with_sigma, **specs)
+        
+        # calculate alatt
+        if not fermi_slice:
+            alatt_k_w = _calc_alatt(n_orb, mu, eta, e_mat, delta_sigma, solve, **w_dict)
+        else:
+            alatt_k_w = _calc_kslice(n_orb, mu, eta, e_mat, delta_sigma, solve, **w_dict)       
+    else:
+        dft_mu = mu
+        w_dict = {}
+        w_dict['w_mesh'] = None
+        w_dict['window'] = None
+        alatt_k_w = None
+
+    
+    return {'k_mesh': k_array, 'k_points': k_points, 'k_points_labels': k_points_labels, 'e_mat': e_mat, 'tb': tb}, alatt_k_w, w_dict, dft_mu
+
+def reorder_sigma(sigma_data, new_order, old_order):
+
+    sigma = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
+    change_of_basis = _change_basis(len(new_order), new_order,  old_order)
+    
+    sigma = np.einsum('ij, jlk -> ilk', np.linalg.inv(change_of_basis),np.einsum('jki, kl -> jli', sigma, change_of_basis))
+    sigma_data['sigma_re'] = sigma.real.tolist()
+    sigma_data['sigma_im'] = sigma.imag.tolist()
+    sigma_data['orbita_order'] = new_order
+
+    return sigma_data

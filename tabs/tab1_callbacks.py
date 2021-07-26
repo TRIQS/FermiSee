@@ -13,7 +13,7 @@ from dash.dependencies import Input, Output, State
 from h5 import HDFArchive
 
 from load_data import load_config, load_w90_hr, load_w90_wout, load_sigma_h5
-from tools.calc_akw import calc_tb_bands, get_tb_bands, calc_alatt 
+from tools.calc_akw import calc_tb_bands, get_tb_bands, calc_alatt , reorder_sigma
 from tabs.id_factory import id_factory
 
 
@@ -54,12 +54,12 @@ def register_callbacks(app):
          Input(id('k-points'), 'data'),
          Input(id('n-k'), 'value'),
          Input(id('calc-akw'), 'n_clicks'),
-         Input(id('orbital-order'), 'value'),
+         Input(id('calc-tb'), 'n_clicks'),
          Input(id('akw-mode'), 'value')],
          State(id('tb-alert'), 'is_open'),
          prevent_initial_call=True
         )
-    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, n_k, click_akw, orbital_order, akw_mode, tb_alert):
+    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, n_k, click_tb, click_akw, akw_mode, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
@@ -67,7 +67,7 @@ def register_callbacks(app):
         if trigger_id == id('dft-mu') and not sigma_data['use']:
             return akw_data, akw_switch, tb_alert
 
-        if trigger_id in (id('calc-akw'), id('dft-mu'), id('n-k'), id('akw-mode')) or ( trigger_id == id('k-points') and click_akw > 0 ):
+        elif trigger_id in (id('calc-akw'), id('n-k'), id('akw-mode')) or ( trigger_id == id('k-points') and click_akw > 0 ):
             if not sigma_data['use'] or not tb_data['use']:
                 return akw_data, akw_switch, not tb_alert
 
@@ -149,12 +149,11 @@ def register_callbacks(app):
                 dft_mu = 0.0
             if not isinstance(n_k, int):
                 n_k = 20
-
+            
             add_local = [0.] * tb_data['n_wf']
 
             k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
-            dft_orbital_order = ['dxz', 'dyz', 'dxy']
-            tb_data['k_mesh'], e_mat, tb = calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, dft_orbital_order, k_mesh, fermi_slice=False)
+            tb_data['k_mesh'], e_mat, tb = calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, k_mesh, fermi_slice=False)
             # calculate Hamiltonian
             tb_data['e_mat'] = e_mat.real.tolist()
             # compute eigenvalues too
@@ -167,7 +166,6 @@ def register_callbacks(app):
                 tb_data['add_spin'] = False
             else:
                 tb_data['add_spin'] = True
-            tb_data['dft_orbital_order'] = dft_orbital_order
             tb_data['use'] = True
 
             return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu']
@@ -208,44 +206,54 @@ def register_callbacks(app):
          [Output(id('sigma-data'), 'data'),
           Output(id('sigma-function'), 'style'),
           Output(id('sigma-upload'), 'style'),
-          Output(id('sigma-upload-box'), 'children')
+          Output(id('sigma-upload-box'), 'children'),
+          Output(id('orbital-order'), 'value')
         ],
          [Input(id('sigma-data'), 'data'),
          Input(id('choose-sigma'), 'value'),
          Input(id('sigma-upload-box'), 'contents'),
          Input(id('sigma-upload-box'), 'filename'),
          Input(id('sigma-upload-box'), 'children'),
-         Input(id('loaded-data'), 'data')],
+         Input(id('loaded-data'), 'data'),
+         Input(id('orbital-order'), 'value')],
          prevent_initial_call=False
         )
     def toggle_update_sigma(sigma_data, sigma_radio_item, sigma_content, sigma_filename, 
-                            sigma_button, loaded_data):
+                            sigma_button, loaded_data, orbital_order):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print(trigger_id)
-               
+
         if trigger_id == id('loaded-data'):
             print('set uploaded data as sigma_data')
             sigma_data = loaded_data['sigma_data']
             sigma_data['use'] = True
             sigma_button = html.Div([loaded_data['config_filename']])
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button
+            # somehow the orbital order is transformed back to lists all the time, so make sure here that it is a tuple!
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order']))
+
+        if trigger_id == id('orbital-order'):
+            orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
+            print('the orbital order has changed', orbital_order)
+            if sigma_data['use'] == True:
+                sigma_data = reorder_sigma(sigma_data, new_order=orbital_order, old_order=sigma_data['orbital_order'])
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order))
 
         if sigma_radio_item == 'upload':
 
-            if sigma_content != None:
+            if sigma_content != None and trigger_id == id('sigma-upload-box'):
                 print('loading Sigma from file...')
-                dft_orbital_order = ['dxz', 'dyz', 'dxy']
-                sigma_data = load_sigma_h5(sigma_content, sigma_filename, dft_orbital_order)
+                sigma_data = load_sigma_h5(sigma_content, sigma_filename)
                 print('successfully loaded sigma from file')
                 sigma_data['use'] = True
+                orbital_order = sigma_data['orbital_order']
                 sigma_button = html.Div([sigma_filename])
             else:
                 sigma_button = sigma_button
-            
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button
+                
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order))
         else:
-            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button
+            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(orbital_order)
 
     # dashboard enter sigma
     @app.callback(
@@ -287,7 +295,7 @@ def register_callbacks(app):
          Input(id('akw-data'), 'data'),
          Input(id('sigma-data'), 'data')],
          prevent_initial_call=True)
-    def update_Akw(tb_bands, akw, colorscale, tb_data, akw_data, sigma_data):
+    def plot_Akw(tb_bands, akw, colorscale, tb_data, akw_data, sigma_data):
         
         # initialize general figure environment
         layout = go.Layout()
