@@ -42,7 +42,7 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                'borderRadius': '15px',
                                'padding': '10px'}),
                     # section 2
-                    html.Hr(),
+                    html.Hr(style={"margin-top": "15px","margin-bottom": "15px"}),
                     html.Div(children=[
                         html.H5('TB Hamiltonian'),
                         html.Div([
@@ -120,7 +120,7 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                'borderRadius': '15px',
                                'padding': '10px'}),
                     # section 3
-                    html.Hr(),
+                    html.Hr(style={"margin-top": "15px","margin-bottom": "15px"}),
                     html.Div(children=[
                         html.H5('Self-energy'),
                         dcc.RadioItems(
@@ -198,7 +198,7 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                'padding': '10px'}
                     ),
                     # section 4
-                    html.Hr(),
+                    html.Hr(style={"margin-top": "15px","margin-bottom": "15px"}),
                     html.Div(children=[
                         html.H5('Layout'),
                         html.Div([
@@ -247,14 +247,14 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                'borderRadius': '15px',
                                'padding': '10px'}),
                     # section 5
-                    html.Hr(),
+                    html.Hr(style={"margin-top": "15px","margin-bottom": "15px"}),
                     html.Div(children=[
                         html.Button("Download config", id=id('dwn_button')),
                         ext_Download(id=id('download_h5')),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
                                'padding': '10px'}),
-                    #html.Hr(),
+                    #html.Hr(style={"margin-top": "15px","margin-bottom": "15px"}),
                     dcc.Store(id=id('tb-data'), data = tb_data),
                     dcc.Store(id=id('akw-data'), data = akw_data),
                     dcc.Store(id=id('sigma-data'), data = sigma_data),
