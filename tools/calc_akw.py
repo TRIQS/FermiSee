@@ -357,6 +357,8 @@ def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice, band_basis
     k_path = k_mesh['k_path']
     k_path = [list(map(lambda item: (k[item]), k.keys())) for k in k_path] # turn dict into list
     k_point_labels = [k.pop(0) for k in k_path] # remove first time, which is label
+    # make sure all kpts are floats
+    k_path = [list(map(float,k)) for k in k_path]
     k_path = [(np.array(k), np.array(k_path[ct+1])) for ct, k in enumerate(k_path) if ct+1 < len(k_path)] # turn into tuples
 
 
