@@ -152,7 +152,7 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                 id=id('sigma-function-input'),
                                 #value='Enter a python function for Σ(k,ω):\n\ndef sigma(ω, a, b):\n\treturn a + b * ω',
                                 placeholder='Enter a python function',
-                                value='def sigma(w): return -1 * w',
+                                value='def sigma(w, Z, A): return (1-1/Z)*w - 1j*A*w**2',
                                 style={'width': '100%', 'height': '80px'}
                                 ),
                             html.Button('Submit', id=id('sigma-function-button'), n_clicks=0),

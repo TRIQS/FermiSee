@@ -11,11 +11,14 @@ import inspect
 import base64
 from dash_extensions.snippets import send_bytes
 from dash.dependencies import Input, Output, State
+
 from h5 import HDFArchive
+from triqs.gf import MeshReFreq
 
 from load_data import load_config, load_w90_hr, load_w90_wout, load_sigma_h5
-from tools.calc_akw import calc_tb_bands, get_tb_bands, calc_alatt , reorder_sigma
+from tools.calc_akw import calc_tb_bands, get_tb_bands, calc_alatt, reorder_sigma
 from tabs.id_factory import id_factory
+import tools.tools as tools
 
 
 def register_callbacks(app):
@@ -221,24 +224,28 @@ def register_callbacks(app):
           Output(id('sigma-upload'), 'style'),
           Output(id('sigma-upload-box'), 'children'),
           Output(id('orbital-order'), 'value'),
-          Output(id('orb-alert'), 'is_open')
-        ],
+          Output(id('orb-alert'), 'is_open'),
+          Output(id('sigma-function-output'), 'children')],
          [Input(id('sigma-data'), 'data'),
-         Input(id('tb-data'), 'data'),
-         Input(id('choose-sigma'), 'value'),
-         Input(id('sigma-upload-box'), 'contents'),
-         Input(id('sigma-upload-box'), 'filename'),
-         Input(id('sigma-upload-box'), 'children'),
-         Input(id('loaded-data'), 'data'),
-         Input(id('orbital-order'), 'value')],
-         State(id('orb-alert'), 'is_open'),
+          Input(id('tb-data'), 'data'),
+          Input(id('choose-sigma'), 'value'),
+          Input(id('sigma-upload-box'), 'contents'),
+          Input(id('sigma-upload-box'), 'filename'),
+          Input(id('sigma-upload-box'), 'children'),
+          Input(id('loaded-data'), 'data'),
+          Input(id('sigma-function-button'), 'n_clicks'),
+          Input(id('orbital-order'), 'value')],
+         [State(id('orb-alert'), 'is_open'),
+          State(id('sigma-function-input'), 'value')],
          prevent_initial_call=False
         )
     def toggle_update_sigma(sigma_data, tb_data, sigma_radio_item, sigma_content, sigma_filename, 
-                            sigma_button, loaded_data, orbital_order, orb_alert):
+                            sigma_button, loaded_data, n_clicks_sigma, orbital_order, orb_alert, f_sigma):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        return_f_sigma = None
         print(trigger_id)
+        orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
 
         if trigger_id == id('loaded-data'):
             print('set uploaded data as sigma_data')
@@ -247,14 +254,14 @@ def register_callbacks(app):
             sigma_button = html.Div([loaded_data['config_filename']])
 
             # somehow the orbital order is transformed back to lists all the time, so make sure here that it is a tuple!
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order'])), orb_alert
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order'])), orb_alert, return_f_sigma
 
         if trigger_id == id('orbital-order'):
-            orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
+            #orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
             print('the orbital order has changed', orbital_order)
             if sigma_data['use'] == True:
                 sigma_data = reorder_sigma(sigma_data, new_order=orbital_order, old_order=sigma_data['orbital_order'])
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma
 
         if sigma_radio_item == 'upload':
 
@@ -268,32 +275,48 @@ def register_callbacks(app):
                 sigma_data['use'] = True
                 orbital_order = sigma_data['orbital_order']
                 sigma_button = html.Div([sigma_filename])
-            else:
-                sigma_button = sigma_button
-                orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
+            #else:
+            #    sigma_button = sigma_button
+            #    orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
 
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert
-        else:
-            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma
 
-    # dashboard enter sigma
-    @app.callback(
-        #[Output('sigma-function-output', 'children'),
-        # Output('sigma-function', 'sigma')],
-        Output(id('sigma-function-output'), 'children'),
-        Input(id('sigma-function-button'), 'n_clicks'),
-        State(id('sigma-function-input'), 'value'),
-        prevent_initial_call=True,
-        )
-    def update_sigma(n_clicks, value):
-        if n_clicks > 0:
-            # parse function
-            tree = ast.parse(value, mode='exec')
-            code = compile(tree, filename='test', mode='exec')
-            namespace = {} 
-            exec(code, namespace)
+        if trigger_id == id('sigma-function-button'):
 
-            return 'You have entered: \n{}'.format(value)
+            if not tb_data['use']:
+                # TODO: create warning before return
+                return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma
+
+            if n_clicks_sigma > 0:
+                # parse function
+                tree = ast.parse(f_sigma, mode='exec')
+                code = compile(tree, filename='test', mode='exec')
+                namespace = {} 
+                exec(code, namespace)
+                # curry
+                c_sigma = tools.curry(namespace['sigma'])
+                n_lambda = len(inspect.getfullargspec(namespace['sigma'])[0]) - 1
+                lambdas = [1 for i in range(n_lambda)]
+
+                # TODO: create warning, see above
+                n_orb = tb_data['n_wf']
+                n_orb = 3
+                w_min = -5
+                w_max = 5
+                n_w = 501
+                soc = False
+
+                w_mesh = MeshReFreq(omega_min=w_min, omega_max=w_max, n_max=n_w)
+                w_dict = {'w_mesh' : w_mesh, 'n_w' : n_w, 'window' : [w_min, w_max]}
+
+                sigma_analytic = tools.sigma_analytic_to_gf(c_sigma, n_orb, w_dict, soc, lambdas)
+                sigma_data.update(tools.sigma_analytic_to_data(sigma_analytic, w_dict, n_orb))
+
+                return_f_sigma = 'You have entered: \n{}'.format(f_sigma)
+
+            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma
+
+        return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma
 
     # dashboard colors
     @app.callback(
