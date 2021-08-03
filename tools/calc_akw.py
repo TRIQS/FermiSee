@@ -143,30 +143,29 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     mu = upscale(akw_data['dmft_mu'], n_orb)
     eta = upscale(1j * akw_data['eta'], n_orb)
     sigma = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
-    sigma_rot = np.zeros(sigma.shape, dtype=complex)
+    sigma_rot = sigma.copy()
     e_mat = np.array(tb_data['e_mat'])
     if band_basis:
         e_vecs = np.array(tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
     w_dict = sigma_data['w_dict']
-    w_vec = np.array([upscale(w_dict['w_mesh'][w], n_orb) for w in range(w_dict['n_w'])])
+    w_vec = np.array(w_dict['w_mesh'])[:,None,None] * np.eye(n_orb)
     n_k = e_mat.shape[2]
 
     if not solve:
-        alatt_k_w = np.zeros((n_k, w_dict['n_w']))
+
         def invert_and_trace(w, eta, mu, e_mat, sigma):
             # inversion is automatically vectorized over first axis of 3D array (omega first index now)
             Glatt =  np.linalg.inv(w + eta[None,...] + mu[None,...] - e_mat[None,...] - sigma.transpose(2,0,1) )
-            return -1.0/np.pi * np.trace( Glatt ,axis1=1, axis2=2).imag
-        
+            return -1.0/np.pi * np.trace( Glatt, axis1=1, axis2=2).imag
+
+        alatt_k_w = np.zeros((n_k, w_dict['n_w']))
         for ik in range(n_k):
             # if evecs are given transform sigma into band basis
             if band_basis:
                 sigma_rot = np.einsum('ij,jkw->ikw',
                                       e_vecs[:,:,ik].conjugate().transpose(),
                                       np.einsum('ijw,jk->ikw', sigma, e_vecs[:,:,ik]))
-                alatt_k_w[ik, :] = invert_and_trace(w_vec, eta, mu, e_mat[:,:,ik], sigma_rot)
-            else:
-                alatt_k_w[ik, :] = invert_and_trace(w_vec, eta, mu, e_mat[:,:,ik], sigma)
+            alatt_k_w[ik, :] = invert_and_trace(w_vec, eta, mu, e_mat[:,:,ik], sigma_rot)
             
     else:
         alatt_k_w = np.zeros((n_k, n_orb))
