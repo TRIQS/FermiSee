@@ -288,11 +288,16 @@ def register_callbacks(app):
                 return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma
 
             if n_clicks_sigma > 0:
-                # parse function
-                tree = ast.parse(f_sigma, mode='exec')
-                code = compile(tree, filename='test', mode='exec')
+                # append numpy and math
+                import_np = 'import numpy as np'
+                import_math = 'import math'
+                imports = [import_np, import_math]
                 namespace = {} 
-                exec(code, namespace)
+                # parse function
+                for to_parse in [*imports, f_sigma]:
+                    tree = ast.parse(to_parse, mode='exec')
+                    code = compile(tree, filename='test', mode='exec')
+                    exec(code, namespace)
                 # curry
                 c_sigma = tools.curry(namespace['sigma'])
                 n_lambda = len(inspect.getfullargspec(namespace['sigma'])[0]) - 1
@@ -308,6 +313,7 @@ def register_callbacks(app):
 
                 w_mesh = MeshReFreq(omega_min=w_min, omega_max=w_max, n_max=n_w)
                 w_dict = {'w_mesh' : w_mesh, 'n_w' : n_w, 'window' : [w_min, w_max]}
+                print(lambdas)
 
                 sigma_analytic = tools.sigma_analytic_to_gf(c_sigma, n_orb, w_dict, soc, lambdas)
                 sigma_data.update(tools.sigma_analytic_to_data(sigma_analytic, w_dict, n_orb))
