@@ -9,16 +9,23 @@ Written by Sophie Beck, 2021
 """
 
 from numpy import dtype
-from tools.TB_functions import *
-from h5 import HDFArchive
 from matplotlib.ticker import MaxNLocator, AutoMinorLocator
 from matplotlib.colors import LogNorm
 from matplotlib import cm, colors
 from scipy.optimize import brentq
 from scipy.interpolate import interp1d
 import itertools
-from triqs.gf import BlockGf
 import matplotlib.pyplot as plt
+
+# triqs
+from triqs.sumk import SumkDiscreteFromLattice
+from tools.TB_functions import *
+from h5 import HDFArchive
+from triqs.gf import BlockGf
+from triqs.gf import GfReFreq, MeshReFreq
+from triqs.utility.dichotomy import dichotomy
+
+
 
 def _linefit(x, y, interval, spacing=50, addspace=0.0):
 
@@ -392,6 +399,51 @@ def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice, band_basis
 
     k_mesh = {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels, 'k_points_dash': k_mesh['k_path']}
     return k_mesh, e_mat, e_vecs, tb
+
+def sumk(mu, Sigma, bz_weights, hopping, eta=0.0):
+    '''
+    calc Gloc 
+    '''
+    Gloc = Sigma.copy()
+    Gloc << 0.0+0.0j
+
+    n_orb = Gloc[list(Gloc.indices)[0]].target_shape[0]
+
+    w_mat = np.array([w.value * np.eye(n_orb) for w in Gloc.mesh])
+    mu_mat = mu * np.eye(n_orb)
+    eta_mat = 1j*eta * np.eye(n_orb)
+
+    #Loop on k points...
+    for wk, eps_k in zip(bz_weights, hopping):
+        for block, gf in Gloc:
+            gf.data[:,:,:] += wk*np.linalg.inv(w_mat[:] + mu_mat - eps_k - Sigma[block].data[:,:,:].real + eta_mat)
+    return Gloc
+
+def calc_mu(data, n_elect, add_spin, add_local, mu_guess= 0.0, Sigma=None, eta=0.0):
+
+    def dens(mu):
+        dens =  sumk(mu = mu, Sigma = Sigma, bz_weights=SK.bz_weights, hopping=SK.hopping, eta=eta).total_density()
+        print(mu,dens)
+        return dens.real
+
+    # set up Wannier Hamiltonian
+    n_k = 10
+    n_orb_rescale = 2 * data['n_wf'] if add_spin else data['n_wf']
+    H_add_loc = np.zeros((n_orb_rescale, n_orb_rescale), dtype=complex)
+    if add_spin: H_add_loc += _lambda_matrix_w90_t2g(add_local)
+
+    hopping = {eval(key): np.array(value, dtype=complex) for key, value in data['hopping'].items()}
+    tb = _get_TBL(hopping, data['units'], data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
+
+    SK = SumkDiscreteFromLattice(lattice=tb, n_points=n_k)
+
+    if not Sigma:
+        Sw = GfReFreq(mesh=MeshReFreq(omega_min=-15, omega_max=15,n_max=1001) , target_shape = [data['n_wf'],data['n_wf']])
+        Sigma = BlockGf(name_list = ['up', 'down'], block_list= [Sw,Sw], make_copies = True)
+
+    mu, density = dichotomy(dens, mu_guess, n_elect, 1e-3, 1.0, max_loops = 100, x_name="chemical potential", y_name="density", verbosity=3)
+
+    return mu
 
 def get_dmft_bands(n_orb, with_sigma=False, fermi_slice=False, solve=False, orbital_order=(0,1,2), band_basis=False, **specs):
     

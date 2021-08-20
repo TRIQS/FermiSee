@@ -16,7 +16,7 @@ from h5 import HDFArchive
 from triqs.gf import MeshReFreq
 
 from load_data import load_config, load_w90_hr, load_w90_wout, load_sigma_h5
-from tools.calc_akw import calc_tb_bands, get_tb_bands, calc_alatt, reorder_sigma
+from tools.calc_akw import calc_tb_bands, get_tb_bands, calc_alatt, reorder_sigma, calc_mu
 from tabs.id_factory import id_factory
 import tools.tools as tools
 
@@ -95,6 +95,7 @@ def register_callbacks(app):
          Output(id('upload-w90-wout'), 'children'),
          Output(id('tb-bands'), 'on'),
          Output(id('dft-mu'), 'value'),
+         Output(id('gf-filling'), 'value'),
          Output(id('orbital-order'), 'options'),
          Output(id('band-basis'), 'on')],
         [Input(id('upload-w90-hr'), 'contents'),
@@ -105,6 +106,8 @@ def register_callbacks(app):
          Input(id('upload-w90-wout'), 'children'),
          Input(id('tb-bands'), 'on'),
          Input(id('calc-tb'), 'n_clicks'),
+         Input(id('gf-filling'), 'value'),
+         Input(id('calc-tb-mu'), 'n_clicks'),
          Input(id('tb-data'), 'data'),
          Input(id('add-spin'), 'value'),
          Input(id('dft-mu'), 'value'),
@@ -115,7 +118,7 @@ def register_callbacks(app):
          Input(id('band-basis'), 'on')],
          prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
-                w90_wout_button, tb_switch, click_tb, tb_data, add_spin, dft_mu, n_k, 
+                w90_wout_button, tb_switch, click_tb, n_elect, click_tb_mu, tb_data, add_spin, dft_mu, n_k, 
                 k_points, loaded_data, orb_options, band_basis):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -131,7 +134,7 @@ def register_callbacks(app):
             tb_data['loaded_hr'] = True
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
-            return tb_data, html.Div([w90_hr_name]), w90_wout_button, tb_switch, dft_mu, orb_options, band_basis
+            return tb_data, html.Div([w90_hr_name]), w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
         #if w90_wout != None and not 'loaded_wout' in tb_data:
         if trigger_id == id('upload-w90-wout'):
@@ -139,7 +142,7 @@ def register_callbacks(app):
             tb_data['units'] = load_w90_wout(w90_wout)
             tb_data['loaded_wout'] = True
 
-            return tb_data, w90_hr_button, html.Div([w90_wout_name]), tb_switch, dft_mu, orb_options, band_basis
+            return tb_data, w90_hr_button, html.Div([w90_wout_name]), tb_switch, dft_mu, n_elect, orb_options, band_basis
 
         # if a full config has been uploaded
         if trigger_id == id('loaded-data'):
@@ -148,19 +151,27 @@ def register_callbacks(app):
             tb_data['use'] = True
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
-            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu'], orb_options, tb_data['band_basis']
+            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu'], tb_data['n_elect'], orb_options, tb_data['band_basis']
+        
+        if trigger_id == id('calc-tb-mu') and ((tb_data['loaded_hr'] and tb_data['loaded_wout']) or tb_data['use']):
+            if float(n_elect) == 0.0:
+                print('please specify filling')
+                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
+
+            add_local = [0.] * tb_data['n_wf']
+            tb_data['dft_mu'] = calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=0.1)
+
+            return tb_data, w90_hr_button, w90_wout_button, tb_switch, '{:.4f}'.format(tb_data['dft_mu']), n_elect, orb_options, band_basis
 
         else:
             if not click_tb > 0 and not tb_data['use']:
-                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, orb_options, band_basis
+                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
             if np.any([k_val in ['', None] for k in k_points for k_key, k_val in k.items()]):
-                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, orb_options, band_basis
+                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
-            if not isinstance(dft_mu, (float, int)):
-                dft_mu = 0.0
             if not isinstance(n_k, int):
                 n_k = 20
-            
+
             add_local = [0.] * tb_data['n_wf']
 
             k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
@@ -177,6 +188,7 @@ def register_callbacks(app):
             tb_data['bnd_low'] = np.min(np.array(tb_data['eps_nuk'][0])).real
             tb_data['bnd_high'] = np.max(np.array(tb_data['eps_nuk'][-1])).real
             tb_data['dft_mu'] = dft_mu
+            tb_data['n_elect'] = float(n_elect)
             tb_data['band_basis'] = band_basis
             if not add_spin:
                 tb_data['add_spin'] = False
@@ -184,7 +196,7 @@ def register_callbacks(app):
                 tb_data['add_spin'] = True
             tb_data['use'] = True
 
-            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu'], orb_options, band_basis
+            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu'], n_elect, orb_options, band_basis
 
     # dashboard k-points
     @app.callback(

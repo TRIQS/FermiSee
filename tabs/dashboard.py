@@ -13,6 +13,7 @@ from tabs.id_factory import id_factory
 def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
     id = id_factory(f'tab{tab_number}')
     col_part = '#F8F9F9'
+    button_style = {'margin' : '5px' , 'padding': '0px 5px 0px 3px'}
     return dcc.Tab(
         label='spectral function A(k,ω)',
         children=[
@@ -86,11 +87,20 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                             ),
                         ], style={'padding': '5px 5px'}
                         ),
+                        # html.Div([
+                        #     # html.P('μ (eV):',style={'width' : '25%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
+                        #         # ),
+                            
+                        # ], style={'padding': '5px 5px'}
+                        # ),
                         html.Div([
-                            html.P('μ (eV):',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
+                            html.P('# electrons: ',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                 ),
+                            dcc.Input(id=id('gf-filling'), type='number', value='0.', step='0.001',
+                                debounce=True, placeholder='number of electrons', style= {'width' : '50%'}),
+                            html.Button('calc mu:', id=id('calc-tb-mu'), n_clicks=0, style= button_style ),
                             dcc.Input(id=id('dft-mu'), type='number', value='0.', step='0.0001',
-                                debounce=True, placeholder='chemical potential μ', style= {'width' : '60%'}),
+                                debounce=True, placeholder='chemical potential μ', style= {'width' : '60%'})
                         ], style={'padding': '5px 5px'}
                         ),
                         html.Div('k-points'),
@@ -107,7 +117,7 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                             editable=True,
                             row_deletable=True
                             ),
-                        html.Button('Add k-point', id=id('add-kpoint'), n_clicks=0),
+                        html.Button('Add k-point', id=id('add-kpoint'), n_clicks=0, style= button_style),
                         html.Div([
                             html.P('#k-points:',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                 ),
@@ -115,7 +125,7 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                       type='number', debounce=True, style= {'width' : '60%'}),
                         ], style={'padding': '5px 5px'}
                         ),
-                        html.Button('Calculate TB bands', id=id('calc-tb'), n_clicks=0),
+                        html.Button('calc TB bands', id=id('calc-tb'), n_clicks=0, style= button_style ),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
                                'padding': '10px'}),
@@ -155,7 +165,7 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                 value='def sigma(w, Z, A): return (1-1/Z)*w - 1j*A*w**2',
                                 style={'width': '100%', 'height': '80px'}
                                 ),
-                            html.Button('Submit', id=id('sigma-function-button'), n_clicks=0),
+                            html.Button('Submit', id=id('sigma-function-button'), n_clicks=0, style= button_style),
                             html.Div(id=id('sigma-function-output'), style={'whiteSpace': 'pre-line'}),
                         ]),
                         html.Div([
@@ -192,7 +202,7 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                                      style={'maxWidth': 300, 'width': 300, 'font-size': 14}),
                         ],id=id('band-basis-tooltip'), style={'padding': '5px 5px'}
                         ),
-                        html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0),
+                        html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0, style= button_style),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',
                                'padding': '10px'}
@@ -249,7 +259,7 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                     # section 5
                     html.Hr(style={"margin-top": "15px","margin-bottom": "15px"}),
                     html.Div(children=[
-                        html.Button("Download config", id=id('dwn_button')),
+                        html.Button("Download config", id=id('dwn_button'), style= button_style),
                         ext_Download(id=id('download_h5')),
                     ], style={'backgroundColor': col_part,
                                'borderRadius': '15px',

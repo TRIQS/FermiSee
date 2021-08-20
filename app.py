@@ -12,7 +12,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets,server=serve
 app.title = 'triqs_spectrometer'
 
 
-tb_data = {'use': False}
+tb_data = {'use': False, 'loaded_hr': False, 'loaded_wout' : False}
 sigma_data = {'use': False}
 akw_data = {'use': False}
 loaded_data = {}
