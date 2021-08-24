@@ -79,7 +79,7 @@ def register_callbacks(app):
             solve = True if akw_mode == 'QP dispersion' else False
             akw_data['dmft_mu'] = sigma_data['dmft_mu']
             akw_data['eta'] = 0.01
-            akw = calc_alatt(tb_data, sigma_data, akw_data, solve, band_basis)
+            akw, akw_data['dmft_mu'] = calc_alatt(tb_data, sigma_data, akw_data, solve, band_basis)
             akw_data['Akw'] = akw.tolist()
             akw_data['use'] = True
             akw_data['solve'] = solve

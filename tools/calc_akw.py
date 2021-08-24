@@ -147,7 +147,7 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     # adjust to system size
     upscale = lambda quantity, n_orb: quantity * np.identity(n_orb)
     n_orb = tb_data['n_wf']
-    mu = upscale(akw_data['dmft_mu'], n_orb)
+    
     eta = upscale(1j * akw_data['eta'], n_orb)
     sigma = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
     sigma_rot = sigma.copy()
@@ -157,6 +157,18 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     w_dict = sigma_data['w_dict']
     w_vec = np.array(w_dict['w_mesh'])[:,None,None] * np.eye(n_orb)
     n_k = e_mat.shape[2]
+
+    # TODO add local
+    add_local = [0.] * tb_data['n_wf']
+    triqs_mesh = MeshReFreq(omega_min=w_dict['window'][0], omega_max=w_dict['window'][1],n_max=w_dict['n_w'])
+    Sw = GfReFreq(mesh=triqs_mesh , target_shape = [n_orb,n_orb])
+    Sw.data[:,:,:] = sigma.transpose((2,0,1))
+    Sigma_triqs = BlockGf(name_list = ['up', 'down'], block_list= [Sw,Sw], make_copies = True)
+
+    new_mu = calc_mu(tb_data, tb_data['n_elect'],  tb_data['add_spin'], add_local, 
+                     mu_guess= float(tb_data['dft_mu'])-akw_data['dmft_mu'], Sigma=Sigma_triqs, eta=akw_data['eta'])
+    # now subtract the new mu from the dft mu to get the DMFT mu (the hoppings below are already cleaned from the dft_mu)
+    mu = upscale(float(tb_data['dft_mu'])-new_mu, n_orb)
 
     if not solve:
 
@@ -193,7 +205,7 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
                 except ValueError:
                     pass
 
-    return alatt_k_w
+    return alatt_k_w, new_mu
 
 def _calc_kslice(n_orb, mu, eta, e_mat, sigma, solve, **w_dict):
 
@@ -419,29 +431,30 @@ def sumk(mu, Sigma, bz_weights, hopping, eta=0.0):
             gf.data[:,:,:] += wk*np.linalg.inv(w_mat[:] + mu_mat - eps_k - Sigma[block].data[:,:,:].real + eta_mat)
     return Gloc
 
-def calc_mu(data, n_elect, add_spin, add_local, mu_guess= 0.0, Sigma=None, eta=0.0):
+def calc_mu(tb_data, n_elect, add_spin, add_local, mu_guess= 0.0, Sigma=None, eta=0.0):
 
     def dens(mu):
-        dens =  sumk(mu = mu, Sigma = Sigma, bz_weights=SK.bz_weights, hopping=SK.hopping, eta=eta).total_density()
+        dens = sumk(mu = mu, Sigma = Sigma, bz_weights=SK.bz_weights, hopping=SK.hopping, eta=eta).total_density()
         print(mu,dens)
         return dens.real
 
     # set up Wannier Hamiltonian
     n_k = 10
-    n_orb_rescale = 2 * data['n_wf'] if add_spin else data['n_wf']
+    n_orb_rescale = 2 * tb_data['n_wf'] if add_spin else tb_data['n_wf']
+    n_blocks = 1 if add_spin else 2 
     H_add_loc = np.zeros((n_orb_rescale, n_orb_rescale), dtype=complex)
     if add_spin: H_add_loc += _lambda_matrix_w90_t2g(add_local)
 
-    hopping = {eval(key): np.array(value, dtype=complex) for key, value in data['hopping'].items()}
-    tb = _get_TBL(hopping, data['units'], data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
+    if not Sigma:
+        Sw = GfReFreq(mesh=MeshReFreq(omega_min=-15, omega_max=15,n_max=1001) , target_shape = [tb_data['n_wf'],tb_data['n_wf']])
+        Sigma = BlockGf(name_list = ['up', 'down'], block_list= [Sw,Sw], make_copies = True)
+
+    hopping = {eval(key): np.array(value, dtype=complex) for key, value in tb_data['hopping'].items()}
+    tb = _get_TBL(hopping, tb_data['units'], tb_data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
 
     SK = SumkDiscreteFromLattice(lattice=tb, n_points=n_k)
 
-    if not Sigma:
-        Sw = GfReFreq(mesh=MeshReFreq(omega_min=-15, omega_max=15,n_max=1001) , target_shape = [data['n_wf'],data['n_wf']])
-        Sigma = BlockGf(name_list = ['up', 'down'], block_list= [Sw,Sw], make_copies = True)
-
-    mu, density = dichotomy(dens, mu_guess, n_elect, 1e-3, 1.0, max_loops = 100, x_name="chemical potential", y_name="density", verbosity=3)
+    mu, density = dichotomy(dens, mu_guess, n_elect, 1e-3, 0.5, max_loops = 100, x_name="chemical potential", y_name="density", verbosity=3)
 
     return mu
 
@@ -462,11 +475,11 @@ def get_dmft_bands(n_orb, with_sigma=False, fermi_slice=False, solve=False, orbi
         
         # calculate alatt
         if not fermi_slice:
-            alatt_k_w = _calc_alatt(n_orb, mu, eta, e_mat, delta_sigma, solve, band_basis,**w_dict)
+            alatt_k_w, new_mu = calc_alatt(n_orb, mu, eta, e_mat, delta_sigma, solve, band_basis,**w_dict)
         else:
             alatt_k_w = _calc_kslice(n_orb, mu, eta, e_mat, delta_sigma, solve, band_basis **w_dict)       
     else:
-        dft_mu = mu
+        dft_mu = new_mu
         w_dict = {}
         w_dict['w_mesh'] = None
         w_dict['window'] = None
