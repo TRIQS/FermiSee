@@ -161,9 +161,8 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     # TODO add local
     add_local = [0.] * tb_data['n_wf']
     triqs_mesh = MeshReFreq(omega_min=w_dict['window'][0], omega_max=w_dict['window'][1],n_max=w_dict['n_w'])
-    Sw = GfReFreq(mesh=triqs_mesh , target_shape = [n_orb,n_orb])
-    Sw.data[:,:,:] = sigma.transpose((2,0,1))
-    Sigma_triqs = BlockGf(name_list = ['up', 'down'], block_list= [Sw,Sw], make_copies = True)
+    Sigma_triqs = GfReFreq(mesh=triqs_mesh , target_shape = [n_orb,n_orb])
+    Sigma_triqs.data[:,:,:] = sigma.transpose((2,0,1))
 
     new_mu = calc_mu(tb_data, tb_data['n_elect'],  tb_data['add_spin'], add_local, 
                      mu_guess= float(tb_data['dft_mu'])-akw_data['dmft_mu'], Sigma=Sigma_triqs, eta=akw_data['eta'])
@@ -419,7 +418,7 @@ def sumk(mu, Sigma, bz_weights, hopping, eta=0.0):
     Gloc = Sigma.copy()
     Gloc << 0.0+0.0j
 
-    n_orb = Gloc[list(Gloc.indices)[0]].target_shape[0]
+    n_orb = Gloc.target_shape[0]
 
     w_mat = np.array([w.value * np.eye(n_orb) for w in Gloc.mesh])
     mu_mat = mu * np.eye(n_orb)
@@ -427,27 +426,26 @@ def sumk(mu, Sigma, bz_weights, hopping, eta=0.0):
 
     #Loop on k points...
     for wk, eps_k in zip(bz_weights, hopping):
-        for block, gf in Gloc:
-            gf.data[:,:,:] += wk*np.linalg.inv(w_mat[:] + mu_mat - eps_k - Sigma[block].data[:,:,:].real + eta_mat)
+        Gloc.data[:,:,:] += wk*np.linalg.inv(w_mat[:] + mu_mat - eps_k - Sigma.data[:,:,:].real + eta_mat)
     return Gloc
 
 def calc_mu(tb_data, n_elect, add_spin, add_local, mu_guess= 0.0, Sigma=None, eta=0.0):
 
     def dens(mu):
-        dens = sumk(mu = mu, Sigma = Sigma, bz_weights=SK.bz_weights, hopping=SK.hopping, eta=eta).total_density()
+        # 2 times for spin degeneracy
+        sp_factor = 1 if add_spin else 2
+        dens = sp_factor*sumk(mu = mu, Sigma = Sigma, bz_weights=SK.bz_weights, hopping=SK.hopping, eta=eta).total_density()
         print(mu,dens)
         return dens.real
 
     # set up Wannier Hamiltonian
     n_k = 10
     n_orb_rescale = 2 * tb_data['n_wf'] if add_spin else tb_data['n_wf']
-    n_blocks = 1 if add_spin else 2 
     H_add_loc = np.zeros((n_orb_rescale, n_orb_rescale), dtype=complex)
     if add_spin: H_add_loc += _lambda_matrix_w90_t2g(add_local)
 
     if not Sigma:
-        Sw = GfReFreq(mesh=MeshReFreq(omega_min=-15, omega_max=15,n_max=1001) , target_shape = [tb_data['n_wf'],tb_data['n_wf']])
-        Sigma = BlockGf(name_list = ['up', 'down'], block_list= [Sw,Sw], make_copies = True)
+        Sigma = GfReFreq(mesh=MeshReFreq(omega_min=-15, omega_max=1,n_max=501) , target_shape = [tb_data['n_wf'],tb_data['n_wf']])
 
     hopping = {eval(key): np.array(value, dtype=complex) for key, value in tb_data['hopping'].items()}
     tb = _get_TBL(hopping, tb_data['units'], tb_data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
