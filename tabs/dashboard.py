@@ -160,7 +160,6 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                         html.Div(id=id('sigma-function'), children=[
                             dcc.Textarea(
                                 id=id('sigma-function-input'),
-                                #value='Enter a python function for Σ(k,ω):\n\ndef sigma(ω, a, b):\n\treturn a + b * ω',
                                 placeholder='Enter a python function',
                                 value='def sigma(w, Z, A): return (1-1/Z)*w - 1j*A*w**2',
                                 style={'width': '100%', 'height': '80px'}
@@ -168,6 +167,7 @@ def make_dashboard(tb_data, akw_data, sigma_data, loaded_data, tab_number):
                             html.Button('Submit', id=id('sigma-function-button'), n_clicks=0, style= button_style),
                             html.Div(id=id('sigma-function-output'), style={'whiteSpace': 'pre-line'}),
                         ]),
+                        html.Div(id=id('sigma-lambdas'), style={'padding': '5px 5px'}),
                         html.Div([
                             html.P('η (eV):',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                 ),
