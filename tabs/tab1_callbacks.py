@@ -10,15 +10,17 @@ from itertools import permutations
 import inspect
 import base64
 from dash_extensions.snippets import send_bytes
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output, State, ALL
 
 from h5 import HDFArchive
 from triqs.gf import MeshReFreq
 
 from load_data import load_config, load_w90_hr, load_w90_wout, load_sigma_h5
-from tools.calc_akw import calc_tb_bands, get_tb_bands, calc_alatt, reorder_sigma, calc_mu
-from tabs.id_factory import id_factory
+import tools.calc_tb as tb
+import tools.calc_akw as akw
+import tools.gf_helpers as gf
 import tools.tools as tools
+from tabs.id_factory import id_factory
 
 
 def register_callbacks(app):
@@ -67,7 +69,7 @@ def register_callbacks(app):
     def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, n_k, click_tb, click_akw, akw_mode, band_basis, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-        print(trigger_id)
+        print('{:20s}'.format('***update_akw***:'), trigger_id)
 
         if trigger_id == id('dft-mu') and not sigma_data['use']:
             return akw_data, akw_switch, tb_alert
@@ -79,7 +81,7 @@ def register_callbacks(app):
             solve = True if akw_mode == 'QP dispersion' else False
             akw_data['dmft_mu'] = sigma_data['dmft_mu']
             akw_data['eta'] = 0.01
-            akw, akw_data['dmft_mu'] = calc_alatt(tb_data, sigma_data, akw_data, solve, band_basis)
+            akw, akw_data['dmft_mu'] = akw.calc_alatt(tb_data, sigma_data, akw_data, solve, band_basis)
             akw_data['Akw'] = akw.tolist()
             akw_data['use'] = True
             akw_data['solve'] = solve
@@ -122,7 +124,7 @@ def register_callbacks(app):
                 k_points, loaded_data, orb_options, band_basis):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-        print(trigger_id)
+        print('{:20s}'.format('***calc_tb***:'), trigger_id)
 
         #if w90_hr != None and not 'loaded_hr' in tb_data:
         if trigger_id == id('upload-w90-hr'):
@@ -159,7 +161,7 @@ def register_callbacks(app):
                 return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
             add_local = [0.] * tb_data['n_wf']
-            tb_data['dft_mu'] = calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=0.1)
+            tb_data['dft_mu'] = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=0.1)
 
             return tb_data, w90_hr_button, w90_wout_button, tb_switch, '{:.4f}'.format(tb_data['dft_mu']), n_elect, orb_options, band_basis
 
@@ -175,7 +177,7 @@ def register_callbacks(app):
             add_local = [0.] * tb_data['n_wf']
 
             k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
-            tb_data['k_mesh'], e_mat, e_vecs, tb = calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, k_mesh, fermi_slice=False, band_basis=band_basis)
+            tb_data['k_mesh'], e_mat, e_vecs, tb = tb.calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, k_mesh, fermi_slice=False, band_basis=band_basis)
             # calculate Hamiltonian
             tb_data['e_mat'] = e_mat.real.tolist()
             if band_basis:
@@ -183,7 +185,7 @@ def register_callbacks(app):
                 tb_data['evecs_im'] = e_vecs.imag.tolist()
                 tb_data['eps_nuk'] = np.einsum('iij -> ij', e_mat).real.tolist()
             else:
-                tb_data['eps_nuk'], evec_nuk = get_tb_bands(e_mat)
+                tb_data['eps_nuk'], evec_nuk = tb.get_tb_bands(e_mat)
                 tb_data['eps_nuk'] = tb_data['eps_nuk'].tolist()
             tb_data['bnd_low'] = np.min(np.array(tb_data['eps_nuk'][0])).real
             tb_data['bnd_high'] = np.max(np.array(tb_data['eps_nuk'][-1])).real
@@ -237,7 +239,9 @@ def register_callbacks(app):
           Output(id('sigma-upload-box'), 'children'),
           Output(id('orbital-order'), 'value'),
           Output(id('orb-alert'), 'is_open'),
-          Output(id('sigma-function-output'), 'children')],
+          Output(id('sigma-function-output'), 'children'),
+          Output(id('sigma-lambdas'), 'children'),
+          Output(id('sigma-lambdas'), 'style')],
          [Input(id('sigma-data'), 'data'),
           Input(id('tb-data'), 'data'),
           Input(id('choose-sigma'), 'value'),
@@ -246,17 +250,30 @@ def register_callbacks(app):
           Input(id('sigma-upload-box'), 'children'),
           Input(id('loaded-data'), 'data'),
           Input(id('sigma-function-button'), 'n_clicks'),
-          Input(id('orbital-order'), 'value')],
+          Input(id('orbital-order'), 'value'),
+          Input({'type': 'sigma-lambdas', 'index': ALL}, 'value')],
          [State(id('orb-alert'), 'is_open'),
           State(id('sigma-function-input'), 'value')],
          prevent_initial_call=False
         )
     def toggle_update_sigma(sigma_data, tb_data, sigma_radio_item, sigma_content, sigma_filename, 
-                            sigma_button, loaded_data, n_clicks_sigma, orbital_order, orb_alert, f_sigma):
+                            sigma_button, loaded_data, n_clicks_sigma, orbital_order, sigma_lambdas, orb_alert, f_sigma):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        print('{:20s}'.format('***update_sigma***:'), trigger_id)
         return_f_sigma = None
-        print(trigger_id)
+        def _build_lambda_children(build, lambdas=None):
+            import dash_core_components as dcc
+            if build:
+                return [html.Div([
+                            html.P(f'{key}:',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}),
+                            dcc.Input(id={'type': 'sigma-lambdas', 'index': ct}, type='number', value=value, step='0.005',
+                                      placeholder=f'λ{key}', style={'width': '60%','margin-bottom': '10px'})
+                        ]) for ct, (key, value) in enumerate(lambdas)]
+            else: return []
+
+        lambda_list = _build_lambda_children(False)
+        lambda_view = {'display': 'none'}
         orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
 
         if trigger_id == id('loaded-data'):
@@ -266,14 +283,14 @@ def register_callbacks(app):
             sigma_button = html.Div([loaded_data['config_filename']])
 
             # somehow the orbital order is transformed back to lists all the time, so make sure here that it is a tuple!
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order'])), orb_alert, return_f_sigma
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order'])), orb_alert, return_f_sigma, lambda_list, lambda_view
 
         if trigger_id == id('orbital-order'):
             #orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
             print('the orbital order has changed', orbital_order)
             if sigma_data['use'] == True:
-                sigma_data = reorder_sigma(sigma_data, new_order=orbital_order, old_order=sigma_data['orbital_order'])
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma
+                sigma_data = gf.reorder_sigma(sigma_data, new_order=orbital_order, old_order=sigma_data['orbital_order'])
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma, lambda_list, lambda_view
 
         if sigma_radio_item == 'upload':
 
@@ -282,7 +299,7 @@ def register_callbacks(app):
                 sigma_data = load_sigma_h5(sigma_content, sigma_filename)
                 # check if number of orbitals match and reject data if no match
                 if sigma_data['n_orb'] != tb_data['n_wf']:
-                    return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), not orb_alert
+                    return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), not orb_alert, return_f_sigma, lambda_list, lambda_view
                 print('successfully loaded sigma from file')
                 sigma_data['use'] = True
                 orbital_order = sigma_data['orbital_order']
@@ -291,15 +308,16 @@ def register_callbacks(app):
             #    sigma_button = sigma_button
             #    orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
 
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma, lambda_list, lambda_view
 
-        if trigger_id == id('sigma-function-button'):
+        if trigger_id == id('sigma-function-button') or '"type":"sigma-lambdas"' in trigger_id:
 
             if not tb_data['use']:
                 # TODO: create warning before return
-                return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma
+                return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma, lambda_list, lambda_view
 
             if n_clicks_sigma > 0:
+
                 # append numpy and math
                 import_np = 'import numpy as np'
                 import_math = 'import math'
@@ -312,8 +330,11 @@ def register_callbacks(app):
                     exec(code, namespace)
                 # curry
                 c_sigma = tools.curry(namespace['sigma'])
-                n_lambda = len(inspect.getfullargspec(namespace['sigma'])[0]) - 1
-                lambdas = [1 for i in range(n_lambda)]
+                # get lambdas from dashboard if trigger, else default values
+                lambda_values = sigma_lambdas if '"type":"sigma-lambdas"' in trigger_id else [1, 1]
+                lambda_tuples = [key for key in zip(inspect.getfullargspec(namespace['sigma'])[0][1:], lambda_values)]
+                lambda_list = _build_lambda_children(True, lambdas=lambda_tuples)
+                lambda_view = {'display': 'inline-block'}
 
                 # TODO: create warning, see above
                 n_orb = tb_data['n_wf']
@@ -325,16 +346,15 @@ def register_callbacks(app):
 
                 w_mesh = MeshReFreq(omega_min=w_min, omega_max=w_max, n_max=n_w)
                 w_dict = {'w_mesh' : w_mesh, 'n_w' : n_w, 'window' : [w_min, w_max]}
-                print(lambdas)
 
-                sigma_analytic = tools.sigma_analytic_to_gf(c_sigma, n_orb, w_dict, soc, lambdas)
+                sigma_analytic = tools.sigma_analytic_to_gf(c_sigma, n_orb, w_dict, soc, lambda_values)
                 sigma_data.update(tools.sigma_analytic_to_data(sigma_analytic, w_dict, n_orb))
 
                 return_f_sigma = 'You have entered: \n{}'.format(f_sigma)
 
-            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma
+            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma, lambda_list, lambda_view
 
-        return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma
+        return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma, lambda_list, lambda_view
 
     # dashboard colors
     @app.callback(
@@ -349,7 +369,7 @@ def register_callbacks(app):
 
     # plot A(k,w)
     @app.callback(
-        Output('Akw', 'figure'),
+        Output(id('Akw'), 'figure'),
         [Input(id('tb-bands'), 'on'),
          Input(id('akw-bands'), 'on'),
          Input(id('colorscale'), 'value'),
@@ -357,7 +377,7 @@ def register_callbacks(app):
          Input(id('akw-data'), 'data'),
          Input(id('sigma-data'), 'data')],
          prevent_initial_call=True)
-    def plot_Akw(tb_bands, akw, colorscale, tb_data, akw_data, sigma_data):
+    def plot_Akw(tb_bands, akw_bands, colorscale, tb_data, akw_data, sigma_data):
         
         # initialize general figure environment
         layout = go.Layout()
@@ -367,21 +387,19 @@ def register_callbacks(app):
         fig.update_yaxes(showspikes=True, spikemode='across', spikesnap='cursor', showticklabels=True, spikedash='solid')
         fig.update_traces(xaxis='x', hoverinfo='none')
 
-        # decide which data to show for TB
-        if tb_data['use']: tb_temp = tb_data
-        if not 'tb_temp' in locals():
+        if not tb_data['use']:
             return fig
     
-        k_mesh = tb_temp['k_mesh']
+        k_mesh = tb_data['k_mesh']
         fig.add_shape(type = 'line', x0=0, y0=0, x1=max(k_mesh['k_disc']), y1=0, line=dict(color='gray', width=0.8))
     
         if tb_bands:
-            for band in range(len(tb_temp['eps_nuk'])):
-                fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=tb_temp['eps_nuk'][band], mode='lines',
+            for band in range(len(tb_data['eps_nuk'])):
+                fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=tb_data['eps_nuk'][band], mode='lines',
                             line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=False, text=f'tb band {band}',
                             hoverinfo='x+y+text'
                             ))
-            if not akw:
+            if not akw_bands:
                 fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                           clickmode='event+select',
                           hovermode='closest',
@@ -397,7 +415,7 @@ def register_callbacks(app):
         if not 'akw_temp' in locals():
             return fig
 
-        if akw:
+        if akw_bands:
             w_mesh = sigma_data['w_dict']['w_mesh']
             if akw_temp['solve']:
                 z_data = np.array(akw_temp['Akw'])
@@ -433,10 +451,10 @@ def register_callbacks(app):
         Input('kpt_edc', 'value'),
         Input(id('akw-data'), 'data'),
         Input(id('tb-data'), 'data'),
-        Input('Akw', 'clickData'),
+        Input(id('Akw'), 'clickData'),
         Input(id('sigma-data'), 'data')],
         prevent_initial_call=True)
-    def update_EDC(tb_bands, akw, kpt_edc, akw_data, tb_data, click_coordinates, sigma_data):
+    def update_EDC(tb_bands, akw_bands, kpt_edc, akw_data, tb_data, click_coordinates, sigma_data):
         layout = go.Layout()
         fig = go.Figure(layout=layout)
         ctx = dash.callback_context
@@ -461,7 +479,7 @@ def register_callbacks(app):
                                             y=[0,300], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), 
                                             showlegend=False, hoverinfo='x+y+text'
                                         ))
-            if not akw:
+            if not akw_bands:
                 fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                                 hovermode='closest',
                                 xaxis_range=[tb_data['bnd_low']- 0.02*abs(tb_data['bnd_low']) , 
@@ -472,7 +490,7 @@ def register_callbacks(app):
                                 font=dict(size=16),
                                 legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
                                 )       
-        if akw:
+        if akw_bands:
             w_mesh = sigma_data['w_dict']['w_mesh']
             if trigger_id == 'Akw':
                 new_kpt = click_coordinates['points'][0]['x']
@@ -492,7 +510,7 @@ def register_callbacks(app):
                                 font=dict(size=16),
                                 legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
                                 )
-        if akw:
+        if akw_bands:
             return fig, kpt_edc, len(k_mesh['k_disc'])-1
         elif tb_bands:
             return fig, kpt_edc, len(k_mesh['k_disc'])-1
@@ -509,10 +527,10 @@ def register_callbacks(app):
         Input('w_mdc', 'value'),
         Input(id('akw-data'), 'data'),
         Input(id('tb-data'), 'data'),
-        Input('Akw', 'clickData'),
+        Input(id('Akw'), 'clickData'),
         Input(id('sigma-data'), 'data')],
         prevent_initial_call=True)
-    def update_MDC(tb_bands, akw, w_mdc, akw_data, tb_data, click_coordinates, sigma_data):
+    def update_MDC(tb_bands, akw_bands, w_mdc, akw_data, tb_data, click_coordinates, sigma_data):
         layout = go.Layout()
         fig = go.Figure(layout=layout)
         ctx = dash.callback_context
@@ -555,7 +573,7 @@ def register_callbacks(app):
         #                         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
         #                         )       
 
-        if akw:
+        if akw_bands:
             w_mesh = sigma_data['w_dict']['w_mesh']
             if trigger_id == 'Akw':
                 new_w = click_coordinates['points'][0]['y']
@@ -575,7 +593,7 @@ def register_callbacks(app):
                               xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']], tickvals=k_mesh['k_points']),
                               legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
                               )
-        if akw:
+        if akw_bands:
             return fig, w_mdc, len(w_mesh)-1
         # elif tb_bands:
         #     return fig, w_mdc, np.max(np.array(tb_temp['eps_nuk'][-1]))+(0.03*np.max(np.array(tb_temp['eps_nuk'][-1])))

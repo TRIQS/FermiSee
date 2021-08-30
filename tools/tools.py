@@ -1,34 +1,42 @@
-import numpy as np
-from itertools import product
-from triqs.gf import GfReFreq
-
-def sigma_analytic_to_data(sigma, w_dict, n_orb):
+def change_basis(n_orb, orbital_order_to, orbital_order_from):
+    """
+    Rotation between orbital bases
+    """
     
-    w_dict['w_mesh'] = [w.value for w in w_dict['w_mesh']]
+    change_of_basis = np.eye(n_orb)
+    for ct, orb in enumerate(orbital_order_to):
+        orb_idx = orbital_order_from.index(orb)
+        change_of_basis[orb_idx,:] = np.roll(np.eye(n_orb,1),ct)[:,0]
 
-    temp_sigma_data = {}
-    temp_sigma_data['sigma_re'] = sigma.real.tolist()
-    temp_sigma_data['sigma_im'] = sigma.imag.tolist()
-    temp_sigma_data['w_dict'] = w_dict
-    temp_sigma_data['dmft_mu'] = 0.0
-    temp_sigma_data['n_orb'] = n_orb
-    temp_sigma_data['use'] = True
+    return change_of_basis
 
-    return temp_sigma_data
+def print_matrix(matrix, n_orb, text):
+    """
+    Pre-determined print command for matrices
+    """
 
-def sigma_analytic_to_gf(c_sigma, n_orb, w_dict, soc, lambdas):
+    print('{}:'.format(text))
+    fmt = '{:16.4f}' * n_orb
+    for row in matrix:
+        print((' '*4 + fmt).format(*row))
 
-    Sigma_freq = GfReFreq(target_shape=(n_orb, n_orb), mesh=w_dict['w_mesh'])
-    for w in Sigma_freq.mesh:
-        Sigma_freq[:,:][w] = c_sigma(w.value)(*lambdas) * np.eye(n_orb)
+def lambda_matrix_w90_t2g(add_lambda):
+    """
+    Add local SOC term to H(R) for t2g shell
+    """
 
-    sigma_array = np.zeros((n_orb, n_orb, w_dict['n_w']), dtype=complex)
-    for ct1, ct2 in product(range(n_orb), range(n_orb)):
-        if ct1 != ct2 and not soc: continue
-        sigma_array[ct1,ct2] = Sigma_freq.data[:,ct1,ct2].real + 1j * Sigma_freq.data[:,ct1,ct2].imag
+    lambda_x, lambda_y, lambda_z = add_lambda
 
-    return sigma_array
+    lambda_matrix = np.zeros((6,6), dtype=complex)
+    lambda_matrix[0,1] = -1j*lambda_z/2.0
+    lambda_matrix[0,5] =  1j*lambda_x/2.0
+    lambda_matrix[1,5] =    -lambda_y/2.0
+    lambda_matrix[2,3] = -1j*lambda_x/2.0
+    lambda_matrix[2,4] =     lambda_y/2.0
+    lambda_matrix[3,4] =  1j*lambda_z/2.0
+    lambda_matrix += np.transpose(np.conjugate(lambda_matrix))
 
+    return lambda_matrix
 
 def curry(func):
     def f_w(w):

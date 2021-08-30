@@ -3,6 +3,7 @@ import dash_bootstrap_components as dbc
 from load_data import load_config
 from layout import layout
 from tabs.tab1_callbacks import register_callbacks as tab1_callbacks
+from tabs.tab2_callbacks import register_callbacks as tab2_callbacks
 from flask import Flask
 
 server = Flask(__name__)
@@ -18,6 +19,7 @@ akw_data = {'use': False}
 loaded_data = {}
 app.layout = layout(tb_data, akw_data, sigma_data, loaded_data)
 tab1_callbacks(app)
+tab2_callbacks(app)
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=9375, host='0.0.0.0')

@@ -4,6 +4,9 @@ import dash_html_components as html
 import dash_daq as daq
 
 from tabs.dashboard import make_dashboard
+from tabs.id_factory import id_factory
+
+id = id_factory('tab1')
 
 # layout
 def layout(tb_data, akw_data, sigma_data, loaded_data):
@@ -16,7 +19,7 @@ def layout(tb_data, akw_data, sigma_data, loaded_data):
             html.Div([
                 html.H3('A(k,ω)', style={'textAlign': 'center'}),
                 dcc.Graph(
-                    id='Akw',
+                    id=id('Akw'),
                     style={'height': '84vh'},
                     clickData={'points': []}
                 )
