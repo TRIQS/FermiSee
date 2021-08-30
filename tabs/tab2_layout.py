@@ -6,12 +6,12 @@ from tabs.id_factory import id_factory
 
 id = id_factory('tab2')
 
-def layout(tb_data, akw_data, sigma_data, loaded_data):
+def layout(tb_data, tb_kslice_data, akw_data, sigma_data, loaded_data):
     return dcc.Tab(
         label='Fermi surface A(k,0)',
         children=[
             # column 1
-            make_dashboard(tb_data, akw_data, sigma_data, loaded_data, 2),
+            make_dashboard(tb_data, tb_kslice_data, akw_data, sigma_data, loaded_data, 2),
             # column 2
             html.Div([
                 html.H3('A(k,0)', style={'textAlign': 'center'}),

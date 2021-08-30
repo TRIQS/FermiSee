@@ -30,15 +30,19 @@ def register_callbacks(app):
          Input(id('akw-bands'), 'on'),
          Input(id('colorscale'), 'value'),
          Input(id_tap('tb-data'), 'data'),
+         Input(id('tb-kslice-data'), 'data'),
          Input(id_tap('akw-data'), 'data'),
          Input(id_tap('sigma-data'), 'data')],
          prevent_initial_call=True)
-    def plot_ak0(tb_bands, akw, colorscale, tb_data, akw_data, sigma_data):
+    def plot_ak0(tb_bands, akw, colorscale, tb_data, tb_kslice_data, akw_data, sigma_data):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***update_akw***:'), trigger_id)
 
-        print(tb_data.keys())
+        for key in tb_data.keys():
+            if key not in ['k_mesh', 'e_mat', 'eps_nuk', 'evecs_re', 'evecs_im', 'bnd_low', 'bnd_high']:
+                tb_kslice_data[key] = tb_data[key]
+        print(tb_kslice_data.keys())
         
         # initialize general figure environment
         layout = go.Layout()
