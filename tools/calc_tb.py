@@ -24,6 +24,17 @@ from h5 import HDFArchive
 from triqs.gf import BlockGf
 from triqs.gf import GfReFreq, MeshReFreq
 from triqs.utility.dichotomy import dichotomy
+import tools.tools as tools
+
+def _convert_kpath(k_mesh):
+    k_path = k_mesh['k_path']
+    k_path = [list(map(lambda item: (k[item]), k.keys())) for k in k_path] # turn dict into list
+    k_point_labels = [k.pop(0) for k in k_path] # remove first item, which is label
+    # make sure all kpts are floats
+    k_path = [list(map(float,k)) for k in k_path]
+    k_path = [(np.array(k), np.array(k_path[ct+1])) for ct, k in enumerate(k_path) if ct+1 < len(k_path)] # turn into tuples
+
+    return k_path, k_point_labels
 
 def get_tb_bands(e_mat):
     """
@@ -37,7 +48,7 @@ def get_tb_bands(e_mat):
 
     return e_val.real, e_vec
 
-def get_tb_kslice(tb, dft_mu):
+def get_tb_kslice(tb, k_mesh, dft_mu):
     """
     Compute band eigenvalues and eigenvectors...
     """
@@ -46,11 +57,12 @@ def get_tb_kslice(tb, dft_mu):
                     [1,0,1],
                     [1,1,0]]
     cart_to_prim = np.linalg.inv(prim_to_cart)
-    w90_paths = list(map(lambda section: (np.array(specs[section[0]]), np.array(specs[section[1]])), specs['bands_path']))
-    final_x, final_y = w90_paths[1]
-    Z = np.array(specs['Z'])
+    k_path, _ = _convert_kpath(k_mesh)
+    final_x, final_y = k_path[1]
+    Z = np.array(k_mesh['Z'])
 
-    e_val, e_vec = get_kx_ky_FS(final_x, final_y, Z, tb, k_trans_back=cart_to_prim, N_kxy=specs['n_k'], kz=specs['kz'], fermi=dft_mu)
+    fermi = 0.
+    e_val, e_vec = get_kx_ky_FS(final_x, final_y, Z, tb, k_trans_back=cart_to_prim, N_kxy=k_mesh['n_k'], kz=k_mesh['kz'], fermi=fermi)
 
     return e_val, e_vec
 
@@ -96,13 +108,7 @@ def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice, band_basis
     tools.print_matrix(h_of_r, data['n_wf'], 'H(R=0)')
 
     # bands info
-    k_path = k_mesh['k_path']
-    k_path = [list(map(lambda item: (k[item]), k.keys())) for k in k_path] # turn dict into list
-    k_point_labels = [k.pop(0) for k in k_path] # remove first time, which is label
-    # make sure all kpts are floats
-    k_path = [list(map(float,k)) for k in k_path]
-    k_path = [(np.array(k), np.array(k_path[ct+1])) for ct, k in enumerate(k_path) if ct+1 < len(k_path)] # turn into tuples
-
+    k_path, k_point_labels = _convert_kpath(k_mesh)
 
     # calculate tight-binding eigenvalues
     if not fermi_slice:
@@ -126,7 +132,7 @@ def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice, band_basis
         for ik_y in range(k_mesh['n_k']):
             path_along_x = [(final_y / (k_mesh['n_k'] - 1) * ik_y + k_mesh['kz'] * Z, final_x + final_y / (k_mesh['n_k'] - 1) * ik_y + k_mesh['kz'] * Z)]
             _, _, e_mat[:,:,:,ik_y] = energy_matrix_on_bz_paths(path_along_x, tb, n_pts=k_mesh['n_k'])
-        k_array = k_points = [0,1]
+        k_disc = k_points = np.array([0,1])
         if add_spin: e_mat = e_mat[2:5,2:5]
 
     k_mesh = {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels, 'k_points_dash': k_mesh['k_path']}

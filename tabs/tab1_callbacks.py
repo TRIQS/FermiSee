@@ -177,7 +177,7 @@ def register_callbacks(app):
             add_local = [0.] * tb_data['n_wf']
 
             k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
-            tb_data['k_mesh'], e_mat, e_vecs, tb = tb.calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, k_mesh, fermi_slice=False, band_basis=band_basis)
+            tb_data['k_mesh'], e_mat, e_vecs, tbl = tb.calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, k_mesh, fermi_slice=False, band_basis=band_basis)
             # calculate Hamiltonian
             tb_data['e_mat'] = e_mat.real.tolist()
             if band_basis:

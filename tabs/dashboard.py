@@ -113,6 +113,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, sigma_data, loaded_data, t
                                 } for i, k in enumerate(['label', 'kx', 'ky', 'kz'])],
                             data=[
                                 {id('column-{}'.format(i)): k for i, k in enumerate(['G', 0,0,0])},
+                                {id('column-{}'.format(i)): k for i, k in enumerate(['X', 0.5,0.0,0])},
                                 {id('column-{}'.format(i)): k for i, k in enumerate(['M', 0.5,0.5,0])}],
                             editable=True,
                             row_deletable=True
