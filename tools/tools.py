@@ -1,3 +1,29 @@
+from tools.TB_functions import *
+
+def get_TBL(hopping, units, n_wf, extend_to_spin=False, add_local=None, add_field=None, renormalize=None):
+    """
+    get triqs tight-binding object from hoppings + units
+    """
+
+    if extend_to_spin:
+    	hopping, n_wf = extend_wannier90_to_spin(hopping, n_wf)
+    if add_local is not None:
+        hopping[(0,0,0)] += add_local
+    if renormalize is not None:
+        assert len(np.shape(renormalize)) == 1, 'Give Z as a vector'
+        assert len(renormalize) == n_wf, 'Give Z as a vector of size n_orb (times two if SOC)'
+        
+        Z_mat = np.diag(np.sqrt(renormalize))
+        for R in hopping:
+            hopping[R] = np.dot(np.dot(Z_mat, hopping[R]), Z_mat)
+
+    if add_field is not None:
+        hopping[(0,0,0)] += add_field
+
+    TBL = TBLattice(units = units, hopping = hopping, orbital_positions = [(0,0,0)]*n_wf,
+                    orbital_names = [str(i) for i in range(n_wf)])
+    return TBL
+
 def change_basis(n_orb, orbital_order_to, orbital_order_from):
     """
     Rotation between orbital bases

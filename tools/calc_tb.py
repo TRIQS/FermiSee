@@ -8,6 +8,7 @@ either calculating the bandstructure or Fermi slice.
 Written by Sophie Beck, 2021
 """
 
+import numpy as np
 from numpy import dtype
 from matplotlib.ticker import MaxNLocator, AutoMinorLocator
 from matplotlib.colors import LogNorm
@@ -19,12 +20,12 @@ import matplotlib.pyplot as plt
 
 # triqs
 from triqs.sumk import SumkDiscreteFromLattice
-from tools.TB_functions import *
 from h5 import HDFArchive
 from triqs.gf import BlockGf
 from triqs.gf import GfReFreq, MeshReFreq
 from triqs.utility.dichotomy import dichotomy
 import tools.tools as tools
+from tools.TB_functions import *
 
 def _convert_kpath(k_mesh):
     k_path = k_mesh['k_path']
@@ -66,30 +67,6 @@ def get_tb_kslice(tb, k_mesh, dft_mu):
 
     return e_val, e_vec
 
-def _get_TBL(hopping, units, n_wf, extend_to_spin=False, add_local=None, add_field=None, renormalize=None):
-    """
-    get triqs tight-binding object from hoppings + units
-    """
-
-    if extend_to_spin:
-    	hopping, n_wf = extend_wannier90_to_spin(hopping, n_wf)
-    if add_local is not None:
-        hopping[(0,0,0)] += add_local
-    if renormalize is not None:
-        assert len(np.shape(renormalize)) == 1, 'Give Z as a vector'
-        assert len(renormalize) == n_wf, 'Give Z as a vector of size n_orb (times two if SOC)'
-        
-        Z_mat = np.diag(np.sqrt(renormalize))
-        for R in hopping:
-            hopping[R] = np.dot(np.dot(Z_mat, hopping[R]), Z_mat)
-
-    if add_field is not None:
-        hopping[(0,0,0)] += add_field
-
-    TBL = TBLattice(units = units, hopping = hopping, orbital_positions = [(0,0,0)]*n_wf,
-                    orbital_names = [str(i) for i in range(n_wf)])
-    return TBL
-
 def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice, band_basis = False):
     """
     calculate tight-binding bands based on a W90 Hamiltonian 
@@ -102,7 +79,7 @@ def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice, band_basis
     if add_spin: H_add_loc += tools.lambda_matrix_w90_t2g(add_local)
 
     hopping = {eval(key): np.array(value, dtype=complex) for key, value in data['hopping'].items()}
-    tb = _get_TBL(hopping, data['units'], data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
+    tb = tools.get_TBL(hopping, data['units'], data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
     # print local H(R)
     h_of_r = tb.hopping_dict()[(0,0,0)][2:5,2:5] if add_spin else tb.hopping_dict()[(0,0,0)]
     tools.print_matrix(h_of_r, data['n_wf'], 'H(R=0)')

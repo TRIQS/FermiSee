@@ -24,23 +24,25 @@ from h5 import HDFArchive
 from triqs.gf import BlockGf
 from triqs.gf import GfReFreq, MeshReFreq
 from triqs.utility.dichotomy import dichotomy
+import tools.tools as tools
 
+upscale = lambda quantity, n_orb: quantity * np.identity(n_orb)
 
 def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
 
-    # adjust to system size
-    upscale = lambda quantity, n_orb: quantity * np.identity(n_orb)
+    # read data
     n_orb = tb_data['n_wf']
-    
     eta = upscale(1j * akw_data['eta'], n_orb)
-    sigma = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
-    sigma_rot = sigma.copy()
-    e_mat = np.array(tb_data['e_mat'])
-    if band_basis:
-        e_vecs = np.array(tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
     w_dict = sigma_data['w_dict']
     w_vec = np.array(w_dict['w_mesh'])[:,None,None] * np.eye(n_orb)
+    e_mat = np.array(tb_data['e_mat'])
     n_k = e_mat.shape[2]
+
+    # sigma
+    sigma = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
+    sigma_rot = sigma.copy()
+    if band_basis:
+        e_vecs = np.array(tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
 
     # TODO add local
     add_local = [0.] * tb_data['n_wf']
@@ -51,7 +53,7 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     new_mu = calc_mu(tb_data, tb_data['n_elect'],  tb_data['add_spin'], add_local, 
                      mu_guess= float(tb_data['dft_mu'])-akw_data['dmft_mu'], Sigma=Sigma_triqs, eta=akw_data['eta'])
     # now subtract the new mu from the dft mu to get the DMFT mu (the hoppings below are already cleaned from the dft_mu)
-    mu = upscale(float(tb_data['dft_mu'])-new_mu, n_orb)
+    mu = upscale(float(tb_data['dft_mu']) - new_mu, n_orb)
 
     if not solve:
 
@@ -90,17 +92,34 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
 
     return alatt_k_w, new_mu
 
-def calc_kslice(n_orb, mu, eta, e_mat, sigma, solve, **w_dict):
+def calc_kslice(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
 
-    # adjust to system size
-    upscale = lambda quantity, n_orb: quantity * np.identity(n_orb)
-    mu = upscale(mu, n_orb)
-    eta = upscale(eta, n_orb)
-
-    iw0 = np.where(np.sign(w_dict['w_mesh']) == True)[0][0]-1
-    _print_matrix(sigma[:,:,iw0], n_orb, 'Zero-frequency Sigma')
-
+    # read data
+    n_orb = tb_data['n_wf']
+    eta = upscale(1j * akw_data['eta'], n_orb)
+    w_dict = sigma_data['w_dict']
+    w_vec = np.array(w_dict['w_mesh'])[:,None,None] * np.eye(n_orb)
+    e_mat = np.array(tb_data['e_mat'])
     n_kx, n_ky = e_mat.shape[2:4]
+
+    # sigma
+    sigma = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
+    sigma_rot = sigma.copy()
+    if band_basis:
+        e_vecs = np.array(tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
+    iw0 = np.where(np.sign(w_dict['w_mesh']) == True)[0][0]-1
+    tools.print_matrix(sigma[:,:,iw0], n_orb, 'Zero-frequency Sigma')
+
+    # TODO add local
+    add_local = [0.] * tb_data['n_wf']
+    triqs_mesh = MeshReFreq(omega_min=w_dict['window'][0], omega_max=w_dict['window'][1],n_max=w_dict['n_w'])
+    Sigma_triqs = GfReFreq(mesh=triqs_mesh , target_shape = [n_orb,n_orb])
+    Sigma_triqs.data[:,:,:] = sigma.transpose((2,0,1))
+
+    new_mu = calc_mu(tb_data, tb_data['n_elect'],  tb_data['add_spin'], add_local, 
+                     mu_guess= float(tb_data['dft_mu'])-akw_data['dmft_mu'], Sigma=Sigma_triqs, eta=akw_data['eta'])
+    # now subtract the new mu from the dft mu to get the DMFT mu (the hoppings below are already cleaned from the dft_mu)
+    mu = upscale(float(tb_data['dft_mu']) - new_mu, n_orb)
 
     if not solve:
         alatt_k_w = np.zeros((n_kx, n_ky))
@@ -135,7 +154,7 @@ def calc_kslice(n_orb, mu, eta, e_mat, sigma, solve, **w_dict):
 
         alatt_k_w[np.where(alatt_k_w > 1)] = 1
 
-    return alatt_k_w
+    return alatt_k_w, new_mu
 
 def sumk(mu, Sigma, bz_weights, hopping, eta=0.0):
     '''
@@ -178,7 +197,7 @@ def calc_mu(tb_data, n_elect, add_spin, add_local, mu_guess= 0.0, Sigma=None, et
         Sigma = GfReFreq(mesh=MeshReFreq(omega_min=-15, omega_max=1,n_max=501) , target_shape = [tb_data['n_wf'],tb_data['n_wf']])
 
     hopping = {eval(key): np.array(value, dtype=complex) for key, value in tb_data['hopping'].items()}
-    tb = _get_TBL(hopping, tb_data['units'], tb_data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
+    tb = tools.get_TBL(hopping, tb_data['units'], tb_data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
 
     SK = SumkDiscreteFromLattice(lattice=tb, n_points=n_k)
 

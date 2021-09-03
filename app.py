@@ -17,8 +17,9 @@ tb_data = {'use': False, 'loaded_hr': False, 'loaded_wout' : False}
 tb_kslice_data = dict(tb_data)
 sigma_data = {'use': False}
 akw_data = {'use': False}
+ak0_data = dict(akw_data)
 loaded_data = {}
-app.layout = layout(tb_data, tb_kslice_data, akw_data, sigma_data, loaded_data)
+app.layout = layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
 tab1_callbacks(app)
 tab2_callbacks(app)
 

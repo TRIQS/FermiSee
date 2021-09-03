@@ -377,7 +377,7 @@ def register_callbacks(app):
          Input(id('akw-data'), 'data'),
          Input(id('sigma-data'), 'data')],
          prevent_initial_call=True)
-    def plot_Akw(tb_bands, akw_bands, colorscale, tb_data, akw_data, sigma_data):
+    def plot_Akw(tb_switch, akw_switch, colorscale, tb_data, akw_data, sigma_data):
         
         # initialize general figure environment
         layout = go.Layout()
@@ -393,13 +393,13 @@ def register_callbacks(app):
         k_mesh = tb_data['k_mesh']
         fig.add_shape(type = 'line', x0=0, y0=0, x1=max(k_mesh['k_disc']), y1=0, line=dict(color='gray', width=0.8))
     
-        if tb_bands:
+        if tb_switch:
             for band in range(len(tb_data['eps_nuk'])):
                 fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=tb_data['eps_nuk'][band], mode='lines',
                             line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=False, text=f'tb band {band}',
                             hoverinfo='x+y+text'
                             ))
-            if not akw_bands:
+            if not akw_switch:
                 fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                           clickmode='event+select',
                           hovermode='closest',
@@ -410,22 +410,20 @@ def register_callbacks(app):
                           xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
                           font=dict(size=16))
 
-        # decide which data to show for A(k,w)
-        if akw_data['use']: akw_temp = akw_data
-        if not 'akw_temp' in locals():
+        if not akw_data['use'] in locals():
             return fig
 
-        if akw_bands:
+        if akw_switch:
             w_mesh = sigma_data['w_dict']['w_mesh']
-            if akw_temp['solve']:
-                z_data = np.array(akw_temp['Akw'])
+            if akw_data['solve']:
+                z_data = np.array(akw_data['Akw'])
                 for orb in range(z_data.shape[1]):
                     #fig.add_trace(go.Contour(x=k_mesh['k_disc'], y=w_mesh, z=z_data[:,:,orb].T,
                     #    colorscale=colorscale, contours=dict(start=0.1, end=1.5, coloring='lines'), ncontours=1, contours_coloring='lines'))
                     fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=z_data[:,orb].T, showlegend=False, mode='markers',
                                                marker_color=px.colors.sequential.Viridis[0]))
             else:
-                z_data = np.log(np.array(akw_temp['Akw']).T)
+                z_data = np.log(np.array(akw_data['Akw']).T)
                 fig.add_trace(go.Heatmap(x=k_mesh['k_disc'], y=w_mesh, z=z_data,
                                          colorscale=colorscale, reversescale=False, showscale=False,
                                          zmin=np.min(z_data), zmax=np.max(z_data)))

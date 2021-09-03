@@ -10,7 +10,7 @@ from dash_extensions import Download as ext_Download
 from tabs.id_factory import id_factory
 
 # layout
-def make_dashboard(tb_data, tb_kslice_data, akw_data, sigma_data, loaded_data, tab_number):
+def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data, tab_number):
     id = id_factory(f'tab{tab_number}')
     col_part = '#F8F9F9'
     button_style = {'margin' : '5px' , 'padding': '0px 5px 0px 3px'}
@@ -269,6 +269,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, sigma_data, loaded_data, t
                     dcc.Store(id=id('tb-data'), data = tb_data),
                     dcc.Store(id=id('tb-kslice-data'), data = tb_kslice_data),
                     dcc.Store(id=id('akw-data'), data = akw_data),
+                    dcc.Store(id=id('ak0-data'), data = ak0_data),
                     dcc.Store(id=id('sigma-data'), data = sigma_data),
                     dcc.Store(id=id('loaded-data'), data = loaded_data),
             ], style={
