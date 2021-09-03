@@ -27,7 +27,8 @@ def register_callbacks(app):
 
     # dashboard calculate TB
     @app.callback(
-        [Output(id('tb-kslice-data'), 'data')],
+        [Output(id('tb-kslice-data'), 'data'),
+         Output(id('tb-bands'), 'on')],
         [Input(id('tb-bands'), 'on'),
          Input(id('calc-tb'), 'n_clicks'),
          Input(id('add-spin'), 'value'),
@@ -61,11 +62,13 @@ def register_callbacks(app):
             tb_kslice_data['eps_nuk'], evec_nuk = tb.get_tb_kslice(tbl, k_mesh, dft_mu)
             tb_kslice_data['use'] = True
 
-        return [tb_kslice_data]
+            tb_switch = {'on': True}
+
+        return tb_kslice_data, tb_switch
 
     # upload akw data
     @app.callback(
-        [Output(id('akw-data'), 'data'),
+        [Output(id('ak0-data'), 'data'),
          Output(id('akw-bands'), 'on'),
          Output(id('tb-alert'), 'is_open')],
         [Input(id('ak0-data'), 'data'),
@@ -102,7 +105,7 @@ def register_callbacks(app):
             ak0_data['use'] = True
             ak0_data['solve'] = solve
 
-            ak0_switch = {'on': True}
+            akw_switch = {'on': True}
 
         return ak0_data, akw_switch, tb_alert 
 
@@ -136,9 +139,10 @@ def register_callbacks(app):
     
         sign = [1,-1]
         quarter = 0
-        quarters = 2 * np.array([sign,sign])
+        quarters = np.array([sign,sign])
         k_mesh = tb_kslice_data['k_mesh']
         if tb_switch:
+            quarters *= 2
             eps_nuk = {int(key): np.array(value) for key, value in tb_kslice_data['eps_nuk'].items()}
             for qrt in list(product(*quarters))[quarter:quarter+1]:
                 for band in range(len(eps_nuk)):
@@ -148,19 +152,21 @@ def register_callbacks(app):
                                                    mode='lines', line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=False,
                                                    text=f'tb band {band}', hoverinfo='x+y+text'))
 
-        if not ak0_data['use'] in locals():
+        if not ak0_data['use']:
             return fig
 
         if akw_switch:
-            n_kx, n_ky = tb_kslice_data['e_mat'].shape[2:4]
-            kx, ky = np.meshgrid(range(n_kx), range(n_ky))
+            n_kx, n_ky = np.array(tb_kslice_data['e_mat']).shape[2:4]
+            ak0 = np.array(ak0_data['Akw'])
+            kx = np.linspace(0, 1, ak0.shape[0])
+            ky = np.linspace(0, 1, ak0.shape[1])
             for qrt in list(product(*quarters))[quarter:quarter+1]:
                 if ak0_data['solve']:
-                    for orb in range(tb_kslice_data['n_wf']):
-                        fig.add_trace(go.Scattergl(x=qrt[0] * kx/(n_kx-1), y=qrt[1] * ky/(n_ky-1), z=ak0_data['Akw'][:,:,orb].T, 
-                                                   showlegend=False, mode='markers', marker_color=px.colors.sequential.Viridis[0]))
+                    for ik1 in range(len(ky)):
+                        for orb in range(tb_kslice_data['n_wf']):
+                            fig.add_trace(go.Scattergl(x=kx, y=ak0[:,ik1,orb].T, showlegend=False, mode='markers',
+                                                       marker_color=px.colors.sequential.Viridis[0]))
                 else:
-                    fig.add_trace(go.Heatmap(x=qrt[0] * kx/(n_kx-1), y=qrt[1] * ky/(n_ky-1), z=ak0_data['Akw'].T, 
-                                             colorscale=colorscale, reversescale=False, showscale=False, zmin=np.min(z_data), zmax=np.max(z_data)))
+                    fig.add_trace(go.Heatmap(x=kx, y=ky, z=ak0.T, colorscale=colorscale, reversescale=False, showscale=False, zmin=np.min(ak0), zmax=np.max(ak0)))
 
         return fig

@@ -81,8 +81,8 @@ def register_callbacks(app):
             solve = True if akw_mode == 'QP dispersion' else False
             akw_data['dmft_mu'] = sigma_data['dmft_mu']
             akw_data['eta'] = 0.01
-            akw, akw_data['dmft_mu'] = akw.calc_alatt(tb_data, sigma_data, akw_data, solve, band_basis)
-            akw_data['Akw'] = akw.tolist()
+            alatt, akw_data['dmft_mu'] = akw.calc_alatt(tb_data, sigma_data, akw_data, solve, band_basis)
+            akw_data['Akw'] = alatt.tolist()
             akw_data['use'] = True
             akw_data['solve'] = solve
 
@@ -410,7 +410,7 @@ def register_callbacks(app):
                           xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
                           font=dict(size=16))
 
-        if not akw_data['use'] in locals():
+        if not akw_data['use']:
             return fig
 
         if akw_switch:

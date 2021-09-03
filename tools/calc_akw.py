@@ -153,6 +153,15 @@ def calc_kslice(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
                         pass
 
         alatt_k_w[np.where(alatt_k_w > 1)] = 1
+        alatt_k_w[np.where(alatt_k_w < 1)] = None
+        for ik1 in range(n_ky):
+            for orb in range(n_orb):
+                try:
+                    cross = np.where(alatt_k_w[:,ik1,orb] == 1)[0]
+                    for idx in cross:
+                        alatt_k_w[idx, ik1, orb] = np.linspace(0, 1, n_ky)[ik1 + 1]
+                except(IndexError):
+                    pass
 
     return alatt_k_w, new_mu
 
