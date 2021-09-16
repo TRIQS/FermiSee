@@ -161,7 +161,7 @@ def register_callbacks(app):
                 return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
             add_local = [0.] * tb_data['n_wf']
-            tb_data['dft_mu'] = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=0.1)
+            tb_data['dft_mu'] = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=0.01)
 
             return tb_data, w90_hr_button, w90_wout_button, tb_switch, '{:.4f}'.format(tb_data['dft_mu']), n_elect, orb_options, band_basis
 
@@ -347,8 +347,8 @@ def register_callbacks(app):
                 w_mesh = MeshReFreq(omega_min=w_min, omega_max=w_max, n_max=n_w)
                 w_dict = {'w_mesh' : w_mesh, 'n_w' : n_w, 'window' : [w_min, w_max]}
 
-                sigma_analytic = tools.sigma_analytic_to_gf(c_sigma, n_orb, w_dict, soc, lambda_values)
-                sigma_data.update(tools.sigma_analytic_to_data(sigma_analytic, w_dict, n_orb))
+                sigma_analytic = gf.sigma_analytic_to_gf(c_sigma, n_orb, w_dict, soc, lambda_values)
+                sigma_data.update(gf.sigma_analytic_to_data(sigma_analytic, w_dict, n_orb))
 
                 return_f_sigma = 'You have entered: \n{}'.format(f_sigma)
 
@@ -602,10 +602,11 @@ def register_callbacks(app):
     Output(id('download_h5'), "data"),
     [Input(id('dwn_button'), "n_clicks"),
      Input(id('tb-data'), 'data'),
-     Input(id('sigma-data'), 'data')],
+     Input(id('sigma-data'), 'data'),
+     Input(id('band-basis'), 'on')],
      prevent_initial_call=True,
     )
-    def download_data(n_clicks, tb_data, sigma_data):
+    def download_data(n_clicks, tb_data, sigma_data, band_basis):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         # check if the download button was pressed
@@ -615,9 +616,10 @@ def register_callbacks(app):
             # store everything as np arrays not as list to enable compression in h5 write!
             tb_data_store = tb_data.copy()
             tb_data_store['e_mat'] = np.array(tb_data['e_mat'])
-            tb_data_store['e_vecs'] = np.array(tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
-            del tb_data_store['evecs_re']
-            del tb_data_store['evecs_im']
+            if band_basis:
+                tb_data_store['e_vecs'] = np.array(tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
+                del tb_data_store['evecs_re']
+                del tb_data_store['evecs_im']
             tb_data_store['eps_nuk'] = np.array(tb_data['eps_nuk'])
             tb_data_store['hopping'] = {str(key): np.array(value) for key, value in tb_data_store['hopping'].items()}
             return_data['tb_data'] = tb_data_store

@@ -116,9 +116,10 @@ def calc_kslice(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     Sigma_triqs = GfReFreq(mesh=triqs_mesh , target_shape = [n_orb,n_orb])
     Sigma_triqs.data[:,:,:] = sigma.transpose((2,0,1))
 
-    new_mu = calc_mu(tb_data, tb_data['n_elect'],  tb_data['add_spin'], add_local, 
-                     mu_guess= float(tb_data['dft_mu'])-akw_data['dmft_mu'], Sigma=Sigma_triqs, eta=akw_data['eta'])
-    # now subtract the new mu from the dft mu to get the DMFT mu (the hoppings below are already cleaned from the dft_mu)
+    #new_mu = calc_mu(tb_data, tb_data['n_elect'],  tb_data['add_spin'], add_local, 
+    #                 mu_guess= float(tb_data['dft_mu'])-akw_data['dmft_mu'], Sigma=Sigma_triqs, eta=akw_data['eta'])
+    ## now subtract the new mu from the dft mu to get the DMFT mu (the hoppings below are already cleaned from the dft_mu)
+    new_mu = float(akw_data['dmft_mu'])
     mu = upscale(float(tb_data['dft_mu']) - new_mu, n_orb)
 
     if not solve:
@@ -203,7 +204,7 @@ def calc_mu(tb_data, n_elect, add_spin, add_local, mu_guess= 0.0, Sigma=None, et
     if add_spin: H_add_loc += tools.lambda_matrix_w90_t2g(add_local)
 
     if not Sigma:
-        Sigma = GfReFreq(mesh=MeshReFreq(omega_min=-15, omega_max=1,n_max=501) , target_shape = [tb_data['n_wf'],tb_data['n_wf']])
+        Sigma = GfReFreq(mesh=MeshReFreq(omega_min=-5, omega_max=1, n_max=1001) , target_shape = [tb_data['n_wf'],tb_data['n_wf']])
 
     hopping = {eval(key): np.array(value, dtype=complex) for key, value in tb_data['hopping'].items()}
     tb = tools.get_TBL(hopping, tb_data['units'], tb_data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
@@ -214,3 +215,42 @@ def calc_mu(tb_data, n_elect, add_spin, add_local, mu_guess= 0.0, Sigma=None, et
 
     return mu
 
+def sigma_from_dmft(n_orb, orbital_order, sigma, spin, block, dc, w_dict, linearize= False):
+    """
+    Takes a sigma obtained from DMFT and interpolates on a given mesh
+    """
+
+    block_spin = spin + '_' + str(block) # if with_sigma == 'calc' else spin
+    SOC = True if spin == 'ud' else False
+    w_mesh_dmft = [x.real for x in sigma[block_spin].mesh]
+    w_mesh = w_dict['w_mesh']
+    sigma_mat = {block_spin: sigma[block_spin].data.real - np.eye(n_orb) * dc + 1j * sigma[block_spin].data.imag}
+
+    # rotate sigma from orbital_order_dmft to orbital_order, where 0,1,2 is the basis given by the Wannier Ham
+    change_of_basis = tools.change_basis(n_orb, orbital_order,  (0,1,2))
+    sigma_mat[block_spin] = np.einsum('ij, kjl -> kil', np.linalg.inv(change_of_basis), np.einsum('ijk, kl -> ijl', sigma_mat[block_spin], change_of_basis))
+
+    sigma_interpolated = np.zeros((n_orb, n_orb, w_dict['n_w']), dtype=complex)
+    
+    if linearize:
+        print('Linearizing Sigma at zero frequency:')
+        eta = eta * 1j
+        iw0 = np.where(np.sign(w_mesh_dmft) == True)[0][0]-1
+        if SOC: sigma_interpolated += np.expand_dims(sigma_mat[block_spin][iw0,:,:], axis=-1)
+        # linearize diagonal elements of sigma
+        for ct in range(n_orb):
+            _, _, fit_params = _linefit(w_mesh_dmft, sigma_mat[block_spin][:,ct,ct], specs['linearize']['window'])
+            zeroth_order, first_order = fit_params[::-1].real
+            print('Zeroth and first order fit parameters: [{0:.4f}, {1:.4f}]'.format(zeroth_order,first_order))
+            sigma_interpolated[ct,ct] = zeroth_order + w_dict['w_mesh'] * first_order
+
+    else:
+        eta = 0 * 1j
+        # interpolate sigma
+        interpolate_sigma = lambda w_mesh, w_mesh_dmft, orb1, orb2: np.interp(w_mesh, w_mesh_dmft, sigma_mat[block_spin][:, orb1, orb2])
+
+        for ct1, ct2 in itertools.product(range(n_orb), range(n_orb)):
+            if ct1 != ct2 and not SOC: continue
+            sigma_interpolated[ct1,ct2] = interpolate_sigma(w_mesh, w_mesh_dmft, ct1, ct2)
+    
+    return sigma_interpolated

@@ -74,6 +74,7 @@ def register_callbacks(app):
         [Input(id('ak0-data'), 'data'),
          Input(id('tb-kslice-data'), 'data'),
          Input(id_tap('sigma-data'), 'data'),
+         Input(id_tap('akw-data'), 'data'),
          Input(id('akw-bands'), 'on'),
          Input(id_tap('dft-mu'), 'value'),
          Input(id('k-points'), 'data'),
@@ -85,7 +86,7 @@ def register_callbacks(app):
          State(id('tb-alert'), 'is_open'),
          prevent_initial_call=True
         )
-    def update_ak0(ak0_data, tb_kslice_data, sigma_data, akw_switch, dft_mu, k_points, n_k, click_tb, click_akw, akw_mode, band_basis, tb_alert):
+    def update_ak0(ak0_data, tb_kslice_data, sigma_data, akw_data, akw_switch, dft_mu, k_points, n_k, click_tb, click_akw, akw_mode, band_basis, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***update_ak0***:'), trigger_id)
@@ -98,7 +99,7 @@ def register_callbacks(app):
                 return ak0_data, akw_switch, not tb_alert
 
             solve = True if akw_mode == 'QP dispersion' else False
-            ak0_data['dmft_mu'] = sigma_data['dmft_mu']
+            ak0_data['dmft_mu'] = akw_data['dmft_mu']
             ak0_data['eta'] = 0.01
             ak0, ak0_data['dmft_mu'] = akw.calc_kslice(tb_kslice_data, sigma_data, ak0_data, solve, band_basis)
             ak0_data['Akw'] = ak0.tolist()

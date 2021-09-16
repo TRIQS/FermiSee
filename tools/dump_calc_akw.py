@@ -33,46 +33,6 @@ def _sigma_from_model(n_orb, orbital_order, zeroth_order, first_order, efermi, e
     
     return sigma_interpolated, mu, dft_mu, eta, w_dict
 
-def sigma_from_dmft(n_orb, orbital_order, sigma, spin, block, dc, w_dict, linearize= False):
-    """
-    Takes a sigma obtained from DMFT and interpolates on a given mesh
-    """
-
-    block_spin = spin + '_' + str(block) # if with_sigma == 'calc' else spin
-    SOC = True if spin == 'ud' else False
-    w_mesh_dmft = [x.real for x in sigma[block_spin].mesh]
-    w_mesh = w_dict['w_mesh']
-    sigma_mat = {block_spin: sigma[block_spin].data.real - np.eye(n_orb) * dc + 1j * sigma[block_spin].data.imag}
-
-    # rotate sigma from orbital_order_dmft to orbital_order, where 0,1,2 is the basis given by the Wannier Ham
-    change_of_basis = _change_basis(n_orb, orbital_order,  (0,1,2))
-    sigma_mat[block_spin] = np.einsum('ij, kjl -> kil', np.linalg.inv(change_of_basis), np.einsum('ijk, kl -> ijl', sigma_mat[block_spin], change_of_basis))
-
-    sigma_interpolated = np.zeros((n_orb, n_orb, w_dict['n_w']), dtype=complex)
-    
-    if linearize:
-        print('Linearizing Sigma at zero frequency:')
-        eta = eta * 1j
-        iw0 = np.where(np.sign(w_mesh_dmft) == True)[0][0]-1
-        if SOC: sigma_interpolated += np.expand_dims(sigma_mat[block_spin][iw0,:,:], axis=-1)
-        # linearize diagonal elements of sigma
-        for ct in range(n_orb):
-            _, _, fit_params = _linefit(w_mesh_dmft, sigma_mat[block_spin][:,ct,ct], specs['linearize']['window'])
-            zeroth_order, first_order = fit_params[::-1].real
-            print('Zeroth and first order fit parameters: [{0:.4f}, {1:.4f}]'.format(zeroth_order,first_order))
-            sigma_interpolated[ct,ct] = zeroth_order + w_dict['w_mesh'] * first_order
-
-    else:
-        eta = 0 * 1j
-        # interpolate sigma
-        interpolate_sigma = lambda w_mesh, w_mesh_dmft, orb1, orb2: np.interp(w_mesh, w_mesh_dmft, sigma_mat[block_spin][:, orb1, orb2])
-
-        for ct1, ct2 in itertools.product(range(n_orb), range(n_orb)):
-            if ct1 != ct2 and not SOC: continue
-            sigma_interpolated[ct1,ct2] = interpolate_sigma(w_mesh, w_mesh_dmft, ct1, ct2)
-    
-    return sigma_interpolated
-
 def get_dmft_bands(n_orb, with_sigma=False, fermi_slice=False, solve=False, orbital_order=(0,1,2), band_basis=False, **specs):
     
     # dmft output
