@@ -37,7 +37,7 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
                     html.H3('EDC', style={'textAlign': 'center'}),
                     dcc.Graph(
                         id='EDC',
-                        style={'height': '95%'}
+                        style={'height': '100%'}
                        ),
                     dcc.Slider(
                         id='kpt_edc',
@@ -52,17 +52,17 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
                 ], style={
                     'padding-right': '1%',
                     'width': '99%',
-                    #'padding-top': '3%',
+                    'padding-bottom': '5%',
                     'height': '40vh',
                     'vertical-align': 'top',
                     'borderBottom': 'thin lightgrey solid'
                     }
                 ),
                 html.Div([
-                    html.H3('MDC', style={'textAlign': 'center'}),
+                    html.H3('MDC', style={'textAlign': 'center', 'padding': '0%'}),
                     dcc.Graph(
                         id='MDC',
-                        style={'height': '95%'}
+                        style={'height': '100%', 'padding': '0%'}
                        ),
                     dcc.Slider(
                         id='w_mdc',
@@ -72,10 +72,10 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
                         #marks={str(year): str(year) for year in df['Year'].unique()},
                         step=1,
                         updatemode='drag',
-                        verticalHeight=100),
+                        ),
                 ], style={
                     'padding-right': '1%',
-                    'padding-top': '10%',
+                    'padding-top': '5%',
                     'width': '99%',
                     'height': '40vh'
                     }
