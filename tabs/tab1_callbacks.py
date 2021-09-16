@@ -59,14 +59,15 @@ def register_callbacks(app):
          Input(id('dft-mu'), 'value'),
          Input(id('k-points'), 'data'),
          Input(id('n-k'), 'value'),
-         Input(id('calc-akw'), 'n_clicks'),
          Input(id('calc-tb'), 'n_clicks'),
+         Input(id('calc-akw'), 'n_clicks'),
          Input(id('akw-mode'), 'value'),
+         Input(id('eta'), 'value'),
          Input(id('band-basis'), 'on')],
          State(id('tb-alert'), 'is_open'),
          prevent_initial_call=True
         )
-    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, n_k, click_tb, click_akw, akw_mode, band_basis, tb_alert):
+    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, n_k, click_tb, click_akw, akw_mode, eta, band_basis, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***update_akw***:'), trigger_id)
@@ -79,8 +80,10 @@ def register_callbacks(app):
                 return akw_data, akw_switch, not tb_alert
 
             solve = True if akw_mode == 'QP dispersion' else False
-            akw_data['dmft_mu'] = sigma_data['dmft_mu']
-            akw_data['eta'] = 0.01
+            if not 'dmft_mu' in akw_data.keys():
+                 akw_data['dmft_mu'] = float(tb_data['dft_mu']) - sigma_data['dmft_mu']
+                 print(akw_data['dmft_mu'])
+            akw_data['eta'] = float(eta)
             alatt, akw_data['dmft_mu'] = akw.calc_alatt(tb_data, sigma_data, akw_data, solve, band_basis)
             akw_data['Akw'] = alatt.tolist()
             akw_data['use'] = True
@@ -117,11 +120,12 @@ def register_callbacks(app):
          Input(id('k-points'), 'data'),
          Input(id('loaded-data'), 'data'),
          Input(id('orbital-order'),'options'),
+         Input(id('eta'), 'value'),
          Input(id('band-basis'), 'on')],
          prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
                 w90_wout_button, tb_switch, click_tb, n_elect, click_tb_mu, tb_data, add_spin, dft_mu, n_k, 
-                k_points, loaded_data, orb_options, band_basis):
+                k_points, loaded_data, orb_options, eta, band_basis):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***calc_tb***:'), trigger_id)
@@ -161,7 +165,7 @@ def register_callbacks(app):
                 return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
             add_local = [0.] * tb_data['n_wf']
-            tb_data['dft_mu'] = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=0.01)
+            tb_data['dft_mu'] = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=float(eta))
 
             return tb_data, w90_hr_button, w90_wout_button, tb_switch, '{:.4f}'.format(tb_data['dft_mu']), n_elect, orb_options, band_basis
 

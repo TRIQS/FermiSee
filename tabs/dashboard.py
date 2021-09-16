@@ -172,7 +172,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                         html.Div([
                             html.P('η (eV):',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                 ),
-                            dcc.Input(id=id('eta'), type='number', value='0.01', step='0.005',
+                            dcc.Input(id=id('eta'), type='number', value='0.010', step='0.001',
                                 placeholder='broadening η', style={'width': '60%','margin-bottom': '10px'}),
                         ], style={'padding': '5px 5px'}
                         ),

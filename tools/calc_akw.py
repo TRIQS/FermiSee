@@ -49,9 +49,10 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     triqs_mesh = MeshReFreq(omega_min=w_dict['window'][0], omega_max=w_dict['window'][1],n_max=w_dict['n_w'])
     Sigma_triqs = GfReFreq(mesh=triqs_mesh , target_shape = [n_orb,n_orb])
     Sigma_triqs.data[:,:,:] = sigma.transpose((2,0,1))
-
+    
     new_mu = calc_mu(tb_data, tb_data['n_elect'],  tb_data['add_spin'], add_local, 
-                     mu_guess= float(tb_data['dft_mu'])-akw_data['dmft_mu'], Sigma=Sigma_triqs, eta=akw_data['eta'])
+                     mu_guess= akw_data['dmft_mu'], Sigma=Sigma_triqs, eta=akw_data['eta'])
+
     # now subtract the new mu from the dft mu to get the DMFT mu (the hoppings below are already cleaned from the dft_mu)
     mu = upscale(float(tb_data['dft_mu']) - new_mu, n_orb)
 
@@ -194,7 +195,6 @@ def calc_mu(tb_data, n_elect, add_spin, add_local, mu_guess= 0.0, Sigma=None, et
         # 2 times for spin degeneracy
         sp_factor = 1 if add_spin else 2
         dens = sp_factor*sumk(mu = mu, Sigma = Sigma, bz_weights=SK.bz_weights, hopping=SK.hopping, eta=eta).total_density()
-        print(mu,dens)
         return dens.real
 
     # set up Wannier Hamiltonian
