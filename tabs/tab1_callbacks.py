@@ -130,6 +130,9 @@ def register_callbacks(app):
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***calc_tb***:'), trigger_id)
 
+        if trigger_id == id('tb-bands'):
+            return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
+
         #if w90_hr != None and not 'loaded_hr' in tb_data:
         if trigger_id == id('upload-w90-hr'):
             print('loading w90 hr file...')
@@ -383,6 +386,10 @@ def register_callbacks(app):
          prevent_initial_call=True)
     def plot_Akw(tb_switch, akw_switch, colorscale, tb_data, akw_data, sigma_data):
         
+        ctx = dash.callback_context
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        print('{:20s}'.format('***plot_Akw***:'), trigger_id)
+
         # initialize general figure environment
         layout = go.Layout()
         fig = go.Figure(layout=layout)
