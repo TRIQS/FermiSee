@@ -110,6 +110,17 @@ def register_callbacks(app):
 
         return ak0_data, akw_switch, tb_alert 
 
+    # dashboard colors
+    @app.callback(
+        Output(id('colorscale'), 'options'),
+        Input(id('colorscale-mode'), 'value'),
+        prevent_initial_call=False,
+        )
+    def update_colorscales(mode):
+        colorscales = [name for name, body in inspect.getmembers(getattr(px.colors, mode))
+                if isinstance(body, list) and len(name.rsplit('_')) == 1]
+        return [{'label': key, 'value': key} for key in colorscales]
+
     # upload akw data
     @app.callback(
         Output(id('Ak0'), 'figure'),
