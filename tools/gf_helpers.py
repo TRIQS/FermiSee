@@ -3,7 +3,7 @@ from itertools import product
 from triqs.gf import GfReFreq
 
 def sigma_analytic_to_data(sigma, w_dict, n_orb):
-    
+
     w_dict['w_mesh'] = [w.value for w in w_dict['w_mesh']]
 
     temp_sigma_data = {}
@@ -36,7 +36,7 @@ def reorder_sigma(sigma_data, new_order, old_order):
 
     sigma = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
     change_of_basis = tools.change_basis(len(new_order), new_order,  old_order)
-    
+
     sigma = np.einsum('ij, jlk -> ilk', np.linalg.inv(change_of_basis), np.einsum('jki, kl -> jli', sigma, change_of_basis))
     sigma_data['sigma_re'] = sigma.real.tolist()
     sigma_data['sigma_im'] = sigma.imag.tolist()

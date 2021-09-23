@@ -49,12 +49,11 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     triqs_mesh = MeshReFreq(omega_min=w_dict['window'][0], omega_max=w_dict['window'][1],n_max=w_dict['n_w'])
     Sigma_triqs = GfReFreq(mesh=triqs_mesh , target_shape = [n_orb,n_orb])
     Sigma_triqs.data[:,:,:] = sigma.transpose((2,0,1))
-    
-    new_mu = calc_mu(tb_data, tb_data['n_elect'],  tb_data['add_spin'], add_local, 
+
+    new_mu = calc_mu(tb_data, tb_data['n_elect'],  tb_data['add_spin'], add_local,
                      mu_guess= akw_data['dmft_mu'], Sigma=Sigma_triqs, eta=akw_data['eta'])
 
-    # now subtract the new mu from the dft mu to get the DMFT mu (the hoppings below are already cleaned from the dft_mu)
-    mu = upscale(float(tb_data['dft_mu']) - new_mu, n_orb)
+    mu = upscale(new_mu, n_orb)
 
     if not solve:
 
@@ -117,11 +116,7 @@ def calc_kslice(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     Sigma_triqs = GfReFreq(mesh=triqs_mesh , target_shape = [n_orb,n_orb])
     Sigma_triqs.data[:,:,:] = sigma.transpose((2,0,1))
 
-    #new_mu = calc_mu(tb_data, tb_data['n_elect'],  tb_data['add_spin'], add_local, 
-    #                 mu_guess= float(tb_data['dft_mu'])-akw_data['dmft_mu'], Sigma=Sigma_triqs, eta=akw_data['eta'])
-    ## now subtract the new mu from the dft mu to get the DMFT mu (the hoppings below are already cleaned from the dft_mu)
-    new_mu = float(akw_data['dmft_mu'])
-    mu = upscale(float(tb_data['dft_mu']) - new_mu, n_orb)
+    mu = upscale(float(akw_data['dmft_mu']), n_orb)
 
     if not solve:
         alatt_k_w = np.zeros((n_kx, n_ky))
@@ -145,7 +140,7 @@ def calc_kslice(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
                     e_val, _ = np.linalg.eigh( eta + mu - e_temp[:,:,ik2] - sigma[:,:,iw0])
                     k1, k2 = [ik2, ik1] if it == 0 else [ik1, ik2]
                     kslice[k1, k2] = e_val
-                
+
                 for orb in range(n_orb):
                     try:
                         x0 = brentq( kslice_interp(ik1, orb), 0, n_kx - 1)
@@ -165,11 +160,11 @@ def calc_kslice(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
                 except(IndexError):
                     pass
 
-    return alatt_k_w, new_mu
+    return alatt_k_w, mu
 
 def sumk(mu, Sigma, bz_weights, hopping, eta=0.0):
     '''
-    calc Gloc 
+    calc Gloc
     '''
     Gloc = Sigma.copy()
     Gloc << 0.0+0.0j
@@ -180,9 +175,9 @@ def sumk(mu, Sigma, bz_weights, hopping, eta=0.0):
     mu_mat = mu * np.eye(n_orb)
     eta_mat = 1j*eta * np.eye(n_orb)
 
-    #Loop on k points...
+    #Loop on k points
     for wk, eps_k in zip(bz_weights, hopping):
-        Gloc.data[:,:,:] += wk*np.linalg.inv(w_mat[:] + mu_mat - eps_k - Sigma.data[:,:,:].real + eta_mat)
+        Gloc.data[:,:,:] += wk*np.linalg.inv(w_mat[:] + mu_mat - eps_k - Sigma.data[:,:,:] + eta_mat)
 
     return Gloc
 
@@ -231,7 +226,7 @@ def sigma_from_dmft(n_orb, orbital_order, sigma, spin, block, dc, w_dict, linear
     sigma_mat[block_spin] = np.einsum('ij, kjl -> kil', np.linalg.inv(change_of_basis), np.einsum('ijk, kl -> ijl', sigma_mat[block_spin], change_of_basis))
 
     sigma_interpolated = np.zeros((n_orb, n_orb, w_dict['n_w']), dtype=complex)
-    
+
     if linearize:
         print('Linearizing Sigma at zero frequency:')
         eta = eta * 1j
@@ -252,5 +247,5 @@ def sigma_from_dmft(n_orb, orbital_order, sigma, spin, block, dc, w_dict, linear
         for ct1, ct2 in itertools.product(range(n_orb), range(n_orb)):
             if ct1 != ct2 and not SOC: continue
             sigma_interpolated[ct1,ct2] = interpolate_sigma(w_mesh, w_mesh_dmft, ct1, ct2)
-    
+
     return sigma_interpolated

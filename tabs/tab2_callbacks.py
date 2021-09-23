@@ -56,7 +56,7 @@ def register_callbacks(app):
             k_mesh['Z'] = np.array([+0.25, +0.25, -0.25])
             add_local = [0.] * tb_kslice_data['n_wf']
 
-            tb_kslice_data['k_mesh'], e_mat, e_vecs, tbl = tb.calc_tb_bands(tb_kslice_data, add_spin, float(dft_mu), add_local, k_mesh, fermi_slice=True)
+            tb_kslice_data['k_mesh'], e_mat, e_vecs, tbl = tb.calc_tb_bands(tb_kslice_data, add_spin, add_local, k_mesh, fermi_slice=True)
             # calculate Hamiltonian
             tb_kslice_data['e_mat'] = e_mat.real.tolist()
             tb_kslice_data['eps_nuk'], evec_nuk = tb.get_tb_kslice(tbl, k_mesh, dft_mu)
@@ -108,7 +108,7 @@ def register_callbacks(app):
 
             akw_switch = {'on': True}
 
-        return ak0_data, akw_switch, tb_alert 
+        return ak0_data, akw_switch, tb_alert
 
     # dashboard colors
     @app.callback(

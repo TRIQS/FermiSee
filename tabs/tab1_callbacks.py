@@ -81,7 +81,7 @@ def register_callbacks(app):
 
             solve = True if akw_mode == 'QP dispersion' else False
             if not 'dmft_mu' in akw_data.keys():
-                 akw_data['dmft_mu'] = float(tb_data['dft_mu']) - sigma_data['dmft_mu']
+                 akw_data['dmft_mu'] = sigma_data['dmft_mu']
                  print(akw_data['dmft_mu'])
             akw_data['eta'] = float(eta)
             alatt, akw_data['dmft_mu'] = akw.calc_alatt(tb_data, sigma_data, akw_data, solve, band_basis)
@@ -91,7 +91,7 @@ def register_callbacks(app):
 
             akw_switch = {'on': True}
 
-        return akw_data, akw_switch, tb_alert 
+        return akw_data, akw_switch, tb_alert
 
     # dashboard calculate TB
     @app.callback(
@@ -124,13 +124,17 @@ def register_callbacks(app):
          Input(id('band-basis'), 'on')],
          prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
-                w90_wout_button, tb_switch, click_tb, n_elect, click_tb_mu, tb_data, add_spin, dft_mu, n_k, 
+                w90_wout_button, tb_switch, click_tb, n_elect, click_tb_mu, tb_data, add_spin, dft_mu, n_k,
                 k_points, loaded_data, orb_options, eta, band_basis):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***calc_tb***:'), trigger_id)
 
         if trigger_id == id('tb-bands'):
+            return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
+
+        if trigger_id == id('dft-mu'):
+            tb_data['dft_mu'] = dft_mu
             return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
         #if w90_hr != None and not 'loaded_hr' in tb_data:
@@ -160,8 +164,8 @@ def register_callbacks(app):
             tb_data['use'] = True
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
-            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu'], tb_data['n_elect'], orb_options, tb_data['band_basis']
-        
+            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, '{:.4f}'.format(tb_data['dft_mu']), tb_data['n_elect'], orb_options, tb_data['band_basis']
+
         if trigger_id == id('calc-tb-mu') and ((tb_data['loaded_hr'] and tb_data['loaded_wout']) or tb_data['use']):
             if float(n_elect) == 0.0:
                 print('please specify filling')
@@ -181,22 +185,24 @@ def register_callbacks(app):
             if not isinstance(n_k, int):
                 n_k = 20
 
+            if not 'dft_mu' in tb_data.keys() or abs(float(dft_mu) - tb_data['dft_mu']) > 1e-4:
+                tb_data['dft_mu'] = float(dft_mu)
+
             add_local = [0.] * tb_data['n_wf']
 
             k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
-            tb_data['k_mesh'], e_mat, e_vecs, tbl = tb.calc_tb_bands(tb_data, add_spin, float(dft_mu), add_local, k_mesh, fermi_slice=False, band_basis=band_basis)
+            tb_data['k_mesh'], e_mat, e_vecs, tbl = tb.calc_tb_bands(tb_data, add_spin, add_local, k_mesh, fermi_slice=False, band_basis=band_basis)
             # calculate Hamiltonian
             tb_data['e_mat'] = e_mat.real.tolist()
             if band_basis:
                 tb_data['evecs_re'] = e_vecs.real.tolist()
                 tb_data['evecs_im'] = e_vecs.imag.tolist()
-                tb_data['eps_nuk'] = np.einsum('iij -> ij', e_mat).real.tolist()
+                tb_data['eps_nuk'] = np.einsum('iij -> ij', e_mat-tb_data['dft_mu']).real.tolist()
             else:
-                tb_data['eps_nuk'], evec_nuk = tb.get_tb_bands(e_mat)
+                tb_data['eps_nuk'], evec_nuk = tb.get_tb_bands(e_mat, tb_data['dft_mu'])
                 tb_data['eps_nuk'] = tb_data['eps_nuk'].tolist()
             tb_data['bnd_low'] = np.min(np.array(tb_data['eps_nuk'][0])).real
             tb_data['bnd_high'] = np.max(np.array(tb_data['eps_nuk'][-1])).real
-            tb_data['dft_mu'] = dft_mu
             tb_data['n_elect'] = float(n_elect)
             tb_data['band_basis'] = band_basis
             if not add_spin:
@@ -205,7 +211,7 @@ def register_callbacks(app):
                 tb_data['add_spin'] = True
             tb_data['use'] = True
 
-            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, tb_data['dft_mu'], n_elect, orb_options, band_basis
+            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, dft_mu, n_elect, orb_options, band_basis
 
     # dashboard k-points
     @app.callback(
@@ -274,7 +280,7 @@ def register_callbacks(app):
             if build:
                 return [html.Div([
                             html.P(f'{key}:',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}),
-                            dcc.Input(id={'type': 'sigma-lambdas', 'index': ct}, type='number', value=value, step='0.005',
+                            dcc.Input(id={'type': 'sigma-lambdas', 'index': ct}, type='number', value=value, step='0.005', debounce=True,
                                       placeholder=f'λ{key}', style={'width': '60%','margin-bottom': '10px'})
                         ]) for ct, (key, value) in enumerate(lambdas)]
             else: return []
@@ -346,9 +352,9 @@ def register_callbacks(app):
                 # TODO: create warning, see above
                 n_orb = tb_data['n_wf']
                 n_orb = 3
-                w_min = -5
-                w_max = 5
-                n_w = 501
+                w_min = -1.5
+                w_max = 1.5
+                n_w = 1001
                 soc = False
 
                 w_mesh = MeshReFreq(omega_min=w_min, omega_max=w_max, n_max=n_w)
@@ -356,7 +362,8 @@ def register_callbacks(app):
 
                 sigma_analytic = gf.sigma_analytic_to_gf(c_sigma, n_orb, w_dict, soc, lambda_values)
                 sigma_data.update(gf.sigma_analytic_to_data(sigma_analytic, w_dict, n_orb))
-
+                # initial dmft_mu to dft_mu
+                sigma_data['dmft_mu'] = tb_data['dft_mu']
                 return_f_sigma = 'You have entered: \n{}'.format(f_sigma)
 
             return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma, lambda_list, lambda_view
@@ -472,44 +479,44 @@ def register_callbacks(app):
         if tb_data['use']: tb_temp = tb_data
         if not 'tb_temp' in locals():
             return fig, 0, 1
-    
+
         k_mesh = tb_temp['k_mesh']
 
         if tb_bands:
             for band in range(len(tb_temp['eps_nuk'])):
                 if band == 0:
-                    fig.add_trace(go.Scattergl(x=[tb_temp['eps_nuk'][band][kpt_edc],tb_temp['eps_nuk'][band][kpt_edc]], 
-                                         y=[0,300], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), 
+                    fig.add_trace(go.Scattergl(x=[tb_temp['eps_nuk'][band][kpt_edc],tb_temp['eps_nuk'][band][kpt_edc]],
+                                         y=[0,300], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]),
                                          showlegend=True, name='k = {:.3f}'.format(tb_temp['k_mesh']['k_disc'][kpt_edc]),
                                     hoverinfo='x+y+text'
                                     ))
                 else:
-                    fig.add_trace(go.Scattergl(x=[tb_temp['eps_nuk'][band][kpt_edc],tb_temp['eps_nuk'][band][kpt_edc]], 
-                                            y=[0,300], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), 
+                    fig.add_trace(go.Scattergl(x=[tb_temp['eps_nuk'][band][kpt_edc],tb_temp['eps_nuk'][band][kpt_edc]],
+                                            y=[0,300], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]),
                                             showlegend=False, hoverinfo='x+y+text'
                                         ))
             if not akw_bands:
                 fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                                 hovermode='closest',
-                                xaxis_range=[tb_data['bnd_low']- 0.02*abs(tb_data['bnd_low']) , 
+                                xaxis_range=[tb_data['bnd_low']- 0.02*abs(tb_data['bnd_low']) ,
                                              tb_data['bnd_high']+ 0.02*abs(tb_data['bnd_high'])],
                                 yaxis_range=[0, 1],
                                 xaxis_title='ω (eV)',
                                 yaxis_title='A(ω)',
                                 font=dict(size=16),
                                 legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
-                                )       
+                                )
         if akw_bands:
             w_mesh = sigma_data['w_dict']['w_mesh']
             if trigger_id == 'Akw':
                 new_kpt = click_coordinates['points'][0]['x']
                 kpt_edc = np.argmin(np.abs(np.array(k_mesh['k_disc']) - new_kpt))
-            
+
             fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Akw'])[kpt_edc,:], mode='lines',
                 line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
                                        hoverinfo='x+y+text'
                                     ))
-            
+
             fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                                 hovermode='closest',
                                 xaxis_range=[w_mesh[0], w_mesh[-1]],
@@ -561,14 +568,14 @@ def register_callbacks(app):
         #     for band in range(len(tb_temp['eps_nuk'])):
         #         if band == 0:
         #             y = np.min(np.abs(np.array(tb_temp['eps_nuk'][band]) - w_mdc))
-        #             fig.add_trace(go.Scattergl(x=[k_mesh['k_disc'][0],k_mesh['k_disc'][-1]], 
-        #                                  y=[y,y], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), 
+        #             fig.add_trace(go.Scattergl(x=[k_mesh['k_disc'][0],k_mesh['k_disc'][-1]],
+        #                                  y=[y,y], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]),
         #                                  showlegend=True, name='ω = {:.3f} eV'.format(akw_data['freq_mesh'][w_mdc]),
         #                             hoverinfo='x+y+text'
         #                             ))
         #         # else:
-        #         #     fig.add_trace(go.Scattergl(x=[tb_temp['eps_nuk'][band][kpt_edc],tb_temp['eps_nuk'][band][kpt_edc]], 
-        #         #                             y=[0,300], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), 
+        #         #     fig.add_trace(go.Scattergl(x=[tb_temp['eps_nuk'][band][kpt_edc],tb_temp['eps_nuk'][band][kpt_edc]],
+        #         #                             y=[0,300], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]),
         #         #                             showlegend=False, hoverinfo='x+y+text'
         #                                 # ))
         #     if not akw:
@@ -608,16 +615,17 @@ def register_callbacks(app):
         #     return fig, w_mdc, np.max(np.array(tb_temp['eps_nuk'][-1]))+(0.03*np.max(np.array(tb_temp['eps_nuk'][-1])))
         else:
             return fig, 0, 1
-    
+
     @app.callback(
     Output(id('download_h5'), "data"),
     [Input(id('dwn_button'), "n_clicks"),
      Input(id('tb-data'), 'data'),
+     Input(id('akw-data'), 'data'),
      Input(id('sigma-data'), 'data'),
      Input(id('band-basis'), 'on')],
      prevent_initial_call=True,
     )
-    def download_data(n_clicks, tb_data, sigma_data, band_basis):
+    def download_data(n_clicks, tb_data, akw_data, sigma_data, band_basis):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         # check if the download button was pressed
@@ -640,13 +648,14 @@ def register_callbacks(app):
             del sigma_data_store['sigma_re']
             del sigma_data_store['sigma_im']
             sigma_data_store['w_dict']['w_mesh'] = np.array(sigma_data['w_dict']['w_mesh'])
+            sigma_data_store['dmft_mu']  = akw_data['dmft_mu']
             return_data['sigma_data'] = sigma_data_store
-            
+
             content = base64.b64encode(return_data.as_bytes()).decode()
 
             return dict(content=content, filename='spectrometer.h5', base64=True)
         else:
             return None
-        
+
 
 

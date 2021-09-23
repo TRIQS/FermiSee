@@ -37,7 +37,7 @@ def _convert_kpath(k_mesh):
 
     return k_path, k_point_labels
 
-def get_tb_bands(e_mat):
+def get_tb_bands(e_mat, mu):
     """
     Compute band eigenvalues and eigenvectors from matrix per k-point
     """
@@ -47,7 +47,7 @@ def get_tb_bands(e_mat):
     for ik in range(np.shape(e_mat)[2]):
         e_val[:,ik], e_vec[:,:,ik] = np.linalg.eigh(e_mat[:,:,ik])
 
-    return e_val.real, e_vec
+    return e_val.real-mu, e_vec
 
 def get_tb_kslice(tb, k_mesh, dft_mu):
     """
@@ -62,20 +62,19 @@ def get_tb_kslice(tb, k_mesh, dft_mu):
     final_x, final_y = k_path[1]
     Z = np.array(k_mesh['Z'])
 
-    fermi = 0.
+    fermi = dft_mu
     e_val, e_vec = get_kx_ky_FS(final_x, final_y, Z, tb, k_trans_back=cart_to_prim, N_kxy=k_mesh['n_k'], kz=k_mesh['kz'], fermi=fermi)
 
     return e_val, e_vec
 
-def calc_tb_bands(data, add_spin, mu, add_local, k_mesh, fermi_slice, band_basis = False):
+def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, band_basis = False):
     """
-    calculate tight-binding bands based on a W90 Hamiltonian 
+    calculate tight-binding bands based on a W90 Hamiltonian
     """
 
     # set up Wannier Hamiltonian
     n_orb_rescale = 2 * data['n_wf'] if add_spin else data['n_wf']
     H_add_loc = np.zeros((n_orb_rescale, n_orb_rescale), dtype=complex)
-    H_add_loc += np.diag([-mu]*n_orb_rescale)
     if add_spin: H_add_loc += tools.lambda_matrix_w90_t2g(add_local)
 
     hopping = {eval(key): np.array(value, dtype=complex) for key, value in data['hopping'].items()}
