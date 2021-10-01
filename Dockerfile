@@ -50,8 +50,8 @@ USER triqs
 WORKDIR /home/triqs
 
 # Create a working directory.
-RUN mkdir /home/triqs/triqs_spectrometer
-WORKDIR /home/triqs/triqs_spectrometer
+RUN mkdir /home/triqs/fermisee
+WORKDIR /home/triqs/fermisee
 
 # Copy the rest of the codebase into the image
 COPY . ./

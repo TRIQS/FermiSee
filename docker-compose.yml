@@ -3,7 +3,7 @@ version: '3'
 services:
   # main application
   triqs_spectrometer:
-    image: triqs_spectrometer
+    image: fermisee
     build:
       .
     ports:

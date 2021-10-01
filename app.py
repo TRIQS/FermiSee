@@ -10,7 +10,7 @@ server = Flask(__name__)
 
 external_stylesheets = [dbc.themes.FLATLY, 'https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets,server=server, prevent_initial_callbacks=True)
-app.title = 'triqs_spectrometer'
+app.title = 'FermiSee'
 
 
 tb_data = {'use': False, 'loaded_hr': False, 'loaded_wout' : False}
