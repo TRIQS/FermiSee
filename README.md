@@ -1,4 +1,4 @@
- # triqs_spectrometer
+ # FermiSee
  
  This is a graphical A(k,w) analyzer tool, based on triqs/lattice/tight_binding-models decorated with a self-energy. 
  
@@ -15,14 +15,7 @@
  to rebuild after changes in the Dockerfile:
  ```
  docker-compose build
- ```
+```
 
-## questions:
-* 
+public images are available on [hub.docker.com/repository/docker/materialstheory/fermisee](hub.docker.com/repository/docker/materialstheory/fermisee)
 
-## ToDo list: 
-* multiple impurities
-* use rot_mat
-* specfunc vs. quasiparticle dispersion [Sophie]
-* perhaps TB on MDC [Sophie]
-* Fermi surface [Sophie]
