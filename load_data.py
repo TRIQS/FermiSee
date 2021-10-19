@@ -21,6 +21,10 @@ def load_config(contents, h5_filename, data):
         data['tb_data'] = ar['tb_data']
         data['tb_data']['e_mat'] = data['tb_data']['e_mat'].tolist()
         data['tb_data']['eps_nuk'] = data['tb_data']['eps_nuk'].tolist()
+        if 'e_vecs' in data['tb_data'].keys():
+            data['tb_data']['evecs_re'] = data['tb_data']['e_vecs'].real  
+            data['tb_data']['evecs_im'] = data['tb_data']['e_vecs'].imag  
+            del data['tb_data']['e_vecs']
         data['tb_data']['hopping'] = {str(key): value.tolist() for key, value in data['tb_data']['hopping'].items()}
         
     if 'sigma_data' in ar:

@@ -2,6 +2,8 @@ import numpy as np
 from itertools import product
 from triqs.gf import GfReFreq
 
+import tools.tools as tools
+
 def sigma_analytic_to_data(sigma, w_dict, n_orb):
 
     w_dict['w_mesh'] = [w.value for w in w_dict['w_mesh']]

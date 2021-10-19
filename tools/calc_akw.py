@@ -222,7 +222,7 @@ def sigma_from_dmft(n_orb, orbital_order, sigma, spin, block, dc, w_dict, linear
     sigma_mat = {block_spin: sigma[block_spin].data.real - np.eye(n_orb) * dc + 1j * sigma[block_spin].data.imag}
 
     # rotate sigma from orbital_order_dmft to orbital_order, where 0,1,2 is the basis given by the Wannier Ham
-    change_of_basis = tools.change_basis(n_orb, orbital_order,  (0,1,2))
+    change_of_basis = tools.change_basis(n_orb, orbital_order,  tuple(range(n_orb)))
     sigma_mat[block_spin] = np.einsum('ij, kjl -> kil', np.linalg.inv(change_of_basis), np.einsum('ijk, kl -> ijl', sigma_mat[block_spin], change_of_basis))
 
     sigma_interpolated = np.zeros((n_orb, n_orb, w_dict['n_w']), dtype=complex)
