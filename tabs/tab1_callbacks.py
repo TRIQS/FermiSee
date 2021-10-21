@@ -475,6 +475,7 @@ def register_callbacks(app):
         fig = go.Figure(layout=layout)
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        print('{:20s}'.format('***update_EDC***:'), trigger_id)
 
         if tb_data['use']: tb_temp = tb_data
         if not 'tb_temp' in locals():
@@ -508,7 +509,7 @@ def register_callbacks(app):
                                 )
         if akw_bands:
             w_mesh = sigma_data['w_dict']['w_mesh']
-            if trigger_id == 'Akw':
+            if trigger_id == id('Akw'):
                 new_kpt = click_coordinates['points'][0]['x']
                 kpt_edc = np.argmin(np.abs(np.array(k_mesh['k_disc']) - new_kpt))
 
@@ -551,6 +552,7 @@ def register_callbacks(app):
         fig = go.Figure(layout=layout)
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        print('{:20s}'.format('***update_MDC***:'), trigger_id)
 
         if tb_data['use']: tb_temp = tb_data
         if not 'tb_temp' in locals():
@@ -591,7 +593,7 @@ def register_callbacks(app):
 
         if akw_bands:
             w_mesh = sigma_data['w_dict']['w_mesh']
-            if trigger_id == 'Akw':
+            if trigger_id == id('Akw'):
                 new_w = click_coordinates['points'][0]['y']
                 w_mdc = np.argmin(np.abs(np.array(w_mesh) - new_w))
         
@@ -628,6 +630,7 @@ def register_callbacks(app):
     def download_data(n_clicks, tb_data, akw_data, sigma_data, band_basis):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        print('{:20s}'.format('***download_data***:'), trigger_id)
         # check if the download button was pressed
         if trigger_id == id('dwn_button'):
             return_data = HDFArchive(descriptor = None, open_flag='a')
