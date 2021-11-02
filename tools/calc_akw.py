@@ -35,9 +35,8 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     eta = upscale(1j * akw_data['eta'], n_orb)
     w_dict = sigma_data['w_dict']
     w_vec = np.array(w_dict['w_mesh'])[:,None,None] * np.eye(n_orb)
-    e_mat = np.array(tb_data['e_mat'])
+    e_mat = np.array(tb_data['e_mat_re']) + 1j * np.array(tb_data['e_mat_im'])
     n_k = e_mat.shape[2]
-
     # sigma
     sigma = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
     sigma_rot = sigma.copy()
@@ -99,7 +98,7 @@ def calc_kslice(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     eta = upscale(1j * akw_data['eta'], n_orb)
     w_dict = sigma_data['w_dict']
     w_vec = np.array(w_dict['w_mesh'])[:,None,None] * np.eye(n_orb)
-    e_mat = np.array(tb_data['e_mat'])
+    e_mat = np.array(tb_data['e_mat_re']) + 1j * np.array(tb_data['e_mat_im'])
     n_kx, n_ky = e_mat.shape[2:4]
 
     # sigma

@@ -192,8 +192,10 @@ def register_callbacks(app):
 
             k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
             tb_data['k_mesh'], e_mat, e_vecs, tbl = tb.calc_tb_bands(tb_data, add_spin, add_local, k_mesh, fermi_slice=False, band_basis=band_basis)
+
             # calculate Hamiltonian
-            tb_data['e_mat'] = e_mat.real.tolist()
+            tb_data['e_mat_re'] = e_mat.real.tolist()
+            tb_data['e_mat_im'] = e_mat.imag.tolist()
             if band_basis:
                 tb_data['evecs_re'] = e_vecs.real.tolist()
                 tb_data['evecs_im'] = e_vecs.imag.tolist()
@@ -637,7 +639,7 @@ def register_callbacks(app):
 
             # store everything as np arrays not as list to enable compression in h5 write!
             tb_data_store = tb_data.copy()
-            tb_data_store['e_mat'] = np.array(tb_data['e_mat'])
+            tb_data_store['e_mat'] = np.array(tb_data['e_mat_re']) + 1j * np.array(tb_data['e_mat_im'])
             if band_basis:
                 tb_data_store['e_vecs'] = np.array(tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
                 del tb_data_store['evecs_re']
