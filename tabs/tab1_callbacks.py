@@ -1,5 +1,3 @@
-import numpy as np
-from itertools import product
 import dash
 import dash_html_components as html
 from flask import send_file
@@ -11,6 +9,7 @@ import inspect
 import base64
 from dash_extensions.snippets import send_bytes
 from dash.dependencies import Input, Output, State, ALL
+import numpy as np
 
 from h5 import HDFArchive
 from triqs.gf import MeshReFreq
@@ -43,7 +42,7 @@ def register_callbacks(app):
         loaded_data = load_config(config_contents, config_filename, loaded_data)
         if loaded_data['error']:
             return loaded_data, True
-        
+
         return loaded_data, False
 
 
@@ -81,11 +80,12 @@ def register_callbacks(app):
 
             solve = True if akw_mode == 'QP dispersion' else False
             if not 'dmft_mu' in akw_data.keys():
-                 akw_data['dmft_mu'] = sigma_data['dmft_mu']
-                 
+                akw_data['dmft_mu'] = sigma_data['dmft_mu']
+
             akw_data['eta'] = float(eta)
-            alatt, akw_data['dmft_mu'] = akw.calc_alatt(tb_data, sigma_data, akw_data, solve, band_basis)
+            alatt, Aw, akw_data['dmft_mu'] = akw.calc_alatt(tb_data, sigma_data, akw_data, solve, band_basis)
             akw_data['Akw'] = alatt.tolist()
+            akw_data['Aw'] = Aw.tolist()
             akw_data['use'] = True
             akw_data['solve'] = solve
 
@@ -172,7 +172,8 @@ def register_callbacks(app):
                 return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
             add_local = [0.] * tb_data['n_wf']
-            tb_data['dft_mu'] = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=float(eta))
+            tb_data['dft_mu'], dft_dos = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=float(eta))
+            tb_data['dft_dos'] = dft_dos.tolist()
 
             return tb_data, w90_hr_button, w90_wout_button, tb_switch, '{:.4f}'.format(tb_data['dft_mu']), n_elect, orb_options, band_basis
 
@@ -234,7 +235,7 @@ def register_callbacks(app):
             rows = loaded_data['tb_data']['k_mesh']['k_points_dash']
             n_k = int(len(loaded_data['tb_data']['k_mesh']['k_disc'])/(len(loaded_data['tb_data']['k_mesh']['k_points'])-1))
             return rows, n_k
-        
+
         for row, col in product(rows, range(1,4)):
             try:
                 row[id(f'column-{col}')] = float(row[id(f'column-{col}')])
@@ -243,9 +244,9 @@ def register_callbacks(app):
 
         if trigger_id == id('add-kpoint'):
             rows.append({c['id']: '' for c in columns})
-        
+
         return rows, n_k
-    
+
     # dashboard sigma upload
     @app.callback(
          [Output(id('sigma-data'), 'data'),
@@ -271,7 +272,7 @@ def register_callbacks(app):
           State(id('sigma-function-input'), 'value')],
          prevent_initial_call=False
         )
-    def toggle_update_sigma(sigma_data, tb_data, sigma_radio_item, sigma_content, sigma_filename, 
+    def toggle_update_sigma(sigma_data, tb_data, sigma_radio_item, sigma_content, sigma_filename,
                             sigma_button, loaded_data, n_clicks_sigma, orbital_order, sigma_lambdas, orb_alert, f_sigma):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -337,7 +338,7 @@ def register_callbacks(app):
                 import_np = 'import numpy as np'
                 import_math = 'import math'
                 imports = [import_np, import_math]
-                namespace = {} 
+                namespace = {}
                 # parse function
                 for to_parse in [*imports, f_sigma]:
                     tree = ast.parse(to_parse, mode='exec')
@@ -394,7 +395,7 @@ def register_callbacks(app):
          Input(id('sigma-data'), 'data')],
          prevent_initial_call=True)
     def plot_Akw(tb_switch, akw_switch, colorscale, tb_data, akw_data, sigma_data):
-        
+
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***plot_Akw***:'), trigger_id)
@@ -402,17 +403,17 @@ def register_callbacks(app):
         # initialize general figure environment
         layout = go.Layout()
         fig = go.Figure(layout=layout)
-        fig.update_xaxes(showspikes=True, spikemode='across', spikesnap='cursor', rangeslider_visible=False, 
+        fig.update_xaxes(showspikes=True, spikemode='across', spikesnap='cursor', rangeslider_visible=False,
                          showticklabels=True, spikedash='solid')
         fig.update_yaxes(showspikes=True, spikemode='across', spikesnap='cursor', showticklabels=True, spikedash='solid')
         fig.update_traces(xaxis='x', hoverinfo='none')
 
         if not tb_data['use']:
             return fig
-    
+
         k_mesh = tb_data['k_mesh']
         fig.add_shape(type = 'line', x0=0, y0=0, x1=max(k_mesh['k_disc']), y1=0, line=dict(color='gray', width=0.8))
-    
+
         if tb_switch:
             for band in range(len(tb_data['eps_nuk'])):
                 fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=tb_data['eps_nuk'][band], mode='lines',
@@ -424,7 +425,7 @@ def register_callbacks(app):
                           clickmode='event+select',
                           hovermode='closest',
                           xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
-                          yaxis_range=[tb_data['bnd_low']- 0.02*abs(tb_data['bnd_low']) , 
+                          yaxis_range=[tb_data['bnd_low']- 0.02*abs(tb_data['bnd_low']) ,
                                        tb_data['bnd_high']+ 0.02*abs(tb_data['bnd_high'])],
                           yaxis_title='ω (eV)',
                           xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
@@ -456,23 +457,24 @@ def register_callbacks(app):
                               xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
                               xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']], tickvals=k_mesh['k_points']),
                               font=dict(size=16))
-    
+
         return fig
-    
-    # plot EDC 
+
+    # plot EDC
     @app.callback(
        [Output('EDC', 'figure'),
         Output('kpt_edc', 'value'),
         Output('kpt_edc', 'max')],
        [Input(id('tb-bands'), 'on'),
         Input(id('akw-bands'), 'on'),
+        Input(id('sum-edc'), 'on'),
         Input('kpt_edc', 'value'),
         Input(id('akw-data'), 'data'),
         Input(id('tb-data'), 'data'),
         Input(id('Akw'), 'clickData'),
         Input(id('sigma-data'), 'data')],
         prevent_initial_call=True)
-    def update_EDC(tb_bands, akw_bands, kpt_edc, akw_data, tb_data, click_coordinates, sigma_data):
+    def update_EDC(tb_bands, akw_bands, sum_edc, kpt_edc, akw_data, tb_data, click_coordinates, sigma_data):
         layout = go.Layout()
         fig = go.Figure(layout=layout)
         ctx = dash.callback_context
@@ -511,24 +513,37 @@ def register_callbacks(app):
                                 )
         if akw_bands:
             w_mesh = sigma_data['w_dict']['w_mesh']
-            if trigger_id == id('Akw'):
-                new_kpt = click_coordinates['points'][0]['x']
-                kpt_edc = np.argmin(np.abs(np.array(k_mesh['k_disc']) - new_kpt))
+            if sum_edc:
+                fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Aw']), mode='lines',
+                    line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
+                                           hoverinfo='x+y+text'
+                                        ))
+                fig.update_layout(yaxis_title='A(ω) summed')
+            else:
+                if trigger_id == id('Akw'):
+                    new_kpt = click_coordinates['points'][0]['x']
+                    kpt_edc = np.argmin(np.abs(np.array(k_mesh['k_disc']) - new_kpt))
 
-            fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Akw'])[kpt_edc,:], mode='lines',
-                line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
-                                       hoverinfo='x+y+text'
-                                    ))
+                fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Akw'])[kpt_edc,:], mode='lines',
+                    line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
+                                           hoverinfo='x+y+text'
+                                        ))
+                fig.update_layout(yaxis_title='A(ω)')
 
-            fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
-                                hovermode='closest',
-                                xaxis_range=[w_mesh[0], w_mesh[-1]],
-                                yaxis_range=[0, 1.01 * np.max(np.array(akw_data['Akw']))],
-                                xaxis_title='ω (eV)',
-                                yaxis_title='A(ω)',
-                                font=dict(size=16),
-                                legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
-                                )
+            fig.update_layout(
+                margin={
+                    'l': 40,
+                    'b': 40,
+                    't': 10,
+                    'r': 40
+                },
+                hovermode='closest',
+                xaxis_range=[w_mesh[0], w_mesh[-1]],
+                yaxis_range=[0, 1.01 * np.max(np.array(akw_data['Akw']))],
+                xaxis_title='ω (eV)',
+                font=dict(size=16),
+                legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
+
         if akw_bands:
             return fig, kpt_edc, len(k_mesh['k_disc'])-1
         elif tb_bands:
@@ -559,7 +574,7 @@ def register_callbacks(app):
         if tb_data['use']: tb_temp = tb_data
         if not 'tb_temp' in locals():
             return fig, 0, 1
-    
+
         k_mesh = tb_temp['k_mesh']
 
         #if tb_bands:
@@ -591,17 +606,17 @@ def register_callbacks(app):
         #                         yaxis_title='A(ω)',
         #                         font=dict(size=16),
         #                         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
-        #                         )       
+        #                         )
 
         if akw_bands:
             w_mesh = sigma_data['w_dict']['w_mesh']
             if trigger_id == id('Akw'):
                 new_w = click_coordinates['points'][0]['y']
                 w_mdc = np.argmin(np.abs(np.array(w_mesh) - new_w))
-        
+
             fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=np.array(akw_data['Akw'])[:, w_mdc], mode='lines', line=go.scattergl.Line(color='#AB63FA'),
                                        showlegend=True, name='ω = {:.3f} eV'.format(w_mesh[w_mdc]), hoverinfo='x+y+text'))
-        
+
             fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
                               hovermode='closest',
                               xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
@@ -661,6 +676,3 @@ def register_callbacks(app):
             return dict(content=content, filename='spectrometer.h5', base64=True)
         else:
             return None
-
-
-

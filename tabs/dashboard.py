@@ -22,7 +22,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                     # section 1
                     html.Div(children=[
                         html.H5('Upload config'),
-                        dbc.Alert('file corrupt or no file', id=id('config-alert'), dismissable=True, 
+                        dbc.Alert('file corrupt or no file', id=id('config-alert'), dismissable=True,
                                   color='warning', fade=False, is_open=False),
                         dcc.Upload(
                             id=id('upload-file'),
@@ -90,7 +90,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                         # html.Div([
                         #     # html.P('μ (eV):',style={'width' : '25%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                         #         # ),
-                            
+
                         # ], style={'padding': '5px 5px'}
                         # ),
                         html.Div([
@@ -181,12 +181,12 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                          options=[{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([0,1,2])))],
                                          style={'width': '100%'}), id=id('orbital-order-tooltip')
                         ),
-                        dbc.Tooltip('Select orbital order of Σ with respect to W90 input Hamiltonian', 
+                        dbc.Tooltip('Select orbital order of Σ with respect to W90 input Hamiltonian',
                                      target=id('orbital-order-tooltip'),
                                      style={'maxWidth': 300, 'width': 300, 'font-size': 14}),
-                        dbc.Alert('Complete TB section first.', id=id('tb-alert'), dismissable=True, 
+                        dbc.Alert('Complete TB section first.', id=id('tb-alert'), dismissable=True,
                                   color='warning', fade=True, is_open=False),
-                        dbc.Alert('# of orbitals does not match (Σ vs. H(r))', id=id('orb-alert'), dismissable=True, 
+                        dbc.Alert('# of orbitals does not match (Σ vs. H(r))', id=id('orb-alert'), dismissable=True,
                                   color='warning', fade=True, is_open=False),
                         html.Div([
                             html.P('band basis:',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
@@ -195,10 +195,10 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 id=id('band-basis'),
                                 on=False,
                                 color='#005eb0',
-                                style={'width': '25%', 
+                                style={'width': '25%',
                                 'display': 'inline-block', 'vertical-align': 'middle'}
                             ),
-                            dbc.Tooltip('calculate A(k,w) in orbital (off) or band basis (on)', 
+                            dbc.Tooltip('calculate A(k,w) in orbital (off) or band basis (on)',
                                      target=id('band-basis-tooltip'),
                                      style={'maxWidth': 300, 'width': 300, 'font-size': 14}),
                         ],id=id('band-basis-tooltip'), style={'padding': '5px 5px'}
@@ -228,6 +228,17 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 ),
                             daq.BooleanSwitch(
                                 id=id('akw-bands'),
+                                on=False,
+                                color='#005eb0',
+                                style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
+                            ),
+                        ], style={'padding': '5px 5px'}
+                        ),
+                        html.Div([
+                            html.P('sum EDC(k):',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
+                                ),
+                            daq.BooleanSwitch(
+                                id=id('sum-edc'),
                                 on=False,
                                 color='#005eb0',
                                 style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
