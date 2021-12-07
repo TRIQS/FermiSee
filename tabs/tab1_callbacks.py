@@ -12,7 +12,7 @@ from dash.dependencies import Input, Output, State, ALL
 import numpy as np
 
 from h5 import HDFArchive
-from triqs.gf import MeshReFreq
+from triqs.gf import MeshReFreq, GfReFreq
 
 from load_data import load_config, load_w90_hr, load_w90_wout, load_sigma_h5
 import tools.calc_tb as tb
@@ -255,9 +255,8 @@ def register_callbacks(app):
           Output(id('sigma-upload-box'), 'children'),
           Output(id('orbital-order'), 'value'),
           Output(id('orb-alert'), 'is_open'),
-          Output(id('sigma-function-output'), 'children'),
-          Output(id('sigma-lambdas'), 'children'),
-          Output(id('sigma-lambdas'), 'style')],
+          Output(id('sigma-params'), 'data'),
+          Output(id('sigma-params'), 'columns')],
          [Input(id('sigma-data'), 'data'),
           Input(id('tb-data'), 'data'),
           Input(id('choose-sigma'), 'value'),
@@ -266,31 +265,45 @@ def register_callbacks(app):
           Input(id('sigma-upload-box'), 'children'),
           Input(id('loaded-data'), 'data'),
           Input(id('sigma-function-button'), 'n_clicks'),
-          Input(id('orbital-order'), 'value'),
-          Input({'type': 'sigma-lambdas', 'index': ALL}, 'value')],
+          Input(id('orbital-order'), 'value')],
+          # Input({'type': 'sigma-lambdas', 'index': ALL}, 'value')],
          [State(id('orb-alert'), 'is_open'),
-          State(id('sigma-function-input'), 'value')],
+          State(id('sigma-params'), 'data'),
+          State(id('sigma-params'), 'columns')],
          prevent_initial_call=False
         )
     def toggle_update_sigma(sigma_data, tb_data, sigma_radio_item, sigma_content, sigma_filename,
-                            sigma_button, loaded_data, n_clicks_sigma, orbital_order, sigma_lambdas, orb_alert, f_sigma):
+                            sigma_button, loaded_data, n_clicks_sigma, orbital_order, orb_alert, sigma_params, sigma_columns):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***update_sigma***:'), trigger_id)
-        return_f_sigma = None
-        def _build_lambda_children(build, lambdas=None):
-            import dash_core_components as dcc
-            if build:
-                return [html.Div([
-                            html.P(f'{key}:',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}),
-                            dcc.Input(id={'type': 'sigma-lambdas', 'index': ct}, type='number', value=value, step='0.005', debounce=True,
-                                      placeholder=f'λ{key}', style={'width': '60%','margin-bottom': '10px'})
-                        ]) for ct, (key, value) in enumerate(lambdas)]
-            else: return []
 
-        lambda_list = _build_lambda_children(False)
-        lambda_view = {'display': 'none'}
         orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
+
+        # update Sigma params if n_wf has changed
+        if trigger_id == id('tb-data') and tb_data['n_wf'] != len(sigma_columns)-1:
+            print(sigma_columns)
+            n_orb_table = len(sigma_columns)-1
+            orbital_order = tuple(range(tb_data['n_wf']))
+            if n_orb_table > tb_data['n_wf']:
+                # remove columns
+                for i in range(n_orb_table - tb_data['n_wf']):
+                    sigma_columns.pop()
+                    sigma_params[0].popitem()
+                    sigma_params[1].popitem()
+            else:
+                for i in range(tb_data['n_wf'] - n_orb_table):
+                    i_orb = int(sigma_columns[-1]['id'].split('-')[-1]) + 1
+                    new_col = {
+                        'name': 'orb{}'.format(i_orb),
+                        'id': 'tab1-column-{}'.format(i_orb),
+                        'deletable': False
+                    }
+                    sigma_columns.append(new_col)
+                    sigma_params[0][new_col['id']] = '1.0'
+                    sigma_params[1][new_col['id']] = '0.0'
+
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns
 
         if trigger_id == id('loaded-data'):
             print('set uploaded data as sigma_data')
@@ -299,14 +312,14 @@ def register_callbacks(app):
             sigma_button = html.Div([loaded_data['config_filename']])
 
             # somehow the orbital order is transformed back to lists all the time, so make sure here that it is a tuple!
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order'])), orb_alert, return_f_sigma, lambda_list, lambda_view
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order'])), orb_alert, sigma_params, sigma_columns
 
         if trigger_id == id('orbital-order'):
             #orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
             print('the orbital order has changed', orbital_order)
             if sigma_data['use'] == True:
                 sigma_data = gf.reorder_sigma(sigma_data, new_order=orbital_order, old_order=sigma_data['orbital_order'])
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma, lambda_list, lambda_view
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns
 
         if sigma_radio_item == 'upload':
 
@@ -315,63 +328,69 @@ def register_callbacks(app):
                 sigma_data = load_sigma_h5(sigma_content, sigma_filename)
                 # check if number of orbitals match and reject data if no match
                 if sigma_data['n_orb'] != tb_data['n_wf']:
-                    return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), not orb_alert, return_f_sigma, lambda_list, lambda_view
+                    return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), not orb_alert, sigma_params, sigma_columns
                 print('successfully loaded sigma from file')
                 sigma_data['use'] = True
                 orbital_order = sigma_data['orbital_order']
                 sigma_button = html.Div([sigma_filename])
-            #else:
-            #    sigma_button = sigma_button
-            #    orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
 
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma, lambda_list, lambda_view
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns
 
-        if trigger_id == id('sigma-function-button') or '"type":"sigma-lambdas"' in trigger_id:
+        if trigger_id == id('sigma-function-button'):
 
             if not tb_data['use']:
                 # TODO: create warning before return
-                return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma, lambda_list, lambda_view
+                return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns
 
-            if n_clicks_sigma > 0:
+            if np.any([S_val in ['', None] for params in sigma_params for S_key, S_val in params.items()]):
+                return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns
 
                 # append numpy and math
-                import_np = 'import numpy as np'
-                import_math = 'import math'
-                imports = [import_np, import_math]
-                namespace = {}
-                # parse function
-                for to_parse in [*imports, f_sigma]:
-                    tree = ast.parse(to_parse, mode='exec')
-                    code = compile(tree, filename='test', mode='exec')
-                    exec(code, namespace)
-                # curry
-                c_sigma = tools.curry(namespace['sigma'])
-                # get lambdas from dashboard if trigger, else default values
-                lambda_values = sigma_lambdas if '"type":"sigma-lambdas"' in trigger_id else [1, 1]
-                lambda_tuples = [key for key in zip(inspect.getfullargspec(namespace['sigma'])[0][1:], lambda_values)]
-                lambda_list = _build_lambda_children(True, lambdas=lambda_tuples)
-                lambda_view = {'display': 'inline-block'}
+                # import_np = 'import numpy as np'
+                # import_math = 'import math'
+                # imports = [import_np, import_math]
+                # namespace = {}
+                # # parse function
+                # for to_parse in [*imports, f_sigma]:
+                # tree = ast.parse(to_parse, mode='exec')
+                # code = compile(tree, filename='test', mode='exec')
+                # exec(code, namespace)
+                # # curry
+                # c_sigma = tools.curry(namespace['sigma'])
+                # # get lambdas from dashboard if trigger, else default values
+                # lambda_values = sigma_lambdas if '"type":"sigma-lambdas"' in trigger_id else [1, 1]
+                # lambda_tuples = [key for key in zip(inspect.getfullargspec(namespace['sigma'])[0][1:], lambda_values)]
+                # lambda_list = _build_lambda_children(True, lambdas=lambda_tuples)
+                # lambda_view = {'display': 'inline-block'}
 
+            if n_clicks_sigma > 0:
                 # TODO: create warning, see above
                 n_orb = tb_data['n_wf']
-                n_orb = 3
-                w_min = -1.5
-                w_max = 1.5
+                w_min = tb_data['bnd_low'] - 0.2*abs(tb_data['bnd_low'])
+                w_max = tb_data['bnd_high'] + 0.2*abs(tb_data['bnd_high'])
                 n_w = 1001
                 soc = False
 
                 w_mesh = MeshReFreq(omega_min=w_min, omega_max=w_max, n_max=n_w)
                 w_dict = {'w_mesh' : w_mesh, 'n_w' : n_w, 'window' : [w_min, w_max]}
 
-                sigma_analytic = gf.sigma_analytic_to_gf(c_sigma, n_orb, w_dict, soc, lambda_values)
+                # Sigma(w) = (1-1/Z) w + Sigma_0
+                # Sigma_0 : correlated crystal field
+                Z = []
+                Sigma_0 = []
+                Z = list(map(float, [val for val in sigma_params[0].values()][1:]))
+                Sigma_0 = list(map(float, [val for val in sigma_params[1].values()][1:]))
+                assert (len(Z) == n_orb and len(Sigma_0) == n_orb), 'Z and Sigma_0 do not have the right length'
+
+                sigma_analytic = gf.sigma_analytic_to_gf(n_orb, w_dict, Sigma_0, Z, soc)
                 sigma_data.update(gf.sigma_analytic_to_data(sigma_analytic, w_dict, n_orb))
                 # initial dmft_mu to dft_mu
                 sigma_data['dmft_mu'] = tb_data['dft_mu']
-                return_f_sigma = 'You have entered: \n{}'.format(f_sigma)
+                sigma_data['orbital_order'] = orbital_order
 
-            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma, lambda_list, lambda_view
+            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns
 
-        return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, return_f_sigma, lambda_list, lambda_view
+        return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns
 
     # dashboard colors
     @app.callback(

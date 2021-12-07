@@ -18,11 +18,34 @@ def sigma_analytic_to_data(sigma, w_dict, n_orb):
 
     return temp_sigma_data
 
-def sigma_analytic_to_gf(c_sigma, n_orb, w_dict, soc, lambdas):
+# for what used to be curry version
+# def sigma_analytic_to_gf(c_sigma, n_orb, w_dict, soc, lambdas):
 
+    # Sigma_freq = GfReFreq(target_shape=(n_orb, n_orb), mesh=w_dict['w_mesh'])
+    # for w in Sigma_freq.mesh:
+        # Sigma_freq[:,:][w] = c_sigma(w.value)(*lambdas) * np.eye(n_orb)
+
+    # sigma_array = np.zeros((n_orb, n_orb, w_dict['n_w']), dtype=complex)
+    # for ct1, ct2 in product(range(n_orb), range(n_orb)):
+        # if ct1 != ct2 and not soc: continue
+        # sigma_array[ct1,ct2] = Sigma_freq.data[:,ct1,ct2].real + 1j * Sigma_freq.data[:,ct1,ct2].imag
+
+    # return sigma_array
+
+def sigma_analytic_to_gf(n_orb, w_dict, Sigma_0, Z, soc):
+
+    # Sigma(w) = (1-1/Z) w + Sigma_0
     Sigma_freq = GfReFreq(target_shape=(n_orb, n_orb), mesh=w_dict['w_mesh'])
     for w in Sigma_freq.mesh:
-        Sigma_freq[:,:][w] = c_sigma(w.value)(*lambdas) * np.eye(n_orb)
+        for orb in range(n_orb):
+            Z_renorm = (1-1/Z[orb]) * w.value
+            # we should have some kind of damping back to 0 instead?
+            FL_energy = 0.15
+            if Z_renorm > FL_energy:
+                Z_renorm = FL_energy
+            elif Z_renorm < -1*FL_energy:
+                Z_renorm = -1*FL_energy
+            Sigma_freq[orb,orb][w] = Z_renorm + Sigma_0[orb]
 
     sigma_array = np.zeros((n_orb, n_orb, w_dict['n_w']), dtype=complex)
     for ct1, ct2 in product(range(n_orb), range(n_orb)):

@@ -159,16 +159,28 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                             ),
                         ]),
                         html.Div(id=id('sigma-function'), children=[
-                            dcc.Textarea(
-                                id=id('sigma-function-input'),
-                                placeholder='Enter a python function',
-                                value='def sigma(w, Z, A): return (1-1/Z)*w - 1j*A*w**2',
-                                style={'width': '100%', 'height': '80px'}
+                            # dcc.Textarea(
+                                # id=id('sigma-function-input'),
+                                # placeholder='Enter a python function',
+                                # value='def sigma(w, Z, A): return (1-1/Z)*w - 1j*A*w**2',
+                                # style={'width': '100%', 'height': '80px'}
+                                # ),
+                            dash_table.DataTable(
+                                id=id('sigma-params'),
+                                columns=[{
+                                    'name' : k,
+                                    'id' : id('column-{}'.format(i)),
+                                    'deletable': False,
+                                    } for i, k in enumerate(['param', 'orb1', 'orb2', 'orb3'])],
+                                data=[
+                                    {id('column-{}'.format(i)): k for i, k in enumerate(['Z', 1.0,1.0,1.0])},
+                                    {id('column-{}'.format(i)): k for i, k in enumerate(['Sigma0', 0.0,0.0,0.0])}],
+                                editable=True,
                                 ),
                             html.Button('Submit', id=id('sigma-function-button'), n_clicks=0, style= button_style),
-                            html.Div(id=id('sigma-function-output'), style={'whiteSpace': 'pre-line'}),
+                            # html.Div(id=id('sigma-function-output'), style={'whiteSpace': 'pre-line'}),
                         ]),
-                        html.Div(id=id('sigma-lambdas'), style={'padding': '5px 5px'}),
+                        # html.Div(id=id('sigma-lambdas'), style={'padding': '5px 5px'}),
                         html.Div([
                             html.P('η (eV):',style={'width' : '40%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                 ),
