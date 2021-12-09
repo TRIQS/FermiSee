@@ -58,7 +58,8 @@ def register_callbacks(app):
 
             tb_kslice_data['k_mesh'], e_mat, e_vecs, tbl = tb.calc_tb_bands(tb_kslice_data, add_spin, add_local, k_mesh, fermi_slice=True)
             # calculate Hamiltonian
-            tb_kslice_data['e_mat'] = e_mat.real.tolist()
+            tb_kslice_data['e_mat_re'] = e_mat.real.tolist()
+            tb_kslice_data['e_mat_im'] = e_mat.imag.tolist()
             tb_kslice_data['eps_nuk'], evec_nuk = tb.get_tb_kslice(tbl, k_mesh, dft_mu)
             tb_kslice_data['use'] = True
 
@@ -135,11 +136,11 @@ def register_callbacks(app):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***update_ak0***:'), trigger_id)
-        
+
         # initialize general figure environment
         layout = go.Layout()
         fig = go.Figure(layout=layout)
-        fig.update_xaxes(showspikes=True, spikemode='across', spikesnap='cursor', rangeslider_visible=False, 
+        fig.update_xaxes(showspikes=True, spikemode='across', spikesnap='cursor', rangeslider_visible=False,
                          showticklabels=True, spikedash='solid')
         fig.update_yaxes(showspikes=True, spikemode='across', spikesnap='cursor', showticklabels=True, spikedash='solid')
         fig.update_traces(xaxis='x', hoverinfo='none')
@@ -148,7 +149,7 @@ def register_callbacks(app):
 
         if not tb_kslice_data['use']:
             return fig
-    
+
         sign = [1,-1]
         quarter = 0
         quarters = np.array([sign,sign])
@@ -168,7 +169,7 @@ def register_callbacks(app):
             return fig
 
         if akw_switch:
-            n_kx, n_ky = np.array(tb_kslice_data['e_mat']).shape[2:4]
+            n_kx, n_ky = np.array(tb_kslice_data['e_mat_re']).shape[2:4]
             ak0 = np.array(ak0_data['Akw'])
             kx = np.linspace(0, 1, ak0.shape[0])
             ky = np.linspace(0, 1, ak0.shape[1])

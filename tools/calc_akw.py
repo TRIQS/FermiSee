@@ -16,6 +16,7 @@ import itertools
 from triqs.sumk import SumkDiscreteFromLattice
 from tools.TB_functions import *
 from triqs.gf import GfReFreq, MeshReFreq
+from triqs.utility.dichotomy import dichotomy
 import tools.tools as tools
 
 upscale = lambda quantity, n_orb: quantity * np.identity(n_orb)
@@ -46,7 +47,21 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     Sigma_triqs = GfReFreq(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
     Sigma_triqs.data[:, :, :] = sigma.transpose((2, 0, 1))
 
-    new_mu, Aw = calc_mu(tb_data,
+    if 'sigma_mu_re' in sigma_data.keys():
+        sigma_mu = np.array(
+            sigma_data['sigma_mu_re']) + 1j * np.array(sigma_data['sigma_mu_im'])
+        Sigma_mu_triqs = GfReFreq(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
+        Sigma_mu_triqs.data[:, :, :] = sigma_mu.transpose((2, 0, 1))
+
+        new_mu = calc_mu(tb_data,
+                         tb_data['n_elect'],
+                         tb_data['add_spin'],
+                         add_local,
+                         mu_guess=akw_data['dmft_mu'],
+                         Sigma=Sigma_mu_triqs,
+                         eta=akw_data['eta'])
+    else:
+        new_mu = calc_mu(tb_data,
                          tb_data['n_elect'],
                          tb_data['add_spin'],
                          add_local,
@@ -55,6 +70,14 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
                          eta=akw_data['eta'])
 
     mu = upscale(new_mu, n_orb)
+
+    Aw = calc_Aw(tb_data,
+                 new_mu,
+                 add_spin=tb_data['add_spin'],
+                 add_local=add_local,
+                 Sigma=Sigma_triqs,
+                 eta=akw_data['eta'],
+                 n_k=10)
 
     if not solve:
 
@@ -219,13 +242,12 @@ def calc_mu(tb_data,
     def dens(mu):
         # 2 times for spin degeneracy
 
-        Gloc = sp_factor * sumk(mu=mu,
+        dens = sp_factor * sumk(mu=mu,
                                 Sigma=Sigma,
                                 bz_weights=SK.bz_weights,
                                 hopping=SK.hopping,
-                                eta=eta)
-        dens = Gloc.total_density().real
-        return dens, Gloc
+                                eta=eta).total_density()
+        return dens.real
 
     # set up Wannier Hamiltonian
     n_k = 10
@@ -251,21 +273,55 @@ def calc_mu(tb_data,
 
     SK = SumkDiscreteFromLattice(lattice=tb, n_points=n_k)
 
-    # call modified dichotomy which also returns Gloc
-    mu, density, Gloc = tools.dichotomy(dens,
-                                        mu_guess,
-                                        n_elect,
-                                        1e-3,
-                                        0.5,
-                                        max_loops=100,
-                                        x_name="chemical potential",
-                                        y_name="density",
-                                        verbosity=3)
+    mu, density = dichotomy(dens,
+                            mu_guess,
+                            n_elect,
+                            1e-3,
+                            0.5,
+                            max_loops=100,
+                            x_name="chemical potential",
+                            y_name="density",
+                            verbosity=3)
+
+    return mu
+
+
+def calc_Aw(tb_data, mu, add_spin, add_local, Sigma=None, eta=0.0, n_k=10):
+
+    n_orb_rescale = 2 * tb_data['n_wf'] if add_spin else tb_data['n_wf']
+    sp_factor = 1 if add_spin else 2
+    H_add_loc = np.zeros((n_orb_rescale, n_orb_rescale), dtype=complex)
+    if add_spin: H_add_loc += tools.lambda_matrix_w90_t2g(add_local)
+
+    if not Sigma:
+        w_min = tb_data['bnd_low'] - 0.2*abs(tb_data['bnd_low'])
+        w_max = tb_data['bnd_high'] + 0.2*abs(tb_data['bnd_high'])
+        n_w = 1001
+        Sigma = GfReFreq(mesh=MeshReFreq(omega_min=w_min, omega_max=w_max,
+                                         n_max=n_w),
+                         target_shape=[n_orb_rescale, n_orb_rescale])
+
+    hopping = {
+        eval(key): np.array(value, dtype=complex)
+        for key, value in tb_data['hopping'].items()
+    }
+    tb = tools.get_TBL(hopping,
+                       tb_data['units'],
+                       tb_data['n_wf'],
+                       extend_to_spin=add_spin,
+                       add_local=H_add_loc)
+
+    SK = SumkDiscreteFromLattice(lattice=tb, n_points=n_k)
+
+    Gloc = sp_factor * sumk(mu=mu,
+                            Sigma=Sigma,
+                            bz_weights=SK.bz_weights,
+                            hopping=SK.hopping,
+                            eta=eta)
 
     Aw = -1.0 / np.pi * np.trace(Gloc.data, axis1=1, axis2=2).imag
 
-    return mu, Aw
-
+    return Aw
 
 def sigma_from_dmft(n_orb,
                     orbital_order,

@@ -34,18 +34,11 @@ def sigma_analytic_to_data(sigma, w_dict, n_orb):
 
 def sigma_analytic_to_gf(n_orb, w_dict, Sigma_0, Z, soc):
 
-    # Sigma(w) = (1-1/Z) w + Sigma_0
+    # Sigma(w) = (1-1/Z)*w + Sigma_0
     Sigma_freq = GfReFreq(target_shape=(n_orb, n_orb), mesh=w_dict['w_mesh'])
     for w in Sigma_freq.mesh:
         for orb in range(n_orb):
-            Z_renorm = (1-1/Z[orb]) * w.value
-            # we should have some kind of damping back to 0 instead?
-            FL_energy = 0.15
-            if Z_renorm > FL_energy:
-                Z_renorm = FL_energy
-            elif Z_renorm < -1*FL_energy:
-                Z_renorm = -1*FL_energy
-            Sigma_freq[orb,orb][w] = Z_renorm + Sigma_0[orb]
+            Sigma_freq[orb,orb][w] = (1-1/Z[orb]) * w.value + Sigma_0[orb]
 
     sigma_array = np.zeros((n_orb, n_orb, w_dict['n_w']), dtype=complex)
     for ct1, ct2 in product(range(n_orb), range(n_orb)):

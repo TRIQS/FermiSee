@@ -165,6 +165,9 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 # value='def sigma(w, Z, A): return (1-1/Z)*w - 1j*A*w**2',
                                 # style={'width': '100%', 'height': '80px'}
                                 # ),
+                            html.P('Σ(ω, Z, Σ₀, η) = (1-1/Z)*ω - iη + Σ₀ ',
+                                   style={'width': '240px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
+                                   ),
                             dash_table.DataTable(
                                 id=id('sigma-params'),
                                 columns=[{
@@ -178,7 +181,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 editable=True,
                                 ),
                             html.Button('Submit', id=id('sigma-function-button'), n_clicks=0, style= button_style),
-                            # html.Div(id=id('sigma-function-output'), style={'whiteSpace': 'pre-line'}),
+                            html.Div(id=id('sigma-function-output'), style={'whiteSpace': 'pre-line'}),
                         ]),
                         # html.Div(id=id('sigma-lambdas'), style={'padding': '5px 5px'}),
                         html.Div([
@@ -247,7 +250,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                         ], style={'padding': '5px 5px'}
                         ),
                         html.Div([
-                            html.P('sum EDC(k):',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
+                            html.P('show A(ω):',style={'width' : '130px','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                 ),
                             daq.BooleanSwitch(
                                 id=id('sum-edc'),
