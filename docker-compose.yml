@@ -4,6 +4,7 @@ services:
   # main application
   triqs_spectrometer:
     image: materialstheory/fermisee
+    network_mode: bridge
     build:
       .
     ports:
