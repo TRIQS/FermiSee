@@ -456,7 +456,7 @@ def register_callbacks(app):
                                        tb_data['bnd_high']+ 0.02*abs(tb_data['bnd_high'])],
                           yaxis_title='ω (eV)',
                           xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
-                          font=dict(size=16))
+                          font=dict(size=20))
 
         if not akw_data['use']:
             return fig
@@ -471,7 +471,8 @@ def register_callbacks(app):
                     fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=z_data[:,orb].T, showlegend=False, mode='markers',
                                                marker_color=px.colors.sequential.Viridis[0]))
             else:
-                z_data = np.log(np.array(akw_data['Akw']).T)
+                # z_data = np.log(np.array(akw_data['Akw']).T)
+                z_data = np.array(akw_data['Akw']).T
                 fig.add_trace(go.Heatmap(x=k_mesh['k_disc'], y=w_mesh, z=z_data,
                                          colorscale=colorscale, reversescale=False, showscale=False,
                                          zmin=np.min(z_data), zmax=np.max(z_data)))
@@ -483,7 +484,7 @@ def register_callbacks(app):
                               yaxis_title='ω (eV)',
                               xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
                               xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']], tickvals=k_mesh['k_points']),
-                              font=dict(size=16))
+                              font=dict(size=20))
 
         return fig
 
@@ -535,7 +536,7 @@ def register_callbacks(app):
                                 yaxis_range=[0, 1],
                                 xaxis_title='ω (eV)',
                                 yaxis_title='A(ω)',
-                                font=dict(size=16),
+                                font=dict(size=20),
                                 legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
                                 )
         if akw_bands:
@@ -568,7 +569,7 @@ def register_callbacks(app):
                 xaxis_range=[w_mesh[0], w_mesh[-1]],
                 yaxis_range=[0, 1.01 * np.max(np.array(akw_data['Akw']))],
                 xaxis_title='ω (eV)',
-                font=dict(size=16),
+                font=dict(size=20),
                 legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
 
         if akw_bands:
@@ -651,7 +652,7 @@ def register_callbacks(app):
                               yaxis_range=[0, 1.01 * np.max(np.array(akw_data['Akw']))],
                               xaxis_title='k',
                               yaxis_title='A(k)',
-                              font=dict(size=16),
+                              font=dict(size=20),
                               xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']], tickvals=k_mesh['k_points']),
                               legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
                               )

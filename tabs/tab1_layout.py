@@ -21,6 +21,7 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
                 dcc.Graph(
                     id=id('Akw'),
                     style={'height': '84vh'},
+                    config={'displaylogo': False, 'toImageButtonOptions': {'scale' : 1, 'width': 1618, 'height': 1000}},
                     clickData={'points': []}
                 )
             ], style={
@@ -37,7 +38,8 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
                     html.H3('EDC', style={'textAlign': 'center'}),
                     dcc.Graph(
                         id='EDC',
-                        style={'height': '100%'}
+                        style={'height': '100%'},
+                        config={'displaylogo': False, 'toImageButtonOptions': {'scale' : 1, 'width': 3000, 'height': 1000}}
                        ),
                     dcc.Slider(
                         id='kpt_edc',
@@ -62,7 +64,8 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
                     html.H3('MDC', style={'textAlign': 'center', 'padding': '0%'}),
                     dcc.Graph(
                         id='MDC',
-                        style={'height': '100%', 'padding': '0%'}
+                        style={'height': '100%', 'padding': '0%'},
+                        config={'displaylogo': False, 'toImageButtonOptions': {'scale' : 1, 'width': 3000, 'height': 1000}}
                        ),
                     dcc.Slider(
                         id='w_mdc',
