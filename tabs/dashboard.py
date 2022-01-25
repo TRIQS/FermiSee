@@ -1,10 +1,10 @@
 import numpy as np
 from itertools import permutations
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 import dash_bootstrap_components as dbc
 import dash_daq as daq
-import dash_table
+from dash import dash_table
 from dash_extensions import Download as ext_Download
 
 from tabs.id_factory import id_factory
