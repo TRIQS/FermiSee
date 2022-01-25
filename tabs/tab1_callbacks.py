@@ -701,6 +701,6 @@ def register_callbacks(app):
 
             content = base64.b64encode(return_data.as_bytes()).decode()
 
-            return dict(content=content, filename='spectrometer.h5', base64=True)
+            return dict(content=content, filename='fermisee.h5', base64=True)
         else:
             return None
