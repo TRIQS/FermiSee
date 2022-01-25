@@ -38,17 +38,19 @@ units = Units()
 # ----------------------------------------------------------------------
 def parse_hopping_from_wannier90_hr(file):
 
-    r""" Wannier90 real space hopping parser of ``*_hr.dat`` files.
+    r""" Wannier90 real space hopping parser of filestream
+         different from function in triqs.lattice.utils
+         because it cannot read from file!
 
-    Returns a dictionary where the keys are the real-space hopping vectors, 
+    Returns a dictionary where the keys are the real-space hopping vectors,
     in terms of multiples of the lattice vectors, and the values are
-    ``num_wann * num_wann`` numpy ndarrays with the hopping integrals. 
+    ``num_wann * num_wann`` numpy ndarrays with the hopping integrals.
 
     Parameters
     ----------
 
-    filename : str
-        Wannier90 ``*_hr.dat`` file to parse.
+    file : string
+        Wannier90 hr file as string to parse
 
     Returns
     -------
@@ -59,7 +61,7 @@ def parse_hopping_from_wannier90_hr(file):
         Total number of Wannier functions per unit-cell.
 
     """
-    
+
     lines = file.splitlines()
 
     lines.pop(0) # pop time header
@@ -75,13 +77,13 @@ def parse_hopping_from_wannier90_hr(file):
     deg = np.array([])
     for line in lines[:nlines]:
         deg = np.concatenate((deg, np.loadtxt(StringIO(line), dtype=np.int, ndmin=1)))
-    
+
     assert( deg.shape == (nrpts,) )
 
     hopp = "\n".join(lines[nlines:])
     hopp = np.loadtxt(StringIO(hopp))
     assert( hopp.shape == (num_wann**2 * nrpts, 7) )
-    
+
     R = np.array(hopp[:, :3], dtype=np.int) # Lattice coordinates in multiples of lattice vectors
     nm = np.array(hopp[:, 3:5], dtype=np.int) - 1 # orbital index pairs, wannier90 counts from 1, fix by remove 1
 
@@ -108,21 +110,23 @@ def parse_hopping_from_wannier90_hr(file):
         hopp_dict[r][n, m] = t[idx]
 
     # -- Account for degeneracy of the Wigner-Seitz points
-    
+
     for r, weight in zip(list(r_dict.keys()), deg):
         hopp_dict[r] /= weight
 
     return hopp_dict, num_wann
-        
+
 # ----------------------------------------------------------------------
 def parse_lattice_vectors_from_wannier90_wout(file):
 
-    r""" Wannier90 real space lattice vectors parser of ``*.wout`` files.
-    
+    r""" Wannier90 real space lattice vectors parser of filestream
+         different from function in triqs.lattice.utils
+         because it cannot read from file!
+
     Parameters
     ----------
 
-    filename : str
+    file : string
         Wannier90 ``*.wout`` file to parse.
 
     Returns
@@ -136,7 +140,7 @@ def parse_lattice_vectors_from_wannier90_wout(file):
     lines = file.splitlines()
 
     # -- Find start of data in text file
-    
+
     for idx, line in enumerate(lines):
         if 'Lattice Vectors' in line:
             if '(Ang)' in line:
@@ -154,9 +158,9 @@ def parse_lattice_vectors_from_wannier90_wout(file):
     array = np.loadtxt(StringIO(lines), usecols=(1, 2, 3))
 
     array *= unit
-    
+
     # -- convert 3x3 array to list of tuples
-    
+
     vectors = []
     for idx in range(array.shape[0]):
         v = tuple(array[idx])
@@ -168,7 +172,7 @@ def parse_lattice_vectors_from_wannier90_wout(file):
 def parse_reciprocal_lattice_vectors_from_wannier90_wout(filename):
 
     r""" Wannier90 reciprocal space lattice vectors parser of ``*.wout`` files.
-    
+
     Parameters
     ----------
 
@@ -179,7 +183,7 @@ def parse_reciprocal_lattice_vectors_from_wannier90_wout(filename):
     -------
 
     vectors : list of three three-tuples of floats
-        Reciprocal lattice vectors. 
+        Reciprocal lattice vectors.
 
     """
 
@@ -187,7 +191,7 @@ def parse_reciprocal_lattice_vectors_from_wannier90_wout(filename):
         lines = fd.readlines()
 
     # -- Find start of data in text file
-    
+
     for idx, line in enumerate(lines):
         if 'Reciprocal-Space Vectors (Ang^-1)' in line:
             break
@@ -196,7 +200,7 @@ def parse_reciprocal_lattice_vectors_from_wannier90_wout(filename):
     array = np.loadtxt(StringIO(lines), usecols=(1, 2, 3))
 
     # -- convert 3x3 array to list of tuples
-    
+
     vectors = []
     for idx in range(array.shape[0]):
         v = tuple(array[idx])
@@ -204,43 +208,3 @@ def parse_reciprocal_lattice_vectors_from_wannier90_wout(filename):
 
     return vectors
 
-# ----------------------------------------------------------------------
-def parse_band_structure_from_wannier90_band_dat(filename):
-
-    r""" Wannier90 band structure parser of ``*_band.dat``` files.
-    
-    Parameters
-    ----------
-
-    filename : str
-        Wannier90 ``*_band.dat`` file to parse.
-
-    Returns
-    -------
-    
-    E : ndarray (2D)
-        Band energies.
-    w : ndarray (1D)
-        k-space path points.
-
-    """
-
-    with open(filename, 'r') as fd:
-        lines = fd.readlines()
-
-    # -- Count the number of empty lines
-
-    num_wann = 0
-    for line in lines:
-        if line.strip(' ') == '\n':
-            num_wann += 1
-
-    lines = "".join(lines)
-
-    data = np.loadtxt(StringIO(lines)).T
-    n_pts = data.shape[-1]
-
-    data = data.reshape(2, num_wann, n_pts//num_wann)
-    w, E = data[0], data[1]
-
-    return E, w

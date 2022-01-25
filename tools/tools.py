@@ -10,6 +10,9 @@ def get_TBL(hopping,
             renormalize=None):
     """
     get triqs tight-binding object from hoppings + units
+    different from triqs.lattice.utils.TB_from_wannier90
+    because it does not read from file but still needs
+    be able to add local etc.
     """
 
     if extend_to_spin:
