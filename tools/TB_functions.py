@@ -1,9 +1,9 @@
-from tools.wannier90 import *
-#from triqs_tprf.tight_binding import *
 from triqs.lattice.tight_binding import *
+from triqs.lattice.utils import k_space_path
 import skimage.measure
 import copy
 from matplotlib import cm
+import numpy as np
 
 def extend_wannier90_to_spin(hopping, num_wann):
     hopping_spin = {}
@@ -19,7 +19,7 @@ def energies_on_bz_paths(paths, tb_lattice, n_pts=50):
 
     # -- Get the reciprocal lattice vectors
     bz = BrillouinZone(tb_lattice.bl)
-    k_mat = np.array(bz.units())
+    k_mat = np.array(bz.units)
 
     n_paths = len(paths)
     n_orb = tb_lattice.NOrbitalsInUnitCell
@@ -54,7 +54,7 @@ def energy_matrix_on_bz_paths(paths, TBL, n_pts=50):
 
     # -- Get the reciprocal lattice vectors
     bz = BrillouinZone(TBL.bl)
-    k_mat = np.array(bz.units())
+    k_mat = np.array(bz.units)
 
     n_paths = len(paths)
     n_orb = TBL.NOrbitalsInUnitCell
@@ -104,7 +104,8 @@ def get_kx_ky_FS(X,Y,Z,tbl,k_trans_back,select=None,N_kxy=10,kz=0.0, fermi=0.0):
     E_FS = np.zeros((tbl.NOrbitalsInUnitCell,N_kxy,N_kxy))
     for kyi in range(N_kxy):
         path_FS = [(Y/(N_kxy-1)*kyi +kz*Z, X+Y/(N_kxy-1)*kyi+kz*Z)]
-        du, du, E_FS[:,:,kyi] = energies_on_bz_paths(path_FS, tbl, n_pts=N_kxy)
+        kvecs, k = k_space_path(path_FS, num=N_kxy)
+        E_FS[:,:,kyi] = tbl.dispersion(kvecs).transpose()
 
     contours = {}
     FS_kx_ky = {}
@@ -112,22 +113,26 @@ def get_kx_ky_FS(X,Y,Z,tbl,k_trans_back,select=None,N_kxy=10,kz=0.0, fermi=0.0):
     for ib in range(np.shape(E_FS)[0]):
         contours[ib] = skimage.measure.find_contours(E_FS[ib,:,:],fermi)
 
-    i = 0   
+    i = 0
     for cb in contours:
         for ci in range(np.shape(contours[cb])[0]):
             FS_kx_ky[i] = np.vstack([fract_ind_to_val(kx,contours[cb][ci][:,0]),
-				fract_ind_to_val(ky,contours[cb][ci][:,1]),
-				kz*Z[2]*np.ones(len(contours[cb][ci][:,0]))]).T.reshape(-1,3)
+                fract_ind_to_val(ky,contours[cb][ci][:,1]),
+                kz*Z[2]*np.ones(len(contours[cb][ci][:,0]))]).T.reshape(-1,3)
             char[i] = {}
             for n in range(len(FS_kx_ky[i][:,0])):
                 p = np.dot(FS_kx_ky[i][n,:], k_trans_back)
-                MAT = energy_matrix_on_bz_path(tbl.tb, p,p, n_pts=1)
-                E, v = np.linalg.eigh(MAT[select[:,np.newaxis],select,0])
+                MAT = tbl.fourier(p)
+                E, v = np.linalg.eigh(MAT[select[:,np.newaxis],select])
                 idx = np.argmin(np.abs(E))
 
                 char[i][n] = [np.round(np.real(v[ib,idx]*np.conjugate(v[ib,idx])),4) for ib in range(len(select))]
             i += 1
     return FS_kx_ky, char
+
+
+
+
 
 def load_data_generic(path, name='w2w'):
     hopping, num_wann = parse_hopping_from_wannier90_hr_dat(path + name +'_hr.dat')

@@ -80,7 +80,7 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, band_basis = F
     hopping = {eval(key): np.array(value, dtype=complex) for key, value in data['hopping'].items()}
     tb = tools.get_TBL(hopping, data['units'], data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
     # print local H(R)
-    h_of_r = tb.hopping_dict()[(0,0,0)][2:5,2:5] if add_spin else tb.hopping_dict()[(0,0,0)]
+    h_of_r = tb.hoppings[(0,0,0)][2:5,2:5] if add_spin else tb.hoppings[(0,0,0)]
     tools.print_matrix(h_of_r, data['n_wf'], 'H(R=0)')
 
     # bands info
