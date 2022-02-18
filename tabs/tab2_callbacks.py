@@ -183,3 +183,36 @@ def register_callbacks(app):
                     fig.add_trace(go.Heatmap(x=kx, y=ky, z=ak0.T, colorscale=colorscale, reversescale=False, showscale=False, zmin=np.min(ak0), zmax=np.max(ak0)))
 
         return fig
+
+
+    @app.callback(
+    Output(id('sec2-collapse'), "is_open"),
+    [Input(id('sec2-collapse-button'), "n_clicks")],
+    [State(id('sec2-collapse'), "is_open")],
+    )
+    def toggle_collapse(n, is_open):
+        if n:
+            return not is_open
+        return is_open    
+
+    @app.callback(
+    Output(id('sec3-collapse'), "is_open"),
+    [Input(id('sec3-collapse-button'), "n_clicks")],
+    [State(id('sec3-collapse'), "is_open")],
+    )
+    def toggle_collapse(n, is_open):
+        if n:
+            return not is_open
+        return is_open
+
+    @app.callback(
+    Output(id('sec4-collapse'), "is_open"),
+    [Input(id('sec4-collapse-button'), "n_clicks")],
+    [State(id('sec4-collapse'), "is_open")],
+    )
+    def toggle_collapse(n, is_open):
+        if n:
+            return not is_open
+        return is_open
+
+    return
