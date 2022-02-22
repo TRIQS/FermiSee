@@ -691,13 +691,14 @@ def register_callbacks(app):
             tb_data_store['hopping'] = {str(key): np.array(value) for key, value in tb_data_store['hopping'].items()}
             return_data['tb_data'] = tb_data_store
 
-            sigma_data_store = sigma_data.copy()
-            sigma_data_store['sigma'] = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
-            del sigma_data_store['sigma_re']
-            del sigma_data_store['sigma_im']
-            sigma_data_store['w_dict']['w_mesh'] = np.array(sigma_data['w_dict']['w_mesh'])
-            sigma_data_store['dmft_mu']  = akw_data['dmft_mu']
-            return_data['sigma_data'] = sigma_data_store
+            if akw_data['use']:
+                sigma_data_store = sigma_data.copy()
+                sigma_data_store['sigma'] = np.array(sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
+                del sigma_data_store['sigma_re']
+                del sigma_data_store['sigma_im']
+                sigma_data_store['w_dict']['w_mesh'] = np.array(sigma_data['w_dict']['w_mesh'])
+                sigma_data_store['dmft_mu']  = akw_data['dmft_mu']
+                return_data['sigma_data'] = sigma_data_store
 
             content = base64.b64encode(return_data.as_bytes()).decode()
 

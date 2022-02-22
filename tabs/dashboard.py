@@ -19,6 +19,11 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
     button_style = {'margin': '5px', 'padding': '0px 5px 0px 3px', 'text-transform': 'none'}
     section_button_style = {'font-size': '15px', 'width': '100%', 'display': 'inline-block', 'margin-bottom': '10px',
                             'height': '37px', 'verticalAlign': 'center', 'textAlign': 'center', 'text-transform': 'none'}
+    section_box_style = {'backgroundColor': col_part,
+                         'borderRadius': '10px',
+                         'padding': '10px',
+                         'margin-top': "10px",
+                         'margin-bottom': "10px"}
     return dcc.Tab(
         label='spectral function A(k,ω)',
         children=[
@@ -38,12 +43,9 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                     html.Button("Download config", id=id('dwn_button'),
                                 style=section_button_style),
                     ext_Download(id=id('download_h5')),
-                ], style={'backgroundColor': col_part,
-                          'borderRadius': '15px',
-                          'padding': '10px'}),
+                ], style=section_box_style),
 
                 # section 2
-                html.Hr(style={"margin-top": "15px", "margin-bottom": "15px"}),
                 html.Div(children=[
                     html.Button(
                         "TB Hamiltonian",
@@ -61,8 +63,8 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                     children=html.A('w90_hr'),
                                     style={
                                         'width': '90%',
-                                        'height': '60px',
-                                        'lineHeight': '60px',
+                                        'height': '37px',
+                                        'lineHeight': '37px',
                                         'borderWidth': '1px',
                                         'borderStyle': 'dashed',
                                         'borderRadius': '5px',
@@ -75,8 +77,8 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                     children=html.A('w90_wout'),
                                     style={
                                         'width': '90%',
-                                        'height': '60px',
-                                        'lineHeight': '60px',
+                                        'height': '37px',
+                                        'lineHeight': '37px',
                                         'borderWidth': '1px',
                                         'borderStyle': 'dashed',
                                         'borderRadius': '5px',
@@ -140,12 +142,9 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                         id=id('sec2-collapse'),
                         is_open=True,
                     ),
-                ], style={'backgroundColor': col_part,
-                          'borderRadius': '15px',
-                          'padding': '10px'}),
+                ], style=section_box_style),
 
                 # section 3
-                html.Hr(style={"margin-top": "15px", "margin-bottom": "15px"}),
                 html.Div(children=[
                     html.Button(
                         "Self-energy",
@@ -246,13 +245,9 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                         id=id('sec3-collapse'),
                         is_open=False,
                     ),
-                ], style={'backgroundColor': col_part,
-                          'borderRadius': '15px',
-                          'padding': '10px'}
-                ),
+                ], style=section_box_style),
 
                 # section 4
-                html.Hr(style={"margin-top": "15px", "margin-bottom": "15px"}),
                 html.Div(children=[
                     html.Button(
                         "Layout",
@@ -321,10 +316,13 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                         id=id('sec4-collapse'),
                         is_open=False,
                     ),
-                ], style={'backgroundColor': col_part,
-                          'borderRadius': '15px',
-                          'padding': '10px'}),
+                ], style=section_box_style),
 
+                # support sec
+                html.Div(children=[
+                    html.P('for help and tutorials visit:'),
+                    html.A('github.com/TRIQS/FermiSee', href='https://github.com/TRIQS/FermiSee', target='_blank'),
+                ], style=section_box_style),
 
                 dcc.Store(id=id('tb-data'), data=tb_data),
                 dcc.Store(id=id('tb-kslice-data'), data=tb_kslice_data),
@@ -337,6 +335,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                 'padding-right': '1%',
                 'display': 'inline-block',
                 'width': '14%',
+                'min-width': '260px',
                 'vertical-align': 'top'
             }
             ),

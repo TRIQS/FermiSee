@@ -48,6 +48,7 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
                         value=0,
                         #marks={str(year): str(year) for year in df['Year'].unique()},
                         step=1,
+                        marks=None,
                         #handleLabel={'showCurrentValue': True, 'label': 'value'},
                         updatemode='drag',
                         ),
@@ -74,6 +75,7 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
                         #value=np.argmin(np.abs(np.array(data['freq_mesh']))),
                         #marks={str(year): str(year) for year in df['Year'].unique()},
                         step=1,
+                        marks=None,
                         updatemode='drag',
                         ),
                 ], style={
