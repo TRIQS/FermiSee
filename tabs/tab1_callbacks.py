@@ -307,7 +307,7 @@ def register_callbacks(app):
 
             return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma
 
-        if trigger_id == id('loaded-data'):
+        if trigger_id == id('loaded-data') and 'sigma_data' in loaded_data.keys():
             print('set uploaded data as sigma_data')
             sigma_data = loaded_data['sigma_data']
             sigma_data['use'] = True
