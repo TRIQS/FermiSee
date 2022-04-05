@@ -58,3 +58,5 @@ Lastly, we manually construct a self-energy using an analytic form for a Fermi l
 
 ![small tutorial](doc/tutorial_sigma_analytic.gif)
 
+
+©2021-2022 The Simons Foundation, Inc. - All Rights Reserved
