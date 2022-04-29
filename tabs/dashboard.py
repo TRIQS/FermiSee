@@ -6,7 +6,6 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State, ALL
 import dash_daq as daq
 from dash import dash_table
-from dash_extensions import Download as ext_Download
 
 from tabs.id_factory import id_factory
 
@@ -42,7 +41,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                     ),
                     html.Button("Download config", id=id('dwn_button'),
                                 style=section_button_style),
-                    ext_Download(id=id('download_h5')),
+                    dcc.Download(id=id('download_h5')),
                 ], style=section_box_style),
 
                 # section 2

@@ -7,7 +7,6 @@ from ast import literal_eval
 from itertools import permutations
 import inspect
 import base64
-from dash_extensions.snippets import send_bytes
 from dash.dependencies import Input, Output, State, ALL
 import numpy as np
 from itertools import product
@@ -714,7 +713,7 @@ def register_callbacks(app):
     def toggle_collapse(n, is_open):
         if n:
             return not is_open
-        return is_open    
+        return is_open
 
     @app.callback(
     Output(id('sec3-collapse'), "is_open"),

@@ -9,7 +9,6 @@ import ast
 from itertools import permutations, product
 import inspect
 import base64
-from dash_extensions.snippets import send_bytes
 from dash.dependencies import Input, Output, State, ALL
 
 from h5 import HDFArchive
@@ -193,7 +192,7 @@ def register_callbacks(app):
     def toggle_collapse(n, is_open):
         if n:
             return not is_open
-        return is_open    
+        return is_open
 
     @app.callback(
     Output(id('sec3-collapse'), "is_open"),
