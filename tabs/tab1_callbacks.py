@@ -3,7 +3,7 @@ from dash import html
 from flask import send_file
 import plotly.express as px
 import plotly.graph_objects as go
-import ast
+from ast import literal_eval
 from itertools import permutations
 import inspect
 import base64
@@ -280,7 +280,8 @@ def register_callbacks(app):
         print('{:20s}'.format('***update_sigma***:'), trigger_id)
 
         return_f_sigma = None
-        orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
+        # orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
+        orbital_order = literal_eval(orbital_order)
 
         # update Sigma params if n_wf has changed
         if trigger_id == id('tb-data') and tb_data['n_wf'] != len(sigma_columns)-1:
@@ -317,7 +318,6 @@ def register_callbacks(app):
             return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order'])), orb_alert, sigma_params, sigma_columns, return_f_sigma
 
         if trigger_id == id('orbital-order'):
-            #orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
             print('the orbital order has changed', orbital_order)
             if sigma_data['use'] == True:
                 sigma_data = gf.reorder_sigma(sigma_data, new_order=orbital_order, old_order=sigma_data['orbital_order'])
