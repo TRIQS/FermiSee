@@ -27,6 +27,7 @@ RUN apt-get update && \
       python3-plotly \ 
       python3-skimage \
       python3-gunicorn \
+      python3-eventlet \
       python3-pandas \
       python3-flask \ 
       libpython3-dev \
@@ -59,6 +60,6 @@ WORKDIR /fermisee
 COPY . ./
 
 # Finally, run gunicorn.
-CMD gunicorn --workers=8 --threads=1 -b 0.0.0.0:$PORT app:server
+CMD gunicorn --workers=12 --threads=1 -b 0.0.0.0:$PORT -k 'eventlet' app:server
 # or run in debug mode
 # CMD ["python3", "app.py"]
