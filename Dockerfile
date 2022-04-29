@@ -23,6 +23,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
       python3-plotly \ 
       python3-skimage \
       python3-gunicorn \
+      python3-eventlet \
       python3-pandas \
       python3-flask \ 
       libpython3-dev \
@@ -36,10 +37,10 @@ RUN pip3 install dash dash-daq dash-bootstrap-components dash-extensions
 
 # triqs
 RUN cd / && mkdir -p source \
-    && cd /source && git clone -b unstable https://github.com/TRIQS/triqs triqs.src \
+    && cd /source && git clone -b 3.1.x --depth 1 https://github.com/TRIQS/triqs triqs.src \
     && mkdir -p triqs.build && cd triqs.build \
     && cmake ../triqs.src -DCMAKE_INSTALL_PREFIX=/usr/local -DMPIEXEC_PREFLAGS='--allow-run-as-root' \
-    && make -j4 && make install \
+    && make -j8 && make install \
     && rm -rf /source
 
 ENV PYTHONPATH=/usr/local/lib/python3.9/site-packages:${PYTHONPATH} \
@@ -57,6 +58,6 @@ WORKDIR /home/triqs/fermisee
 COPY . ./
 
 # Finally, run gunicorn.
-CMD gunicorn --workers=8 --threads=1 -b 0.0.0.0:$PORT app:server
+CMD gunicorn --workers=12 --threads=1 -b 0.0.0.0:$PORT -k 'eventlet' app:server
 # or run in debug mode
 # CMD ["python3", "app.py"]
