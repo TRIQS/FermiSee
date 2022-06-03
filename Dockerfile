@@ -1,6 +1,11 @@
-FROM ubuntu:21.10
+FROM ubuntu:22.04
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    apt-get install -y software-properties-common apt-transport-https curl && \
+    curl -L https://users.flatironinstitute.org/~ccq/triqs3/jammy/public.gpg | apt-key add - && \
+    add-apt-repository "deb https://users.flatironinstitute.org/~ccq/triqs3/jammy/ /" -y && \
+    apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      triqs \
       g++ \
       git \
       make \
@@ -34,17 +39,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 
 # Install Python dependencies.
 RUN pip3 install dash dash-daq dash-bootstrap-components dash-extensions
-
-# triqs
-RUN cd / && mkdir -p source \
-    && cd /source && git clone -b 3.1.x --depth 1 https://github.com/TRIQS/triqs triqs.src \
-    && mkdir -p triqs.build && cd triqs.build \
-    && cmake ../triqs.src -DCMAKE_INSTALL_PREFIX=/usr/local -DMPIEXEC_PREFLAGS='--allow-run-as-root' \
-    && make -j8 && make install \
-    && rm -rf /source
-
-ENV PYTHONPATH=/usr/local/lib/python3.9/site-packages:${PYTHONPATH} \
-    TRIQS_ROOT=/usr/local
 
 RUN useradd -m triqs
 USER triqs
