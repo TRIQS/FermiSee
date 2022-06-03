@@ -38,7 +38,7 @@ RUN apt-get update && \
       rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
 # Install Python dependencies.
-RUN pip3 install dash dash-daq dash-bootstrap-components dash-extensions
+RUN pip3 install dash==2.3.1 dash-daq dash-bootstrap-components dash-extensions
 
 RUN useradd -m triqs
 USER triqs
