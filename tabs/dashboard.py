@@ -56,7 +56,15 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                         # html div for collapse first:
                         html.Div(children=[
                             # now body of collapse:
-                            html.Div([
+
+                            dcc.RadioItems(
+                                id=id('choose-TB-method'),
+                                options=[{'label': i, 'value': i} for i in ['wannier-90', 'pythTB']],
+                                value='wannier-90',
+                                inputStyle={"margin-right": "5px"},
+                                labelStyle={'display': 'inline-block', 'margin-left': '5px'}
+                            ),
+                            html.Div( id=id('w90-buttons'), children=[
                                 html.Div([dcc.Upload(
                                     id=id('upload-w90-hr'),
                                     children=html.A('w90_hr'),
@@ -86,6 +94,24 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                     },
                                     multiple=False)], style={'width': '49%', 'display': 'inline-block'})
                             ]),
+                            html.Div(id=id('pythTB-button'), children=[
+                                dcc.Upload(
+                                id=id('upload-pythTB-json'),
+                                children=html.A('pythTB .json'),
+                               style={
+                                        'width': '90%',
+                                        'height': '37px',
+                                        'lineHeight': '37px',
+                                        'borderWidth': '1px',
+                                        'borderStyle': 'dashed',
+                                        'borderRadius': '5px',
+                                        'textAlign': 'center',
+                                        'margin': '10px'
+                                    },
+ 
+                               multiple=False)],
+                               style={'display': 'none'}
+                            ),
                             html.Div([
                                 html.P('add spin:', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                        ),
