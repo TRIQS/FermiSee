@@ -57,55 +57,46 @@ def load_pythTB_json(contents):
         #return norb (number of orbitals), units (lattice dim) and hopping_dict (self explanatory)
         norb = data['_norb']
         units=[]
-        for i in lat:
-                units.append(tuple(i))
-        hopping_dict={}
-        #apparently if _dim_r <= 2 then an array doesnt need to be passed
-        #not sure why, and need to figure out how to handle these cases
+
+        #apparently if _dim_r <= 2 then an array doesnt need to be passed in the hoppings
         if data['_dim_r'] <= 2:
                 raise Exception("The pyTB lattice must be greater than 2x2. ie _dim_r > 2")
         
-        #stores the absolute values of all the keys, used later to add negative hopping vectors
-        #Ex: hopping_keys =  [(1,0,0), (0,1,0), (0,-1,0)] -> abs_hopping_keys = [(1,0,0), (0,1,0), (0,1,0)]; (1,0,0) is unique in the abs_hopping_key, therefore the (-1,0,0) vector must be added to the list of vectors. 
-        abs_hopping_keys = []
-        for i in hoppings:
-                abs_hopping_keys.append(tuple(np.absolute(i[3])))
+        #extract the lattice dimensions
+        for i in lat:
+                units.append(tuple(i))
         
-        #if a negative vector is manually added but with a different hopping energy then the average energy is stored
-        #the dup_key_dict stores the the absolute hopping as a key when there is a duplicate in abs_hopping_keys
-        #the value is the (original hop vector, t)
-        dup_key_dict={}
+        #extract the hoppings
+        vectors=[] #list of np arrays
+        temp_dict={} #this dict is to keep track of instances of conjugate pair vectorss
+        hopping_dict={} #this one that will be sent to make a triqs lattice object
         
         for i in hoppings:
                 t = i[0]
                 hop_vector = i[3]
-                abs_hop_vector = tuple(np.absolute(hop_vector))
-                #if there is only 1 instance of the absolute vector then the negative vector must be added
-                if abs_hopping_keys.count(abs_hop_vector) == 1:
-                        #add the vector
-                        hopping_dict[tuple(hop_vector)]=t*np.eye(norb) #is np.eye always going to be used?
-                        #add the negative vector
-                        neg_hop_vector = []
-                        for j in hop_vector:
-                            neg_hop_vector.append(j*-1)
-                        hopping_dict[tuple(neg_hop_vector)]=t*np.eye(norb)
-                        #print(t,neg_hop_vector)
-                #there are multiple instances of the same absolute vector
-                else:
-                        #the hop vectors are in dup_key_dict; extract the information
-                        if abs_hop_vector in dup_key_dict:
-                            other_t = dup_key_dict[abs_hop_vector][1]
-                            other_hop_vector = dup_key_dict[abs_hop_vector][0]
-                            avg = (t+other_t)/2
-                            #add vector
-                            hopping_dict[tuple(hop_vector)]=avg*np.eye(norb)
-                            #edit the value of the other vector
-                            hopping_dict[tuple(other_hop_vector)]=avg*np.eye(norb)
-                        #the hop vector is not in dup_key_dict (this is the first duplicate); save it
-                        else:
-                            dup_key_dict[abs_hop_vector]=(tuple(hop_vector),t)
-                            #place holder in the dict
-                            hopping_dict[tuple(hop_vector)]=[]
+                temp_dict[tuple(hop_vector)] = t
+                vectors.append(np.array(hop_vector))
+        print(vectors)
+        print(temp_dict)
+        
+        for i in vectors:
+                tup = tuple(i.tolist())
+                #if the current vector has been added in a previous iteration then we skip it
+                if tup not in hopping_dict.keys():
+                    t = temp_dict[tup]
+                    neg = -1*i
+                    tup_neg = tuple(neg.tolist())
+                    #before we add this vector to the dict check if the opposite vector is specified
+                    if tup_neg in temp_dict.keys():
+                        #sum the hopping energy of the vectors and set it to both
+                        t_other = temp_dict[tup_neg]
+                        t += t_other
+                        hopping_dict[tup_neg] = t*np.eye(norb)
+                    #if its not specified then we add the negative vector with the same t value
+                    else:
+                        hopping_dict[tup_neg] = t*np.eye(norb)
+                    hopping_dict[tup] = t*np.eye(norb)
+        
         #site energies are added as hoppings to the origin
         for i in site_energies:
                 _matrix = i*np.eye(norb)
