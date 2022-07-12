@@ -39,13 +39,9 @@ RUN apt-get update && \
 # Install Python dependencies.
 RUN pip3 install dash==2.3.1 dash-daq dash-bootstrap-components dash-extensions
 
-RUN useradd -m triqs
-USER triqs
-WORKDIR /home/triqs
-
 # Create a working directory.
-RUN mkdir /home/triqs/fermisee
-WORKDIR /home/triqs/fermisee
+RUN mkdir /fermisee
+WORKDIR /fermisee
 
 # Copy the rest of the codebase into the image
 COPY . ./
