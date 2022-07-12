@@ -25,15 +25,15 @@ def load_config(contents, h5_filename, data):
         del data['tb_data']['e_mat']
         data['tb_data']['eps_nuk'] = data['tb_data']['eps_nuk'].tolist()
         if 'e_vecs' in data['tb_data'].keys():
-            data['tb_data']['evecs_re'] = data['tb_data']['e_vecs'].real  
-            data['tb_data']['evecs_im'] = data['tb_data']['e_vecs'].imag  
+            data['tb_data']['evecs_re'] = data['tb_data']['e_vecs'].real
+            data['tb_data']['evecs_im'] = data['tb_data']['e_vecs'].imag
             del data['tb_data']['e_vecs']
         data['tb_data']['hopping'] = {str(key): value.tolist() for key, value in data['tb_data']['hopping'].items()}
-        
+
     if 'sigma_data' in ar:
         data['sigma_data'] = ar['sigma_data']
-        data['sigma_data']['sigma_re'] =  data['sigma_data']['sigma'].real.tolist()
-        data['sigma_data']['sigma_im'] =  data['sigma_data']['sigma'].imag.tolist()
+        data['sigma_data']['sigma_re'] = data['sigma_data']['sigma'].real.tolist()
+        data['sigma_data']['sigma_im'] = data['sigma_data']['sigma'].imag.tolist()
         del data['sigma_data']['sigma']
         data['sigma_data']['w_dict']['w_mesh'] = data['sigma_data']['w_dict']['w_mesh'].tolist()
         data['sigma_data']['orbital_order'] = tuple(data['sigma_data']['orbital_order'])
@@ -46,79 +46,105 @@ def load_config(contents, h5_filename, data):
 
     return data
 
+
 def load_pythTB_json(contents):
-        content_type, content_string = contents.split(',')
-        data_stream = base64.b64decode(content_string)
-        data = json.loads(data_stream)
+    '''
+    read pythTB json file
 
-        lat = data['_lat']
-        hoppings = data['_hoppings']
-        site_energies = data['_site_energies']
-        #return norb (number of orbitals), units (lattice dim) and hopping_dict (self explanatory)
-        norb = data['_norb']
-        units=[]
+    Parameters
+    ----------
+    contents: json string from memory
 
-        #apparently if _dim_r <= 2 then an array doesnt need to be passed in the hoppings
-        if data['_dim_r'] <= 2:
-                raise Exception("The pyTB lattice must be greater than 2x2. ie _dim_r > 2")
-        
-        #extract the lattice dimensions
-        for i in lat:
-                units.append(tuple(i))
-        
-        #extract the hoppings
-        vectors=[] #list of np arrays
-        temp_dict={} #this dict is to keep track of instances of conjugate pair vectorss
-        hopping_dict={} #this one that will be sent to make a triqs lattice object
-        
-        for i in hoppings:
-                t = i[0]
-                hop_vector = i[3]
-                temp_dict[tuple(hop_vector)] = t
-                vectors.append(np.array(hop_vector))
-        print(vectors)
-        print(temp_dict)
-        
-        for i in vectors:
-                tup = tuple(i.tolist())
-                #if the current vector has been added in a previous iteration then we skip it
-                if tup not in hopping_dict.keys():
-                    t = temp_dict[tup]
-                    neg = -1*i
-                    tup_neg = tuple(neg.tolist())
-                    #before we add this vector to the dict check if the opposite vector is specified
-                    if tup_neg in temp_dict.keys():
-                        #sum the hopping energy of the vectors and set it to both
-                        t_other = temp_dict[tup_neg]
-                        t += t_other
-                        hopping_dict[tup_neg] = t*np.eye(norb)
-                    #if its not specified then we add the negative vector with the same t value
-                    else:
-                        hopping_dict[tup_neg] = t*np.eye(norb)
-                    hopping_dict[tup] = t*np.eye(norb)
-        
-        #site energies are added as hoppings to the origin
-        for i in site_energies:
-                _matrix = i*np.eye(norb)
-                hopping_dict[tuple([0.0,0.0,0.0])]=_matrix
-        return norb, units, hopping_dict
+    Returns
+    -------
+    norb: int
+        number of orbitals
+    units: list of tuples
+        vectors spanning unit cell
+    hopping_dict: dict
+        dict of hopping tuples
+    '''
+    content_type, content_string = contents.split(',')
+    data_stream = base64.b64decode(content_string)
+    data = json.loads(data_stream)
+
+    lat = data['_lat']
+    hoppings = data['_hoppings']
+    site_energies = data['_site_energies']
+    norb = data['_norb']
+    units = []
+
+    # apparently if _dim_r <= 2 then an array doesnt need to be passed in the hoppings
+    if data['_dim_r'] <= 2:
+        raise Exception("The pyTB lattice must be greater than 2x2. ie _dim_r > 2")
+
+    # extract the lattice dimensions
+    for i in lat:
+        units.append(tuple(i))
+
+    # extract the hoppings
+    vectors = []  # list of np arrays
+    temp_dict = {}  # this dict is to keep track of instances of conjugate pair vectors
+    hopping_dict = {}  # this one that will be sent to make a triqs lattice object
+
+    for i in hoppings:
+        # not correct atm
+        t = i[0]
+        # here we have to store i[1] and i[2] and orbital from to!
+        hop_vector = i[3]
+        temp_dict[tuple(hop_vector)] = t
+        vectors.append(np.array(hop_vector))
+    print(vectors)
+    print(temp_dict)
+
+    for i in vectors:
+        tup = tuple(i.tolist())
+        print(tup)
+        # if the current vector has been added in a previous iteration then we skip it
+        if tup not in hopping_dict.keys():
+            t = temp_dict[tup]
+            neg = -1*i
+            tup_neg = tuple(neg.tolist())
+            # before we add this vector to the dict check if the opposite vector is specified
+            if tup_neg in temp_dict.keys():
+                # sum the hopping energy of the vectors and set it to both
+                t_other = temp_dict[tup_neg]
+                t += t_other
+                hopping_dict[tup_neg] = t*np.eye(norb)
+            # if its not specified then we add the negative vector with the same t value
+            else:
+                hopping_dict[tup_neg] = t*np.eye(norb)
+            hopping_dict[tup] = t*np.eye(norb)
+
+    # site energies are added as diagonal hoppings to the origin
+    _matrix = np.zeros((norb, norb))
+    for i, energy in enumerate(site_energies):
+        _matrix[i, i] = energy
+    hopping_dict[tuple([0.0, 0.0, 0.0])] += _matrix
+
+    print('--------')
+    print(hopping_dict)
+    return norb, units, hopping_dict
+
 
 def load_w90_hr(contents):
     content_type, content_string = contents.split(',')
     w90_hr_stream = base64.b64decode(content_string).decode('utf-8')
     hopping, n_wf = tb_w90.parse_hopping_from_wannier90_hr(w90_hr_stream)
-    #print('number of Wannier orbitals {}'.format(num_wann))
+    # print('number of Wannier orbitals {}'.format(num_wann))
 
     return hopping, n_wf
+
 
 def load_w90_wout(contents):
     content_type, content_string = contents.split(',')
     w90_wout_stream = base64.b64decode(content_string).decode('utf-8')
     units = tb_w90.parse_lattice_vectors_from_wannier90_wout(w90_wout_stream)
 
-    return units 
+    return units
 
-def load_sigma_h5(contents , filename, orbital_order = None):
+
+def load_sigma_h5(contents, filename, orbital_order=None):
     '''
     example to store a suitable sigma:
     with HDFArchive(path,'w') as h5:
@@ -146,9 +172,9 @@ def load_sigma_h5(contents , filename, orbital_order = None):
     w_mesh = ar['self_energy']['w_mesh']
 
     # setup w_dict
-    w_dict = {'w_mesh' : w_mesh, 
-              'n_w' : ar['self_energy']['n_w'], 
-              'window' : [w_mesh[0],w_mesh[-1]]}
+    w_dict = {'w_mesh': w_mesh,
+              'n_w': ar['self_energy']['n_w'],
+              'window': [w_mesh[0], w_mesh[-1]]}
     # TODO able to choose these
     spin = 'up'
     block = 0
@@ -165,7 +191,3 @@ def load_sigma_h5(contents , filename, orbital_order = None):
     print(sigma_interpolated.shape)
 
     return data
-
-
-
-
