@@ -239,6 +239,12 @@ def calc_mu(tb_data,
     """
     This function determines the chemical potential based on tb_data, an optional sigma and a number of electrons.
     """
+    global bq_i
+    bq_i = 0
+
+    global dich_i
+    dich_i = 0
+
     def dens(mu):
         # 2 times for spin degeneracy
 
@@ -247,7 +253,22 @@ def calc_mu(tb_data,
                                 bz_weights=SK.bz_weights,
                                 hopping=SK.hopping,
                                 eta=eta).total_density()
+        global dich_i
+        dich_i+=1
         return dens.real
+
+    def dens_brentq(mu,n_elect):
+        # 2 times for spin degeneracy
+
+        dens = sp_factor * sumk(mu=mu,
+                                Sigma=Sigma,
+                                bz_weights=SK.bz_weights,
+                                hopping=SK.hopping,
+                                eta=eta).total_density()
+        global bq_i
+        bq_i += 1
+        print(mu,'\t',dens.real-n_elect)
+        return dens.real-n_elect
 
     # set up Wannier Hamiltonian
     n_k = 10
@@ -272,17 +293,73 @@ def calc_mu(tb_data,
                        add_local=H_add_loc)
 
     SK = SumkDiscreteFromLattice(lattice=tb, n_points=n_k)
+    
+    # This is where I begin my testing
+    import time
+    import sys
+    sys.stdout = open('mu_testing','w')
+    print("dichotomy testing")
+    sys.stdout.close()
+    '''
+    guess=[0,13]
+    time_list=[]
+    for i in range(1,6):
+        sys.stdout = open('mu_testing','a')
+        print("# electrons:", i)
+        sys.stdout.close()
+        for j in guess:
+            n_elect = i
+            mu_guess = j
+            sys.stdout = sys.__stdout__
+            dich_i=0
+            start_time = time.time()
+            mu, density = dichotomy(dens,
+                                    mu_guess,
+                                    n_elect,
+                                    1e-3,
+                                    0.5,
+                                    max_loops=100,
+                                    x_name="chemical potential",
+                                    y_name="density",
+                                    verbosity=3)
+            execution_time=time.time()-start_time
 
-    mu, density = dichotomy(dens,
-                            mu_guess,
-                            n_elect,
-                            1e-3,
-                            0.5,
-                            max_loops=100,
-                            x_name="chemical potential",
-                            y_name="density",
-                            verbosity=3)
+            sys.stdout = open('mu_testing','a')
+            print( "\tmu_guess:", j, "\texecution time:",execution_time,
+                  "\tmu:", mu, "\titerations:", dich_i)
+            time_list.append(execution_time)
+            sys.stdout.close()
+    sys.stdout = open('mu_testing','a')
+    print("average time:", sum(time_list)/len(time_list))
+    sys.stdout.close()
+    '''
+    #Begin brentq time testing 
+    sys.stdout = open('mu_testing','a')
+    print("\nbrentq testing")
+    sys.stdout.close()
+    time_list = []
+    for i in range(1,6):
+        sys.stdout = open('mu_testing','a')
+        print("# electrons:", i)
+        sys.stdout.close()
+        for j in range(2):
+            n_elect=i
+            sys.stdout = sys.__stdout__
+            bq_i=0
+            start_time = time.time()
+            root = brentq(dens_brentq,tb_data['bnd_low'],tb_data['bnd_high'],(n_elect))
+            execution_time = time.time()-start_time
 
+            sys.stdout = open('mu_testing','a')
+            print( "\texecution time:", execution_time,"\tmu:",root,
+                  "\titerations:", bq_i)
+            time_list.append(execution_time)
+            sys.stdout.close()
+
+    sys.stdout = open('mu_testing','a')
+    print("average time:", sum(time_list)/len(time_list))
+    sys.stdout.close()
+    sys.stdout = sys.__stdout__
     return mu
 
 
