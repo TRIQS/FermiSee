@@ -240,7 +240,7 @@ def calc_mu(tb_data,
     """
     This function determines the chemical potential based on tb_data, an optional sigma and a number of electrons.
     """
-    def dens(mu):
+    def dens(mu,n_elect):
         # 2 times for spin degeneracy
 
         dens = sp_factor * sumk(mu=mu,
@@ -248,7 +248,7 @@ def calc_mu(tb_data,
                                 bz_weight=bz_weight,
                                 eps_nuk=eps_nuk,
                                 eta=eta).total_density()
-        return dens.real
+        return dens.real-n_elect
 
     # set up Wannier Hamiltonian
     n_orb_rescale = 2 * tb_data['n_wf'] if add_spin else tb_data['n_wf']
@@ -270,24 +270,16 @@ def calc_mu(tb_data,
     k_array = np.array(np.meshgrid(k_spacing, k_spacing, k_spacing)).T.reshape(-1, 3)
     bz_weight = 1/(n_k**3)
     eps_nuk = tb.dispersion(k_array)
-
+    eps_max = np.max(eps_nuk)
+    eps_min = np.min(eps_nuk)
     if not Sigma:
-        bandwidth = np.abs(np.max(eps_nuk) - np.min(eps_nuk))
+        bandwidth = np.abs(eps_max - eps_min)
         n_w = int((bandwidth+0.6)/w_spacing)
         Sigma = Gf(mesh=MeshReFreq(window=[-bandwidth-0.5, 0.1], n_w=n_w),
                    target_shape=[tb_data['n_wf'], tb_data['n_wf']])
 
-
-    mu, density = dichotomy(dens,
-                            mu_guess,
-                            n_elect,
-                            1e-3,
-                            0.5,
-                            max_loops=100,
-                            x_name="chemical potential",
-                            y_name="density",
-                            verbosity=3)
-
+    mu = brentq(dens,eps_max,eps_min,(n_elect),xtol=1e-4)
+    print(mu)
     return mu
 
 
