@@ -72,59 +72,35 @@ def load_pythTB_json(contents):
     hoppings = data['_hoppings']
     site_energies = data['_site_energies']
     norb = data['_norb']
-    units = []
 
     # apparently if _dim_r <= 2 then an array doesnt need to be passed in the hoppings
     if data['_dim_r'] <= 2:
         raise Exception("The pyTB lattice must be greater than 2x2. ie _dim_r > 2")
 
     # extract the lattice dimensions
+    units = []
     for i in lat:
         units.append(tuple(i))
 
     # extract the hoppings
-    vectors = []  # list of np arrays
-    temp_dict = {}  # this dict is to keep track of instances of conjugate pair vectors
-    hopping_dict = {}  # this one that will be sent to make a triqs lattice object
+    #parsing is taken and adapted from triqs/lattice/utils.py TB_from_pythTB
+    hopping_dict={}
+    m_zero = np.zeros((norb, norb), dtype=complex)
+    #on-site energy
+    hopping_dict[(0, 0, 0)] = np.eye(norb, dtype=complex) * site_energies
+    #hoppings
+    for hop, orb_from, orb_to, vector in hoppings:
+        if tuple(vector) not in hopping_dict:
+            hopping_dict[tuple(vector)] = m_zero.copy()
+            # per default pythTB does not explicitly stores -R
+            hopping_dict[tuple(-np.array(vector))] = m_zero.copy()
 
-    for i in hoppings:
-        t = i[0]
-        index_i = i[1]
-        index_j = i[2]
-        #hopping amplitude matrix
-        hop_matrix = np.zeros((norb,norb))
-        # here we have to store i[1] and i[2] and orbital from to!
-        hop_matrix[index_i, index_j] = t
-        hop_vector = i[3]
-        temp_dict[tuple(hop_vector)] = hop_matrix
-        vectors.append(np.array(hop_vector))
-    print(vectors)
-    print(temp_dict)
-
-    for i in vectors:
-        tup = tuple(i.tolist())
-        print(tup)
-        # if the current vector has been added in a previous iteration then we skip it
-        if tup not in hopping_dict.keys():
-            t = temp_dict[tup]
-            neg = -1*i
-            tup_neg = tuple(neg.tolist())
-            # before we add this vector to the dict check if the opposite vector is specified
-            if tup_neg in temp_dict.keys():
-                # sum the hopping energy of the vectors and set it to both
-                t_other = temp_dict[tup_neg]
-                t += t_other
-                hopping_dict[tup_neg] = t
-            # if its not specified then we add the negative vector with the same t value
-            else:
-                hopping_dict[tup_neg] = t
-            hopping_dict[tup] = t
-
-    # site energies are added as diagonal hoppings to the origin
-    _matrix = np.zeros((norb, norb))
-    for i, energy in enumerate(site_energies):
-        _matrix[i, i] = energy
-    hopping_dict[tuple([0.0, 0.0, 0.0])] = _matrix
+            hopping_dict[tuple(vector)][orb_from, orb_to] += hop
+            # fill -R from +R using H_ij(+R)=[H_ji(-R)]*
+            # if the user specified -R explicitly we have to sum both hopping
+            # matrices
+            # according to pythTB documentation
+            hopping_dict[tuple(-np.array(vector))][orb_to, orb_from] += np.conj(hop)
 
     print('--------')
     print(hopping_dict)
