@@ -88,11 +88,15 @@ def load_pythTB_json(contents):
     hopping_dict = {}  # this one that will be sent to make a triqs lattice object
 
     for i in hoppings:
-        # not correct atm
         t = i[0]
+        index_i = i[1]
+        index_j = i[2]
+        #hopping amplitude matrix
+        hop_matrix = np.zeros((norb,norb))
         # here we have to store i[1] and i[2] and orbital from to!
+        hop_matrix[index_i, index_j] = t
         hop_vector = i[3]
-        temp_dict[tuple(hop_vector)] = t
+        temp_dict[tuple(hop_vector)] = hop_matrix
         vectors.append(np.array(hop_vector))
     print(vectors)
     print(temp_dict)
@@ -110,17 +114,17 @@ def load_pythTB_json(contents):
                 # sum the hopping energy of the vectors and set it to both
                 t_other = temp_dict[tup_neg]
                 t += t_other
-                hopping_dict[tup_neg] = t*np.eye(norb)
+                hopping_dict[tup_neg] = t
             # if its not specified then we add the negative vector with the same t value
             else:
-                hopping_dict[tup_neg] = t*np.eye(norb)
-            hopping_dict[tup] = t*np.eye(norb)
+                hopping_dict[tup_neg] = t
+            hopping_dict[tup] = t
 
     # site energies are added as diagonal hoppings to the origin
     _matrix = np.zeros((norb, norb))
     for i, energy in enumerate(site_energies):
         _matrix[i, i] = energy
-    hopping_dict[tuple([0.0, 0.0, 0.0])] += _matrix
+    hopping_dict[tuple([0.0, 0.0, 0.0])] = _matrix
 
     print('--------')
     print(hopping_dict)
