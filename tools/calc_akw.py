@@ -305,7 +305,13 @@ def calc_mu(tb_data,
     else:
         eps_min, eps_max = tb_data['eps_min_max']
         eps_nuk = tb.fourier(k_array)
+        sigma_hartree = Sigma(0.0).real
+        sigma_eig, _ = np.linalg.eigh(sigma_hartree)
+        print(sigma_hartree, sigma_eig)
+        if sigma_eig[-1] > 0: eps_max+=sigma_eig[-1]
+        if sigma_eig[0] <  0: eps_min+=sigma_eig[0]
 
+    print(eps_min, eps_max)
     #n_orb = n_wf
     w_mat = np.array([w.value * np.eye(tb_data['n_wf']) for w in Sigma.mesh])
     
@@ -353,23 +359,23 @@ def calc_mu(tb_data,
     print("\nbrentq testing")
     sys.stdout.close()
     time_list = []
-    for i in range(1,2):
-        sys.stdout = open('mu_testing','a')
-        print("# electrons:", i)
-        sys.stdout.close()
-        for j in range(2):
-            n_elect=i
-            sys.stdout = sys.__stdout__
-            bq_i=0
-            start_time = time.time()
-            mu = brentq(dens_brentq,eps_max,eps_min,(n_elect),xtol=1e-4)
-            execution_time = time.time()-start_time
+   # for i in range(1,2):
+    sys.stdout = open('mu_testing','a')
+   # print("# electrons:", i)
+    sys.stdout.close()
+    for j in range(1):
+        #n_elect=i
+        sys.stdout = sys.__stdout__
+        bq_i=0
+        start_time = time.time()
+        mu = brentq(dens_brentq,eps_max,eps_min,(n_elect),xtol=1e-4)
+        execution_time = time.time()-start_time
 
-            sys.stdout = open('mu_testing','a')
-            print( "\texecution time:", execution_time,"\tmu:", mu,
-                  "\titerations:", bq_i)
-            time_list.append(execution_time)
-            sys.stdout.close()
+        sys.stdout = open('mu_testing','a')
+        print( "\texecution time:", execution_time,"\tmu:", mu,
+              "\titerations:", bq_i)
+        time_list.append(execution_time)
+        sys.stdout.close()
 
     sys.stdout = open('mu_testing','a')
     print("average time:", sum(time_list)/len(time_list))

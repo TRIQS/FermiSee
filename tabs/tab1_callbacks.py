@@ -75,7 +75,7 @@ def register_callbacks(app):
             return akw_data, akw_switch, tb_alert
 
         elif trigger_id in (id('calc-akw'), id('n-k'), id('akw-mode')) or ( trigger_id == id('k-points') and click_akw > 0 ):
-            if not sigma_data['use'] or not tb_data['use']:
+            if not sigma_data['use'] or not tb_data['use'] or not tb_data['dft_mu']:
                 return akw_data, akw_switch, not tb_alert
 
             solve = True if akw_mode == 'QP dispersion' else False
