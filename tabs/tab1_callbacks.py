@@ -92,6 +92,7 @@ def register_callbacks(app):
             akw_switch = {'on': True}
 
         return akw_data, akw_switch, tb_alert
+    
     #toggle the TB options
     @app.callback(
     [Output(id('w90-buttons'), 'style'),
@@ -102,7 +103,35 @@ def register_callbacks(app):
             if radio_selection == 'pythTB':
                     return {'display': 'none'}, {'display': 'block'}
             return {'display': 'block'}, {'display': 'none'}
+    
+    #change button color after something is uploaded
+    @app.callback(
+        Output(id('upload-pythTB-json'), 'style'),
+        [Input(id('upload-pythTB-json'),'style'),
+         Input(id('upload-pythTB-json'), 'children')],
+        prevent_initial_call = True,
+    )
+    def change_button(pythTB_style, pythTB_filename):
 
+        #Here I'll make a new div with a different style that will be returned and change the style of the w90_hr and w90_out when a file is loaded
+        loaded_style={
+                            'width': '90%',
+                            'height': '37px',
+                            'background-color': 'green',
+                            'lineHeight': '37px',
+                            'borderWidth': '1px',
+                            'borderStyle': 'solid',
+                            'borderRadius': '5px',
+                            'textAlign': 'center',
+                            'margin': '10px'
+        }
+
+        ctx = dash.callback_context
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        if trigger_id == id('upload-pythTB-json'):
+            return pythTB_style
+        return pythTB_style
+    
     # dashboard calculate TB
     @app.callback(
         [Output(id('tb-data'), 'data'),
@@ -143,19 +172,6 @@ def register_callbacks(app):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***calc_tb***:'), trigger_id)
-
-        #Here I'll make a new div with a different style that will be returned and change the style of the w90_hr and w90_out when a file is loaded
-        loaded_style={
-                                        'width': '90%',
-                                        'height': '37px',
-                                        'background-color': 'green',
-                                        'lineHeight': '37px',
-                                        'borderWidth': '1px',
-                                        'borderStyle': 'solid',
-                                        'borderRadius': '5px',
-                                        'textAlign': 'center',
-                                        'margin': '10px'
-        }
 
         if trigger_id == id('tb-bands'):
             return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
@@ -484,7 +500,7 @@ def register_callbacks(app):
 
         k_mesh = tb_data['k_mesh']
         fig.add_shape(type = 'line', x0=0, y0=0, x1=max(k_mesh['k_disc']), y1=0, line=dict(color='gray', width=0.8))
-
+        print(k_mesh['k_points_dash'])
         if tb_switch:
             for band in range(len(tb_data['eps_nuk'])):
                 fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=tb_data['eps_nuk'][band], mode='lines',

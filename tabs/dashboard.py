@@ -98,7 +98,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 dcc.Upload(
                                 id=id('upload-pythTB-json'),
                                 children=html.A('pythTB .json'),
-                               style={
+                                style={
                                         'width': '90%',
                                         'height': '37px',
                                         'lineHeight': '37px',
