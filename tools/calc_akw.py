@@ -305,6 +305,7 @@ def calc_mu(tb_data,
     else:
         eps_min, eps_max = tb_data['eps_min_max']
         eps_nuk = tb.fourier(k_array)
+        #TODO: there could be an edge case that is beyond the boundaries
         sigma_hartree = Sigma(0.0).real
         sigma_eig, _ = np.linalg.eigh(sigma_hartree)
         print(sigma_hartree, sigma_eig)
