@@ -75,7 +75,7 @@ def register_callbacks(app):
             return akw_data, akw_switch, tb_alert
 
         elif trigger_id in (id('calc-akw'), id('n-k'), id('akw-mode')) or ( trigger_id == id('k-points') and click_akw > 0 ):
-            if not sigma_data['use'] or not tb_data['use']:
+            if not sigma_data['use'] or not tb_data['use'] or not tb_data['dft_mu']:
                 return akw_data, akw_switch, not tb_alert
 
             solve = True if akw_mode == 'QP dispersion' else False
@@ -234,7 +234,7 @@ def register_callbacks(app):
                 return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
             add_local = [0.] * tb_data['n_wf']
-            tb_data['dft_mu'] = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=float(eta))
+            tb_data['dft_mu'], tb_data['eps_min_max'] = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=float(eta))
 
             return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, '{:.4f}'.format(tb_data['dft_mu']), n_elect, orb_options, band_basis
 

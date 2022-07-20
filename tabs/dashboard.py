@@ -246,7 +246,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                             dbc.Tooltip('Select orbital order of Σ with respect to W90 input Hamiltonian',
                                         target=id('orbital-order-tooltip'),
                                         style={'maxWidth': 300, 'width': 300, 'font-size': 14}),
-                            dbc.Alert('Complete TB section first.', id=id('tb-alert'), dismissable=True,
+                            dbc.Alert('Complete TB section first and calc mu', id=id('tb-alert'), dismissable=True,
                                       color='warning', fade=True, is_open=False, duration=3000),
                             dbc.Alert('# of orbitals does not match (Σ vs. H(r))', id=id('orb-alert'), dismissable=True,
                                       color='warning', fade=True, is_open=False, duration=3000),
