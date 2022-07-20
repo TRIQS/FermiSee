@@ -139,7 +139,7 @@ def register_callbacks(app):
          Output(id('upload-w90-wout'), 'children'),
          Output(id('upload-pythTB-json'), 'children'),
          Output(id('tb-bands'), 'on'),
-         Output(id('dft-mu'), 'value'),
+         Output(id('dft-mu'), 'children'),
          Output(id('gf-filling'), 'value'),
          Output(id('orbital-order'), 'options'),
          Output(id('band-basis'), 'on')],
@@ -158,7 +158,7 @@ def register_callbacks(app):
          Input(id('calc-tb-mu'), 'n_clicks'),
          Input(id('tb-data'), 'data'),
          Input(id('add-spin'), 'value'),
-         Input(id('dft-mu'), 'value'),
+         Input(id('dft-mu'), 'children'),
          Input(id('n-k'), 'value'),
          Input(id('k-points'), 'data'),
          Input(id('loaded-data'), 'data'),
@@ -172,11 +172,14 @@ def register_callbacks(app):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***calc_tb***:'), trigger_id)
+        
+        print(dft_mu)
 
         if trigger_id == id('tb-bands'):
             return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
         if trigger_id == id('dft-mu'):
+            print(dft_mu)
             tb_data['dft_mu'] = dft_mu
             return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
