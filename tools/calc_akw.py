@@ -57,7 +57,6 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
                          tb_data['n_elect'],
                          tb_data['add_spin'],
                          add_local,
-                         mu_guess=akw_data['dmft_mu'],
                          Sigma=Sigma_mu_triqs,
                          eta=akw_data['eta'])
     else:
@@ -65,7 +64,6 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
                          tb_data['n_elect'],
                          tb_data['add_spin'],
                          add_local,
-                         mu_guess=akw_data['dmft_mu'],
                          Sigma=Sigma_triqs,
                          eta=akw_data['eta'])
 
@@ -234,7 +232,6 @@ def calc_mu(tb_data,
             n_elect,
             add_spin,
             add_local,
-            mu_guess=0.0,
             Sigma=None,
             eta=0.0,
             w_spacing=0.005,
@@ -251,6 +248,8 @@ def calc_mu(tb_data,
                                 eps_nuk=eps_nuk,
                                 w_mat=w_mat,
                                 eta=eta).total_density()
+        print("dens: ", dens.real, " n_elect: ",n_elect)
+        print(dens.real-n_elect)
         return dens.real-n_elect
 
     # set up Wannier Hamiltonian
@@ -293,7 +292,7 @@ def calc_mu(tb_data,
     print(eps_min, eps_max)
     #n_orb = n_wf
     w_mat = np.array([w.value * np.eye(tb_data['n_wf']) for w in Sigma.mesh])
-    mu = brentq(dens_brentq,eps_max,eps_min,(n_elect),xtol=1e-4)
+    mu = brentq(dens,eps_max,eps_min,(n_elect),xtol=1e-4)
     return mu, (eps_min, eps_max)
 
 

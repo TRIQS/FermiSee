@@ -135,8 +135,15 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 dcc.Input(id=id('gf-filling'), type='number', value='0.', step='0.001',
                                           debounce=True, placeholder='number of electrons', style={'width': '50%'}),
                                 html.Button('calc mu:', id=id('calc-tb-mu'), n_clicks=0, style=button_style),
-                                #dcc.Input(id=id('dft-mu'), type='number', value='0.', step='0.0001', debounce=True, placeholder='chemical potential μ', style={'width': '60%'})
-                                html.Div(id=id('dft-mu'), children=html.P('0'))
+                                html.Div(id=id('dft-mu'), children=html.P('0'),
+                                style={'width': '50%',
+                                       'display':'inline-block', 
+                                       'margin': '5px',
+                                       'padding': '5px 5px 0px 3px',
+                                       'background': 'white',
+                                       'border-radius':'5px'
+
+                                      })
                             ], style={'padding': '5px 5px'}
                             ),
                             html.Div('k-points'),

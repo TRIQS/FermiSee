@@ -55,7 +55,7 @@ def register_callbacks(app):
          Input(id('tb-data'), 'data'),
          Input(id('sigma-data'), 'data'),
          Input(id('akw-bands'), 'on'),
-         Input(id('dft-mu'), 'value'),
+         Input(id('dft-mu'), 'children'),
          Input(id('k-points'), 'data'),
          Input(id('n-k'), 'value'),
          Input(id('calc-tb'), 'n_clicks'),
@@ -173,14 +173,7 @@ def register_callbacks(app):
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***calc_tb***:'), trigger_id)
         
-        print(dft_mu)
-
         if trigger_id == id('tb-bands'):
-            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
-
-        if trigger_id == id('dft-mu'):
-            print(dft_mu)
-            tb_data['dft_mu'] = dft_mu
             return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
         # if w90_hr != None and not 'loaded_hr' in tb_data:
@@ -226,7 +219,7 @@ def register_callbacks(app):
             tb_data['use'] = True
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
-            return tb_data, w90_hr_button, w90_wout_button,  pythTB_button,{'on': True}, '{:.4f}'.format(tb_data['dft_mu']), tb_data['n_elect'], orb_options, tb_data['band_basis']
+            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, {'on': True}, html.P('{:.4f}'.format(tb_data['dft_mu'])), tb_data['n_elect'], orb_options, tb_data['band_basis']
 
         if trigger_id == id('calc-tb-mu') and ((tb_data['loaded_hr'] and tb_data['loaded_wout']) or tb_data['use']):
             if float(n_elect) == 0.0:
@@ -234,9 +227,9 @@ def register_callbacks(app):
                 return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
             add_local = [0.] * tb_data['n_wf']
-            tb_data['dft_mu'], tb_data['eps_min_max'] = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=float(eta))
+            tb_data['dft_mu'], tb_data['eps_min_max'] = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, eta=float(eta))
 
-            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, '{:.4f}'.format(tb_data['dft_mu']), n_elect, orb_options, band_basis
+            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, html.P('{:.4f}'.format(tb_data['dft_mu'])), n_elect, orb_options, band_basis
 
         else:
             if not click_tb > 0 and not tb_data['use']:
@@ -248,9 +241,6 @@ def register_callbacks(app):
 
             if not isinstance(n_k, int):
                 n_k = 20
-
-            if not 'dft_mu' in tb_data.keys() or abs(float(dft_mu) - tb_data['dft_mu']) > 1e-4:
-                tb_data['dft_mu'] = float(dft_mu)
 
             add_local = [0.] * tb_data['n_wf']
 
