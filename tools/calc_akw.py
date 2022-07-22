@@ -248,7 +248,7 @@ def calc_mu(tb_data,
                                 eps_nuk=eps_nuk,
                                 w_mat=w_mat,
                                 eta=eta).total_density()
-        print("dens: ", dens.real, " n_elect: ",n_elect)
+        print("dens: ", dens.real, " n_elect: ",n_elect, " mu: ", mu)
         print(dens.real-n_elect)
         return dens.real-n_elect
 

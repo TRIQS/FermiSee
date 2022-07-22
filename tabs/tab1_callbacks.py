@@ -184,6 +184,7 @@ def register_callbacks(app):
             tb_data['n_wf'] = n_wf
             tb_data['hopping'] = hopping
             tb_data['loaded_hr'] = True
+            tb_data['dft_mu'] = 0.0
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
             return tb_data, html.Div([w90_hr_name]), w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
@@ -205,6 +206,7 @@ def register_callbacks(app):
             tb_data['n_wf'] = n_orb
             tb_data['units'] = units
             tb_data['hopping'] = hoppings
+            tb_data['dft_mu'] = 0.0
 
             # a little hack to turn the flags true to continue using the existing functionality
             tb_data['loaded_hr'] = True
@@ -507,7 +509,7 @@ def register_callbacks(app):
                           xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
                           yaxis_range=[tb_data['bnd_low']- 0.02*abs(tb_data['bnd_low']) ,
                                        tb_data['bnd_high']+ 0.02*abs(tb_data['bnd_high'])],
-                          yaxis_title='ω (eV)',
+                                  yaxis_title='ω(eV)',
                           xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
                           font=dict(size=20))
 
