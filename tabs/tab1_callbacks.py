@@ -14,7 +14,7 @@ from itertools import product
 from h5 import HDFArchive
 from triqs.gf import MeshReFreq, GfReFreq
 
-from load_data import load_config, load_w90_hr, load_w90_wout, load_sigma_h5
+from load_data import load_config, load_w90_hr, load_w90_wout, load_sigma_h5, load_pythTB_json
 import tools.calc_tb as tb
 import tools.calc_akw as akw
 import tools.gf_helpers as gf
@@ -55,7 +55,7 @@ def register_callbacks(app):
          Input(id('tb-data'), 'data'),
          Input(id('sigma-data'), 'data'),
          Input(id('akw-bands'), 'on'),
-         Input(id('dft-mu'), 'value'),
+         Input(id('dft-mu'), 'children'),
          Input(id('k-points'), 'data'),
          Input(id('n-k'), 'value'),
          Input(id('calc-tb'), 'n_clicks'),
@@ -75,7 +75,7 @@ def register_callbacks(app):
             return akw_data, akw_switch, tb_alert
 
         elif trigger_id in (id('calc-akw'), id('n-k'), id('akw-mode')) or ( trigger_id == id('k-points') and click_akw > 0 ):
-            if not sigma_data['use'] or not tb_data['use']:
+            if not sigma_data['use'] or not tb_data['use'] or not tb_data['dft_mu']:
                 return akw_data, akw_switch, not tb_alert
 
             solve = True if akw_mode == 'QP dispersion' else False
@@ -92,14 +92,54 @@ def register_callbacks(app):
             akw_switch = {'on': True}
 
         return akw_data, akw_switch, tb_alert
+    
+    #toggle the TB options
+    @app.callback(
+    [Output(id('w90-buttons'), 'style'),
+     Output(id('pythTB-button'), 'style')],
+    [Input(id('choose-TB-method'), 'value')]
+    )
+    def display_TB_upload_method(radio_selection):
+            if radio_selection == 'pythTB':
+                    return {'display': 'none'}, {'display': 'block'}
+            return {'display': 'block'}, {'display': 'none'}
+    
+    #change button color after something is uploaded
+    @app.callback(
+        Output(id('upload-pythTB-json'), 'style'),
+        [Input(id('upload-pythTB-json'),'style'),
+         Input(id('upload-pythTB-json'), 'children')],
+        prevent_initial_call = True,
+    )
+    def change_button(pythTB_style, pythTB_filename):
 
+        #Here I'll make a new div with a different style that will be returned and change the style of the w90_hr and w90_out when a file is loaded
+        loaded_style={
+                            'width': '90%',
+                            'height': '37px',
+                            'background-color': 'green',
+                            'lineHeight': '37px',
+                            'borderWidth': '1px',
+                            'borderStyle': 'solid',
+                            'borderRadius': '5px',
+                            'textAlign': 'center',
+                            'margin': '10px'
+        }
+
+        ctx = dash.callback_context
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        if trigger_id == id('upload-pythTB-json'):
+            return pythTB_style
+        return pythTB_style
+    
     # dashboard calculate TB
     @app.callback(
         [Output(id('tb-data'), 'data'),
          Output(id('upload-w90-hr'), 'children'),
          Output(id('upload-w90-wout'), 'children'),
+         Output(id('upload-pythTB-json'), 'children'),
          Output(id('tb-bands'), 'on'),
-         Output(id('dft-mu'), 'value'),
+         Output(id('dft-mu'), 'children'),
          Output(id('gf-filling'), 'value'),
          Output(id('orbital-order'), 'options'),
          Output(id('band-basis'), 'on')],
@@ -109,13 +149,16 @@ def register_callbacks(app):
          Input(id('upload-w90-wout'), 'contents'),
          Input(id('upload-w90-wout'), 'filename'),
          Input(id('upload-w90-wout'), 'children'),
+         Input(id('upload-pythTB-json'), 'contents'),
+         Input(id('upload-pythTB-json'), 'filename'),
+         Input(id('upload-pythTB-json'), 'children'),
          Input(id('tb-bands'), 'on'),
          Input(id('calc-tb'), 'n_clicks'),
          Input(id('gf-filling'), 'value'),
          Input(id('calc-tb-mu'), 'n_clicks'),
          Input(id('tb-data'), 'data'),
          Input(id('add-spin'), 'value'),
-         Input(id('dft-mu'), 'value'),
+         Input(id('dft-mu'), 'children'),
          Input(id('n-k'), 'value'),
          Input(id('k-points'), 'data'),
          Input(id('loaded-data'), 'data'),
@@ -124,20 +167,16 @@ def register_callbacks(app):
          Input(id('band-basis'), 'on')],
          prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
-                w90_wout_button, tb_switch, click_tb, n_elect, click_tb_mu, tb_data, add_spin, dft_mu, n_k,
+                w90_wout_button, pythTB, pythTB_name, pythTB_button, tb_switch, click_tb, n_elect, click_tb_mu, tb_data, add_spin, dft_mu, n_k,
                 k_points, loaded_data, orb_options, eta, band_basis):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***calc_tb***:'), trigger_id)
-
+        
         if trigger_id == id('tb-bands'):
-            return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
+            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
-        if trigger_id == id('dft-mu'):
-            tb_data['dft_mu'] = dft_mu
-            return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
-
-        #if w90_hr != None and not 'loaded_hr' in tb_data:
+        # if w90_hr != None and not 'loaded_hr' in tb_data:
         if trigger_id == id('upload-w90-hr'):
             print('loading w90 hr file...')
             hopping, n_wf = load_w90_hr(w90_hr)
@@ -145,17 +184,35 @@ def register_callbacks(app):
             tb_data['n_wf'] = n_wf
             tb_data['hopping'] = hopping
             tb_data['loaded_hr'] = True
+            tb_data['dft_mu'] = 0.0
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
+            return tb_data, html.Div([w90_hr_name]), w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
-            return tb_data, html.Div([w90_hr_name]), w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
-
-        #if w90_wout != None and not 'loaded_wout' in tb_data:
+        # if w90_wout != None and not 'loaded_wout' in tb_data:
         if trigger_id == id('upload-w90-wout'):
             print('loading w90 wout file...')
             tb_data['units'] = load_w90_wout(w90_wout)
             tb_data['loaded_wout'] = True
 
-            return tb_data, w90_hr_button, html.Div([w90_wout_name]), tb_switch, dft_mu, n_elect, orb_options, band_basis
+            return tb_data, w90_hr_button, html.Div([w90_wout_name]), pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
+
+        # if pythTB is being loaded
+        if trigger_id == id('upload-pythTB-json'):
+            print('loading pythTB .json file...')
+            print(pythTB_name)
+            n_orb, units, hoppings = load_pythTB_json(pythTB)
+            hoppings = {str(key): value.real.tolist() for key, value in hoppings.items()}
+
+            tb_data['n_wf'] = n_orb
+            tb_data['units'] = units
+            tb_data['hopping'] = hoppings
+            tb_data['dft_mu'] = 0.0
+
+            # a little hack to turn the flags true to continue using the existing functionality
+            tb_data['loaded_hr'] = True
+            tb_data['loaded_wout'] = True
+
+            return tb_data, w90_hr_button, w90_wout_button, html.Div([pythTB_name]), tb_switch, dft_mu, n_elect, orb_options, band_basis
 
         # if a full config has been uploaded
         if trigger_id == id('loaded-data'):
@@ -164,29 +221,28 @@ def register_callbacks(app):
             tb_data['use'] = True
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
-            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, '{:.4f}'.format(tb_data['dft_mu']), tb_data['n_elect'], orb_options, tb_data['band_basis']
+            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, {'on': True}, html.P('{:.4f}'.format(tb_data['dft_mu'])), tb_data['n_elect'], orb_options, tb_data['band_basis']
 
         if trigger_id == id('calc-tb-mu') and ((tb_data['loaded_hr'] and tb_data['loaded_wout']) or tb_data['use']):
             if float(n_elect) == 0.0:
                 print('please specify filling')
-                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
+                return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
             add_local = [0.] * tb_data['n_wf']
-            tb_data['dft_mu'] = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, mu_guess=float(dft_mu), eta=float(eta))
+            tb_data['dft_mu'], tb_data['eps_min_max'] = akw.calc_mu(tb_data, float(n_elect), add_spin, add_local, eta=float(eta))
 
-            return tb_data, w90_hr_button, w90_wout_button, tb_switch, '{:.4f}'.format(tb_data['dft_mu']), n_elect, orb_options, band_basis
+            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, html.P('{:.4f}'.format(tb_data['dft_mu'])), n_elect, orb_options, band_basis
 
         else:
             if not click_tb > 0 and not tb_data['use']:
-                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
+                return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
             if np.any([k_val in ['', None] for k in k_points for k_key, k_val in k.items()]):
-                return tb_data, w90_hr_button, w90_wout_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
+                return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
+
+
 
             if not isinstance(n_k, int):
                 n_k = 20
-
-            if not 'dft_mu' in tb_data.keys() or abs(float(dft_mu) - tb_data['dft_mu']) > 1e-4:
-                tb_data['dft_mu'] = float(dft_mu)
 
             add_local = [0.] * tb_data['n_wf']
 
@@ -213,7 +269,7 @@ def register_callbacks(app):
                 tb_data['add_spin'] = True
             tb_data['use'] = True
 
-            return tb_data, w90_hr_button, w90_wout_button, {'on': True}, dft_mu, n_elect, orb_options, band_basis
+            return tb_data, w90_hr_button,w90_wout_button, pythTB_button, {'on': True}, dft_mu, n_elect, orb_options, band_basis
 
     # dashboard k-points
     @app.callback(
@@ -439,7 +495,7 @@ def register_callbacks(app):
 
         k_mesh = tb_data['k_mesh']
         fig.add_shape(type = 'line', x0=0, y0=0, x1=max(k_mesh['k_disc']), y1=0, line=dict(color='gray', width=0.8))
-
+        print(k_mesh['k_points_dash'])
         if tb_switch:
             for band in range(len(tb_data['eps_nuk'])):
                 fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=tb_data['eps_nuk'][band], mode='lines',
@@ -453,7 +509,7 @@ def register_callbacks(app):
                           xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
                           yaxis_range=[tb_data['bnd_low']- 0.02*abs(tb_data['bnd_low']) ,
                                        tb_data['bnd_high']+ 0.02*abs(tb_data['bnd_high'])],
-                          yaxis_title='ω (eV)',
+                                  yaxis_title='ω(eV)',
                           xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
                           font=dict(size=20))
 

@@ -17,7 +17,11 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
             make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data, 1),
             # column 2
             html.Div([
-                html.H3('A(k,ω)', style={'textAlign': 'center'}),
+                #html.H3('A(k,ω)', style={'textAlign': 'center'}),
+                dcc.Link(children=html.H3('A(k,ω)', style={'textAlign': 'center'}),
+                         href="https://en.wikipedia.org/wiki/Tight_binding",
+                         style={"color":"black", "text-decoration":"none"}
+                        ),
                 dcc.Graph(
                     id=id('Akw'),
                     style={'height': '84vh'},
