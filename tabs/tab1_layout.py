@@ -1,6 +1,7 @@
 import numpy as np
 from dash import dcc
 from dash import html
+import dash_bootstrap_components as dbc
 import dash_daq as daq
 
 from tabs.dashboard import make_dashboard
@@ -17,11 +18,15 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
             make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data, 1),
             # column 2
             html.Div([
-                #html.H3('A(k,ω)', style={'textAlign': 'center'}),
-                dcc.Link(children=html.H3('A(k,ω)', style={'textAlign': 'center'}),
-                         href="https://en.wikipedia.org/wiki/Tight_binding",
-                         style={"color":"black", "text-decoration":"none"}
-                        ),
+                #html.H3('A(k,ω)', id=id('Akw-title'), style={'textAlign': 'center'}),
+                html.A(children=html.H3('A(k,ω)', id=id('Akw-title'), style={'textAlign': 'center'}),
+                       id=id('download-csv'),
+                       href="",
+                       download="Akw_rawdata.csv",
+                       target="_blank",
+                       style={"color":"black", "text-decoration":"none"}),
+                #dcc.Download(id=id('download-dataframe-csv')),
+                dbc.Tooltip("Click to download the data as CSV", target=id('Akw-title')),
                 dcc.Graph(
                     id=id('Akw'),
                     style={'height': '84vh'},

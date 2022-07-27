@@ -10,6 +10,8 @@ import base64
 from dash.dependencies import Input, Output, State, ALL
 import numpy as np
 from itertools import product
+import pandas as pd #for the csv stuff
+import urllib
 
 from h5 import HDFArchive
 from triqs.gf import MeshReFreq, GfReFreq
@@ -129,9 +131,34 @@ def register_callbacks(app):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         if trigger_id == id('upload-pythTB-json'):
-            return pythTB_style
+            return loaded_style
         return pythTB_style
     
+    #testing the download csv 
+    @app.callback(
+        Output(id('download-csv'), 'href'),
+        [Input(id('Akw-title'), 'n_clicks'),
+        Input(id('tb-data'), 'data')],
+        prevent_initial_call=True,
+    )
+    def func(n_clicks, tb_data):
+        df = pd.DataFrame({"no": [0,0,0,0], "data": [0,0,0,0], "you need to plot the figure before downloading the csv": [0,0,0,0]})
+        
+        #plot_data = list(zip(k_mesh['k_disc'],*tb_data['eps_nuk']))
+        if 'k_mesh' in tb_data:
+            df = pd.DataFrame()
+            df['k'] = tb_data['k_mesh']['k_disc']
+            for band in range(len(tb_data['eps_nuk'])):
+                b = 'ε'+str(band) 
+                df[b] = tb_data['eps_nuk'][band]
+        #print(df)
+        csv_string = df.to_csv(index=False, encoding='utf-8', sep=',',
+                               float_format='%.6e')
+        print(csv_string)
+        csv_string = "data:text/csv;charset=utf-8," + urllib.parse.quote(csv_string)
+        #return dash.dcc.send_data_frame(df.to_csv, "mydf.csv")
+        return csv_string
+
     # dashboard calculate TB
     @app.callback(
         [Output(id('tb-data'), 'data'),
