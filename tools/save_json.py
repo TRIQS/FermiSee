@@ -64,8 +64,7 @@ def store(tb_model, file_name):
 
 def load(file_name):
     '''
-    Stores a pythTB object as a .json file with the filename provided.
-    An addition could be a path variable to specify the directory where the filed is stored
+    Loads a pythTB object from .json file with the filename provided.
 
     Parameters
     ----------
@@ -80,6 +79,7 @@ def load(file_name):
         from the json file
 
     '''
+    #TODO: An addition could be a path variable to specify the directory where the filed is stored
     f = open(file_name, "r")
     data = json.loads(f.read(), object_hook=decode)
     print("Read in data from:",file_name)

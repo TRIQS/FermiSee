@@ -106,6 +106,16 @@ def register_callbacks(app):
                     return {'display': 'none'}, {'display': 'block'}
             return {'display': 'block'}, {'display': 'none'}
     
+    #show orbital projection prompt
+    @app.callback(
+    Output(id('input-select-orbital'), 'style'),
+    [Input(id('band-basis'), 'on')]
+    )
+    def display_orbital_selection(band_basis):
+            if band_basis:
+                    return {'display': 'block'}
+            return{'display': 'none'}
+
     #change button color after something is uploaded
     @app.callback(
         Output(id('upload-pythTB-json'), 'style'),
@@ -119,9 +129,8 @@ def register_callbacks(app):
         loaded_style={
                             'width': '90%',
                             'height': '37px',
-                            'background-color': 'green',
                             'lineHeight': '37px',
-                            'borderWidth': '1px',
+                            'borderWidth': '2px',
                             'borderStyle': 'solid',
                             'borderRadius': '5px',
                             'textAlign': 'center',
@@ -151,10 +160,8 @@ def register_callbacks(app):
             for band in range(len(tb_data['eps_nuk'])):
                 b = 'ε'+str(band) 
                 df[b] = tb_data['eps_nuk'][band]
-        #print(df)
         csv_string = df.to_csv(index=False, encoding='utf-8', sep=',',
                                float_format='%.6e')
-        print(csv_string)
         csv_string = "data:text/csv;charset=utf-8," + urllib.parse.quote(csv_string)
         #return dash.dcc.send_data_frame(df.to_csv, "mydf.csv")
         return csv_string
@@ -191,11 +198,11 @@ def register_callbacks(app):
          Input(id('loaded-data'), 'data'),
          Input(id('orbital-order'),'options'),
          Input(id('eta'), 'value'),
-         Input(id('band-basis'), 'on')],
+         Input(id('band-basis'), 'on'),
+         Input(id('select-orbitals'), 'value')],
          prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
-                w90_wout_button, pythTB, pythTB_name, pythTB_button, tb_switch, click_tb, n_elect, click_tb_mu, tb_data, add_spin, dft_mu, n_k,
-                k_points, loaded_data, orb_options, eta, band_basis):
+                w90_wout_button, pythTB, pythTB_name, pythTB_button, tb_switch, click_tb, n_elect, click_tb_mu, tb_data, add_spin, dft_mu, n_k, k_points, loaded_data, orb_options, eta, band_basis, sel_orb):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***calc_tb***:'), trigger_id)
@@ -274,7 +281,24 @@ def register_callbacks(app):
             add_local = [0.] * tb_data['n_wf']
 
             k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
-            tb_data['k_mesh'], e_mat, e_vecs, tbl = tb.calc_tb_bands(tb_data, add_spin, add_local, k_mesh, fermi_slice=False, band_basis=band_basis)
+            
+            sel_orbs_list = []
+            if band_basis:
+                #remove any spaces from the user input
+                sel_orb = sel_orb.replace(" ", "")
+                #separate the input by commas
+                #if the input is a number and less than # of orbitals its valid
+                for i in sel_orb.split(','):
+                    if i.isdigit():
+                        val = int(i)
+                        if val <= tb_data['n_wf']:
+                            sel_orbs_list.append(val)
+                #update the value on the dash of only the valid orbitals used
+                sel_orb = ''.join(str(x)+',' for x in sel_orbs_list)
+                print(sel_orb)
+            tb_data['k_mesh'], e_mat, e_vecs, tbl, tb_data['orb_proj']=tb.calc_tb_bands(tb_data, add_spin, add_local,
+                                                 k_mesh, fermi_slice=False,
+                                                 projected_orbs=sel_orbs_list, band_basis=band_basis)
 
             # calculate Hamiltonian
             tb_data['e_mat_re'] = e_mat.real.tolist()
@@ -498,12 +522,13 @@ def register_callbacks(app):
         Output(id('Akw'), 'figure'),
         [Input(id('tb-bands'), 'on'),
          Input(id('akw-bands'), 'on'),
+         Input(id('band-basis'),'on'),
          Input(id('colorscale'), 'value'),
          Input(id('tb-data'), 'data'),
          Input(id('akw-data'), 'data'),
          Input(id('sigma-data'), 'data')],
          prevent_initial_call=True)
-    def plot_Akw(tb_switch, akw_switch, colorscale, tb_data, akw_data, sigma_data):
+    def plot_Akw(tb_switch, akw_switch, band_basis_switch, colorscale, tb_data, akw_data, sigma_data):
 
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -539,6 +564,23 @@ def register_callbacks(app):
                                   yaxis_title='ω(eV)',
                           xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
                           font=dict(size=20))
+        # TODO:Orbital projections are tied to the band basis button, pretty sure this is wrong
+        if band_basis_switch:
+            for band in range(tb_data['n_wf']):
+                values = tb_data['orb_proj'][band]
+                fig.add_trace(go.Scatter(x=k_mesh['k_disc'],
+                                         y=tb_data['eps_nuk'][band],
+                                         marker=dict(size=10,
+                                                     cmax=1,
+                                                     cmin=0,
+                                                     color=values,
+                                                     colorbar=dict(
+                                                         title=""
+                                                     ),
+                                                     colorscale="Spectral"
+                                                    ),
+                                         mode="markers",
+                                         showlegend=False))
 
         if not akw_data['use']:
             return fig

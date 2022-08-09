@@ -1,12 +1,11 @@
 import numpy as np
 import base64
 import io
-from h5 import HDFArchive
 import json
+from h5 import HDFArchive
 
 import tools.wannier90 as tb_w90
 import tools.calc_akw as calc_akw
-
 
 def load_config(contents, h5_filename, data):
     data['config_filename'] = h5_filename
@@ -64,9 +63,22 @@ def load_pythTB_json(contents):
     hopping_dict: dict
         dict of hopping tuples
     '''
+
+    def decode(d):
+        '''
+        When decoding a json file this will check for the existence of complex
+        number dictionary objects created by the encoder and translates it into a
+        complex number.
+        '''
+        if "complex" in d:
+            return complex(d["real"], d["imag"])
+        if "array" in d:
+            return np.array(d["list"])
+        return d
+    
     content_type, content_string = contents.split(',')
     data_stream = base64.b64decode(content_string)
-    data = json.loads(data_stream)
+    data = json.loads(data_stream, object_hook = decode)
 
     lat = data['_lat']
     hoppings = data['_hoppings']
@@ -87,6 +99,7 @@ def load_pythTB_json(contents):
     hopping_dict={}
     m_zero = np.zeros((norb, norb), dtype=complex)
     #on-site energy
+    print(site_energies)
     hopping_dict[(0, 0, 0)] = np.eye(norb, dtype=complex) * site_energies
     #hoppings
     for hop, orb_from, orb_to, vector in hoppings:
@@ -94,7 +107,7 @@ def load_pythTB_json(contents):
             hopping_dict[tuple(vector)] = m_zero.copy()
             # per default pythTB does not explicitly stores -R
             hopping_dict[tuple(-np.array(vector))] = m_zero.copy()
-
+            print(hop)
             hopping_dict[tuple(vector)][orb_from, orb_to] += hop
             # fill -R from +R using H_ij(+R)=[H_ji(-R)]*
             # if the user specified -R explicitly we have to sum both hopping

@@ -258,7 +258,9 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                             dbc.Alert('# of orbitals does not match (Σ vs. H(r))', id=id('orb-alert'), dismissable=True,
                                       color='warning', fade=True, is_open=False, duration=3000),
                             html.Div([
-                                html.P('band basis:', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
+                                #Orbital Projection was called band basis
+                                #I left the id of the switch the same
+                                html.P('Orbital Projection:', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                        ),
                                 daq.BooleanSwitch(
                                     id=id('band-basis'),
@@ -272,6 +274,15 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                             style={'maxWidth': 300, 'width': 300, 'font-size': 14}),
                             ], id=id('band-basis-tooltip'), style={'padding': '5px 5px'}
                             ),
+                            html.Div([
+                                html.P('select orbitals: ', style={'display': 'block', 'text-align': 'left', 'vertical-align': 'center'}
+                                       ),
+                                dcc.Input(id=id('select-orbitals'),
+                                          type='text', 
+                                          value='0',
+                                          debounce=True,
+                                          placeholder='select orbitals Ex: 0,1,2'),
+                            ],id=id('input-select-orbital'), style={'display':'none'}),
                             html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0, style=button_style),
                         ]),
                         id=id('sec3-collapse'),
