@@ -99,7 +99,6 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
             for band in range(data['n_wf']):
                 for orb in projected_orbs:
                     total_proj[band] += np.real(e_vecs[orb,band] * e_vecs[orb,band].conjugate())
-            #print(total_proj)
         else:
             e_vecs = np.array([None])
             total_proj = np.array([None])

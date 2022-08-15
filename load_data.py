@@ -99,7 +99,6 @@ def load_pythTB_json(contents):
     hopping_dict={}
     m_zero = np.zeros((norb, norb), dtype=complex)
     #on-site energy
-    print(site_energies)
     hopping_dict[(0, 0, 0)] = np.eye(norb, dtype=complex) * site_energies
     #hoppings
     for hop, orb_from, orb_to, vector in hoppings:
@@ -107,7 +106,6 @@ def load_pythTB_json(contents):
             hopping_dict[tuple(vector)] = m_zero.copy()
             # per default pythTB does not explicitly stores -R
             hopping_dict[tuple(-np.array(vector))] = m_zero.copy()
-            print(hop)
             hopping_dict[tuple(vector)][orb_from, orb_to] += hop
             # fill -R from +R using H_ij(+R)=[H_ji(-R)]*
             # if the user specified -R explicitly we have to sum both hopping
@@ -115,8 +113,6 @@ def load_pythTB_json(contents):
             # according to pythTB documentation
             hopping_dict[tuple(-np.array(vector))][orb_to, orb_from] += np.conj(hop)
 
-    print('--------')
-    print(hopping_dict)
     return norb, units, hopping_dict
 
 

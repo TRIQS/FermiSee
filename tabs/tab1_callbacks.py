@@ -143,7 +143,7 @@ def register_callbacks(app):
             return loaded_style
         return pythTB_style
     
-    #testing the download csv 
+    #download csv 
     @app.callback(
         Output(id('download-csv'), 'data'),
         [Input(id('Akw-title'), 'n_clicks'),

@@ -281,7 +281,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                           type='text', 
                                           value='0',
                                           debounce=True,
-                                          placeholder='select orbitals Ex: 0,1,2'),
+                                          placeholder='Ex: 0,1,2'),
                             ],id=id('input-select-orbital'), style={'display':'none'}),
                             html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0, style=button_style),
                         ]),

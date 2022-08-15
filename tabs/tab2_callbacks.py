@@ -59,9 +59,7 @@ def register_callbacks(app):
             # calculate Hamiltonian
             tb_kslice_data['e_mat_re'] = e_mat.real.tolist()
             tb_kslice_data['e_mat_im'] = e_mat.imag.tolist()
-            #tb_kslice_data['eps_nuk'], evec_nuk = tb.get_tb_kslice(tbl, k_mesh, dft_mu)
-            #not sure if this will always work
-            #check if tb_data has the mu if not set mu to 0
+            
             mu = 0
             if 'dft_mu' in tb_data.keys():
                 mu = tb_data['dft_mu']
