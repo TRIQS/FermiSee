@@ -24,8 +24,6 @@ from h5 import HDFArchive
 from triqs.gf import BlockGf
 from triqs.gf import GfReFreq, MeshReFreq
 from triqs.utility.dichotomy import dichotomy
-#from solid_dmft import _get_tb_bands as getTB
-import solid_dmft.postprocessing as sdmft
 import tools.tools as tools
 from tools.TB_functions import *
 

@@ -145,26 +145,31 @@ def register_callbacks(app):
     
     #testing the download csv 
     @app.callback(
-        Output(id('download-csv'), 'href'),
+        Output(id('download-csv'), 'data'),
         [Input(id('Akw-title'), 'n_clicks'),
-        Input(id('tb-data'), 'data')],
+         State(id('tb-bands'), 'on'),
+         State(id('akw-bands'), 'on'),
+         State(id('tb-data'), 'data'),
+         State(id('akw-data'), 'data'),
+         State(id('sigma-data'), 'data')],
         prevent_initial_call=True,
     )
-    def func(n_clicks, tb_data):
+    def prep_csv(n_clicks,tb_switch, akw_switch, tb_data, akw_data, sigma_data):
         df = pd.DataFrame({"no": [0,0,0,0], "data": [0,0,0,0], "you need to plot the figure before downloading the csv": [0,0,0,0]})
         
-        #plot_data = list(zip(k_mesh['k_disc'],*tb_data['eps_nuk']))
-        if 'k_mesh' in tb_data:
+        if tb_switch:
             df = pd.DataFrame()
             df['k'] = tb_data['k_mesh']['k_disc']
             for band in range(len(tb_data['eps_nuk'])):
-                b = 'ε'+str(band) 
-                df[b] = tb_data['eps_nuk'][band]
-        csv_string = df.to_csv(index=False, encoding='utf-8', sep=',',
-                               float_format='%.6e')
-        csv_string = "data:text/csv;charset=utf-8," + urllib.parse.quote(csv_string)
-        #return dash.dcc.send_data_frame(df.to_csv, "mydf.csv")
-        return csv_string
+                b = 'ε'+str(band)
+                df[b] = tb_data['eps_nuk'][band] 
+        if akw_switch:
+            Akw = np.array(akw_data['Akw'])
+            w_mesh = sigma_data['w_dict']['w_mesh']
+            Akw_df = pd.DataFrame(Akw, columns = w_mesh)
+            df = pd.concat([df, Akw_df], axis=1)
+
+        return dash.dcc.send_data_frame(df.to_csv, "Akw_rawdata.csv")
 
     # dashboard calculate TB
     @app.callback(
