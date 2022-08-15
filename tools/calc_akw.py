@@ -289,9 +289,12 @@ def calc_mu(tb_data,
         if sigma_eig[-1] > 0: eps_max+=sigma_eig[-1]
         if sigma_eig[0] <  0: eps_min+=sigma_eig[0]
 
-    print(eps_min, eps_max)
-    #n_orb = n_wf
     w_mat = np.array([w.value * np.eye(tb_data['n_wf']) for w in Sigma.mesh])
+    
+    #Check if stored mu is the correct mu to avoid recalculation
+    #if mu is correct, dens-n_elect == 0
+    if np.isclose(0.0,dens(tb_data['dft_mu'],n_elect),atol=1e-3):
+        return tb_data['dft_mu'], (eps_min, eps_max)
     mu = brentq(dens,eps_max,eps_min,(n_elect),xtol=1e-4)
     return mu, (eps_min, eps_max)
 
