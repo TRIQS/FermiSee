@@ -211,7 +211,8 @@ def register_callbacks(app):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***calc_tb***:'), trigger_id)
-        
+       
+        print(tb_switch)
         if trigger_id == id('tb-bands'):
             return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
@@ -260,7 +261,7 @@ def register_callbacks(app):
             tb_data['use'] = True
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
-            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, {'on': True}, html.P('{:.4f}'.format(tb_data['dft_mu'])), tb_data['n_elect'], orb_options, tb_data['band_basis']
+            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, True, html.P('{:.4f}'.format(tb_data['dft_mu'])), tb_data['n_elect'], orb_options, tb_data['band_basis']
 
         if trigger_id == id('calc-tb-mu') and ((tb_data['loaded_hr'] and tb_data['loaded_wout']) or tb_data['use']):
             if float(n_elect) == 0.0:
@@ -300,7 +301,6 @@ def register_callbacks(app):
                             sel_orbs_list.append(val)
                 #update the value on the dash of only the valid orbitals used
                 sel_orb = ''.join(str(x)+',' for x in sel_orbs_list)
-                print(sel_orb)
             tb_data['k_mesh'], e_mat, e_vecs, tbl, tb_data['orb_proj']=tb.calc_tb_bands(tb_data, add_spin, add_local,
                                                  k_mesh, fermi_slice=False,
                                                  projected_orbs=sel_orbs_list, band_basis=band_basis)
@@ -325,7 +325,11 @@ def register_callbacks(app):
                 tb_data['add_spin'] = True
             tb_data['use'] = True
 
-            return tb_data, w90_hr_button,w90_wout_button, pythTB_button, {'on': True}, dft_mu, n_elect, orb_options, band_basis
+            #if band-basis is on then switch off tb-bands
+            if band_basis:
+                return tb_data, w90_hr_button, w90_wout_button, pythTB_button,  False, dft_mu, n_elect, orb_options, band_basis
+            else:
+                return tb_data, w90_hr_button, w90_wout_button, pythTB_button,  True, dft_mu, n_elect, orb_options, band_basis
 
     # dashboard k-points
     @app.callback(
@@ -553,23 +557,23 @@ def register_callbacks(app):
         k_mesh = tb_data['k_mesh']
         fig.add_shape(type = 'line', x0=0, y0=0, x1=max(k_mesh['k_disc']), y1=0, line=dict(color='gray', width=0.8))
         print(k_mesh['k_points_dash'])
+        if not akw_switch:
+            fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
+                      clickmode='event+select',
+                      hovermode='closest',
+                      xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
+                      yaxis_range=[tb_data['bnd_low']- 0.02*abs(tb_data['bnd_low']) ,
+                                   tb_data['bnd_high']+ 0.02*abs(tb_data['bnd_high'])],
+                              yaxis_title='ω(eV)',
+                      xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
+                      font=dict(size=20))
         if tb_switch:
             for band in range(len(tb_data['eps_nuk'])):
                 fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=tb_data['eps_nuk'][band], mode='lines',
                             line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=False, text=f'tb band {band}',
                             hoverinfo='x+y+text'
                             ))
-            if not akw_switch:
-                fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
-                          clickmode='event+select',
-                          hovermode='closest',
-                          xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
-                          yaxis_range=[tb_data['bnd_low']- 0.02*abs(tb_data['bnd_low']) ,
-                                       tb_data['bnd_high']+ 0.02*abs(tb_data['bnd_high'])],
-                                  yaxis_title='ω(eV)',
-                          xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
-                          font=dict(size=20))
-        # TODO:Orbital projections are tied to the band basis button, pretty sure this is wrong
+        
         if band_basis_switch:
             for band in range(tb_data['n_wf']):
                 values = tb_data['orb_proj'][band]
