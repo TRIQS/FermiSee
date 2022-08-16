@@ -45,18 +45,18 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
                             omega_max=w_dict['window'][1],
                             n_max=w_dict['n_w'])
     Sigma_triqs = Gf(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
-    Sigma_triqs.data[:, :, :] = sigma.transpose((2, 0, 1))
-
+    Sigma_triqs.data[:, :, :] = sigma.transpose((2, 0, 1)) 
+    print(tb_data['n_elect'],akw_data['dmft_mu'])
     if 'sigma_mu_re' in sigma_data.keys():
         sigma_mu = np.array(
             sigma_data['sigma_mu_re']) + 1j * np.array(sigma_data['sigma_mu_im'])
         Sigma_mu_triqs = Gf(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
         Sigma_mu_triqs.data[:, :, :] = sigma_mu.transpose((2, 0, 1))
-
         new_mu, _ = calc_mu(tb_data,
                          tb_data['n_elect'],
                          tb_data['add_spin'],
                          add_local,
+                         current_mu=akw_data['dmft_mu'],
                          Sigma=Sigma_mu_triqs,
                          eta=akw_data['eta'])
     else:
@@ -64,6 +64,7 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
                          tb_data['n_elect'],
                          tb_data['add_spin'],
                          add_local,
+                         current_mu=akw_data['dmft_mu'],
                          Sigma=Sigma_triqs,
                          eta=akw_data['eta'])
 
@@ -232,6 +233,7 @@ def calc_mu(tb_data,
             n_elect,
             add_spin,
             add_local,
+            current_mu = 0.0,
             Sigma=None,
             eta=0.0,
             w_spacing=0.005,
@@ -248,8 +250,7 @@ def calc_mu(tb_data,
                                 eps_nuk=eps_nuk,
                                 w_mat=w_mat,
                                 eta=eta).total_density()
-        print("dens: ", dens.real, " n_elect: ",n_elect, " mu: ", mu)
-        print(dens.real-n_elect)
+        print(f"dens: {dens.real:.4f} n_elect: {n_elect:.2f}  mu: {mu:.4f}")
         return dens.real-n_elect
 
     # set up Wannier Hamiltonian
@@ -285,7 +286,6 @@ def calc_mu(tb_data,
         #TODO: there could be an edge case that is beyond the boundaries
         sigma_hartree = Sigma(0.0).real
         sigma_eig, _ = np.linalg.eigh(sigma_hartree)
-        #print(sigma_hartree, sigma_eig)
         if sigma_eig[-1] > 0: eps_max+=sigma_eig[-1]
         if sigma_eig[0] <  0: eps_min+=sigma_eig[0]
 
@@ -293,8 +293,8 @@ def calc_mu(tb_data,
     
     #Check if stored mu is the correct mu to avoid recalculation
     #if mu is correct, dens-n_elect == 0
-    if np.isclose(0.0,dens(tb_data['dft_mu'],n_elect),atol=1e-3):
-        return tb_data['dft_mu'], (eps_min, eps_max)
+    if np.isclose(0.0,dens(current_mu, n_elect),atol=1e-3):
+        return current_mu, (eps_min, eps_max)
     mu = brentq(dens,eps_max,eps_min,(n_elect),xtol=1e-4)
     return mu, (eps_min, eps_max)
 

@@ -67,7 +67,7 @@ def get_tb_kslice(tb, k_mesh, dft_mu):
 
     return e_val, e_vec
 
-def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs, band_basis = False ):
+def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs=[], band_basis = False ):
     """
     calculate tight-binding bands based on a W90 Hamiltonian
     """
@@ -101,7 +101,7 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
                     total_proj[band] += np.real(e_vecs[orb,band] * e_vecs[orb,band].conjugate())
         else:
             e_vecs = np.array([None])
-            total_proj = np.array([None])
+            total_proj = [] 
     else:
         e_mat = np.zeros((n_orb_rescale, n_orb_rescale, k_mesh['n_k'], k_mesh['n_k']), dtype=complex)
         e_vecs = np.array([None])

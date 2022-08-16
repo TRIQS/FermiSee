@@ -143,7 +143,11 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                        'background': 'white',
                                        'border-radius':'5px'
 
-                                      })
+                                      }),
+                                html.P('eV', style={'display': 'inline-block',
+                                                    'text-align': 'left',
+                                                    'vertical-align':
+                                                    'center'})
                             ], style={'padding': '5px 5px'}
                             ),
                             html.Div('k-points'),
