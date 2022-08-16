@@ -15,7 +15,7 @@ import itertools
 # triqs
 from triqs.sumk import SumkDiscreteFromLattice
 from tools.TB_functions import *
-from triqs.gf import GfReFreq, MeshReFreq
+from triqs.gf import Gf, MeshReFreq
 from triqs.utility.dichotomy import dichotomy
 import tools.tools as tools
 
@@ -44,28 +44,26 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     triqs_mesh = MeshReFreq(omega_min=w_dict['window'][0],
                             omega_max=w_dict['window'][1],
                             n_max=w_dict['n_w'])
-    Sigma_triqs = GfReFreq(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
-    Sigma_triqs.data[:, :, :] = sigma.transpose((2, 0, 1))
-
+    Sigma_triqs = Gf(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
+    Sigma_triqs.data[:, :, :] = sigma.transpose((2, 0, 1)) 
     if 'sigma_mu_re' in sigma_data.keys():
         sigma_mu = np.array(
             sigma_data['sigma_mu_re']) + 1j * np.array(sigma_data['sigma_mu_im'])
-        Sigma_mu_triqs = GfReFreq(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
+        Sigma_mu_triqs = Gf(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
         Sigma_mu_triqs.data[:, :, :] = sigma_mu.transpose((2, 0, 1))
-
-        new_mu = calc_mu(tb_data,
+        new_mu, _ = calc_mu(tb_data,
                          tb_data['n_elect'],
                          tb_data['add_spin'],
                          add_local,
-                         mu_guess=akw_data['dmft_mu'],
+                         current_mu=akw_data['dmft_mu'],
                          Sigma=Sigma_mu_triqs,
                          eta=akw_data['eta'])
     else:
-        new_mu = calc_mu(tb_data,
+        new_mu, _ = calc_mu(tb_data,
                          tb_data['n_elect'],
                          tb_data['add_spin'],
                          add_local,
-                         mu_guess=akw_data['dmft_mu'],
+                         current_mu=akw_data['dmft_mu'],
                          Sigma=Sigma_triqs,
                          eta=akw_data['eta'])
 
@@ -148,7 +146,7 @@ def calc_kslice(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     triqs_mesh = MeshReFreq(omega_min=w_dict['window'][0],
                             omega_max=w_dict['window'][1],
                             n_max=w_dict['n_w'])
-    Sigma_triqs = GfReFreq(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
+    Sigma_triqs = Gf(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
     Sigma_triqs.data[:, :, :] = sigma.transpose((2, 0, 1))
 
     mu = upscale(float(akw_data['dmft_mu']), n_orb)
@@ -208,24 +206,25 @@ def calc_kslice(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     return alatt_k_w, mu
 
 
-def sumk(mu, Sigma, bz_weights, hopping, eta=0.0):
+def sumk(mu, Sigma, bz_weight, eps_nuk, w_mat, eta=0.0):
     '''
     calc Gloc
     '''
     Gloc = Sigma.copy()
-    Gloc << 0.0 + 0.0j
+    Gloc << 0.00+0.00j
 
-    n_orb = Gloc.target_shape[0]
-
-    w_mat = np.array([w.value * np.eye(n_orb) for w in Gloc.mesh])
-    mu_mat = mu * np.eye(n_orb)
-    eta_mat = 1j * eta * np.eye(n_orb)
-
-    #Loop on k points
-    for wk, eps_k in zip(bz_weights, hopping):
-        Gloc.data[:, :, :] += wk * np.linalg.inv(w_mat[:] + mu_mat - eps_k -
-                                                 Sigma.data[:, :, :] + eta_mat)
-
+    mu_mat = mu * np.eye(Gloc.target_shape[0])
+    eta_mat = 1j * eta * np.eye(Gloc.target_shape[0])
+   
+    #check if the eps_nuk is a matrix otherwise it must be converted to a
+    #diagonal matrix
+    if len(eps_nuk.shape) == 2:
+        #Loop on k points
+        for eps_nu in eps_nuk:
+            Gloc.data[:, :, :] += bz_weight * np.linalg.inv(w_mat[:] + mu_mat - np.diag(eps_nu) - Sigma.data[:, :, :] + eta_mat)
+    else:
+        for eps_nu in eps_nuk:
+            Gloc.data[:, :, :] += bz_weight * np.linalg.inv(w_mat[:] + mu_mat - eps_nu - Sigma.data[:, :, :] + eta_mat)
     return Gloc
 
 
@@ -233,33 +232,31 @@ def calc_mu(tb_data,
             n_elect,
             add_spin,
             add_local,
-            mu_guess=0.0,
+            current_mu = 0.0,
             Sigma=None,
-            eta=0.0):
+            eta=0.0,
+            w_spacing=0.005,
+            n_k=10):
     """
     This function determines the chemical potential based on tb_data, an optional sigma and a number of electrons.
     """
-    def dens(mu):
+    def dens(mu,n_elect):
         # 2 times for spin degeneracy
 
         dens = sp_factor * sumk(mu=mu,
                                 Sigma=Sigma,
-                                bz_weights=SK.bz_weights,
-                                hopping=SK.hopping,
+                                bz_weight=bz_weight,
+                                eps_nuk=eps_nuk,
+                                w_mat=w_mat,
                                 eta=eta).total_density()
-        return dens.real
+        print(f"dens: {dens.real:.4f} n_elect: {n_elect:.2f}  mu: {mu:.4f}")
+        return dens.real-n_elect
 
     # set up Wannier Hamiltonian
-    n_k = 10
     n_orb_rescale = 2 * tb_data['n_wf'] if add_spin else tb_data['n_wf']
     sp_factor = 1 if add_spin else 2
     H_add_loc = np.zeros((n_orb_rescale, n_orb_rescale), dtype=complex)
     if add_spin: H_add_loc += tools.lambda_matrix_w90_t2g(add_local)
-
-    if not Sigma:
-        Sigma = GfReFreq(mesh=MeshReFreq(omega_min=-5, omega_max=1,
-                                         n_max=1001),
-                         target_shape=[tb_data['n_wf'], tb_data['n_wf']])
 
     hopping = {
         eval(key): np.array(value, dtype=complex)
@@ -271,19 +268,34 @@ def calc_mu(tb_data,
                        extend_to_spin=add_spin,
                        add_local=H_add_loc)
 
-    SK = SumkDiscreteFromLattice(lattice=tb, n_points=n_k)
+    k_spacing = np.linspace(0, 1, n_k, endpoint=False)
+    k_array = np.array(np.meshgrid(k_spacing, k_spacing, k_spacing)).T.reshape(-1, 3)
+    bz_weight = 1/(n_k**3)
+    if not Sigma:
+        eps_nuk = tb.dispersion(k_array)
+        eps_max = np.max(eps_nuk)
+        eps_min = np.min(eps_nuk)
+        bandwidth = np.abs(eps_max - eps_min)
+        n_w = int((bandwidth+0.6)/w_spacing)
+        Sigma = Gf(mesh=MeshReFreq(window=[-bandwidth-0.5, 0.1], n_w=n_w),
+                   target_shape=[tb_data['n_wf'], tb_data['n_wf']])
+    else:
+        eps_min, eps_max = tb_data['eps_min_max']
+        eps_nuk = tb.fourier(k_array)
+        #TODO: there could be an edge case that is beyond the boundaries
+        sigma_hartree = Sigma(0.0).real
+        sigma_eig, _ = np.linalg.eigh(sigma_hartree)
+        if sigma_eig[-1] > 0: eps_max+=sigma_eig[-1]
+        if sigma_eig[0] <  0: eps_min+=sigma_eig[0]
 
-    mu, density = dichotomy(dens,
-                            mu_guess,
-                            n_elect,
-                            1e-3,
-                            0.5,
-                            max_loops=100,
-                            x_name="chemical potential",
-                            y_name="density",
-                            verbosity=3)
-
-    return mu
+    w_mat = np.array([w.value * np.eye(tb_data['n_wf']) for w in Sigma.mesh])
+    
+    #Check if stored mu is the correct mu to avoid recalculation
+    #if mu is correct, dens-n_elect == 0
+    if np.isclose(0.0,dens(current_mu, n_elect),atol=1e-3):
+        return current_mu, (eps_min, eps_max)
+    mu = brentq(dens,eps_max,eps_min,(n_elect),xtol=1e-4)
+    return mu, (eps_min, eps_max)
 
 
 def calc_Aw(tb_data, mu, add_spin, add_local, Sigma=None, eta=0.0, n_k=10):
@@ -296,10 +308,10 @@ def calc_Aw(tb_data, mu, add_spin, add_local, Sigma=None, eta=0.0, n_k=10):
     if not Sigma:
         w_min = tb_data['bnd_low'] - 0.2*abs(tb_data['bnd_low'])
         w_max = tb_data['bnd_high'] + 0.2*abs(tb_data['bnd_high'])
-        n_w = 1001
-        Sigma = GfReFreq(mesh=MeshReFreq(omega_min=w_min, omega_max=w_max,
-                                         n_max=n_w),
-                         target_shape=[n_orb_rescale, n_orb_rescale])
+        w_spacing = 0.005
+        n_w = int(np.abs(w_max-w_min)/w_spacing)
+        Sigma = Gf(mesh=MeshReFreq(window=[w_min, w_max], n_max=n_w),
+                   target_shape=[n_orb_rescale, n_orb_rescale])
 
     hopping = {
         eval(key): np.array(value, dtype=complex)
@@ -311,12 +323,17 @@ def calc_Aw(tb_data, mu, add_spin, add_local, Sigma=None, eta=0.0, n_k=10):
                        extend_to_spin=add_spin,
                        add_local=H_add_loc)
 
-    SK = SumkDiscreteFromLattice(lattice=tb, n_points=n_k)
-
+    k_spacing = np.linspace(0, 1, n_k, endpoint=False)
+    k_array = np.array(np.meshgrid(k_spacing, k_spacing, k_spacing)).T.reshape(-1, 3)
+    bz_weight = 1/(n_k**3)
+    eps_nuk = tb.dispersion(k_array)
+    w_mat = np.array([w.value * np.eye(tb_data['n_wf']) for w in Sigma.mesh])
+    
     Gloc = sp_factor * sumk(mu=mu,
                             Sigma=Sigma,
-                            bz_weights=SK.bz_weights,
-                            hopping=SK.hopping,
+                            bz_weight=bz_weight,
+                            eps_nuk=eps_nuk,
+                            w_mat=w_mat,
                             eta=eta)
 
     Aw = -1.0 / np.pi * np.trace(Gloc.data, axis1=1, axis2=2).imag

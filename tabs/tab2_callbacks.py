@@ -31,7 +31,7 @@ def register_callbacks(app):
         [Input(id('tb-bands'), 'on'),
          Input(id('calc-tb'), 'n_clicks'),
          Input(id('add-spin'), 'value'),
-         Input(id_tap('dft-mu'), 'value'),
+         Input(id_tap('dft-mu'), 'children'),
          Input(id('n-k'), 'value'),
          Input(id('k-points'), 'data'),
          Input(id('tb-kslice-data'), 'data'),
@@ -55,11 +55,15 @@ def register_callbacks(app):
             k_mesh['Z'] = np.array([+0.25, +0.25, -0.25])
             add_local = [0.] * tb_kslice_data['n_wf']
 
-            tb_kslice_data['k_mesh'], e_mat, e_vecs, tbl = tb.calc_tb_bands(tb_kslice_data, add_spin, add_local, k_mesh, fermi_slice=True)
+            tb_kslice_data['k_mesh'], e_mat, e_vecs, tbl, _  = tb.calc_tb_bands(tb_kslice_data, add_spin, add_local, k_mesh, fermi_slice=True)
             # calculate Hamiltonian
             tb_kslice_data['e_mat_re'] = e_mat.real.tolist()
             tb_kslice_data['e_mat_im'] = e_mat.imag.tolist()
-            tb_kslice_data['eps_nuk'], evec_nuk = tb.get_tb_kslice(tbl, k_mesh, dft_mu)
+            
+            mu = 0
+            if 'dft_mu' in tb_data.keys():
+                mu = tb_data['dft_mu']
+            tb_kslice_data['eps_nuk'], evec_nuk = tb.get_tb_kslice(tbl, k_mesh, mu)
             tb_kslice_data['use'] = True
 
             tb_switch = {'on': True}
@@ -76,7 +80,7 @@ def register_callbacks(app):
          Input(id_tap('sigma-data'), 'data'),
          Input(id_tap('akw-data'), 'data'),
          Input(id('akw-bands'), 'on'),
-         Input(id_tap('dft-mu'), 'value'),
+         Input(id_tap('dft-mu'), 'children'),
          Input(id('k-points'), 'data'),
          Input(id('n-k'), 'value'),
          Input(id('calc-akw'), 'n_clicks'),

@@ -67,11 +67,10 @@ def get_tb_kslice(tb, k_mesh, dft_mu):
 
     return e_val, e_vec
 
-def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, band_basis = False):
+def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs=[], band_basis = False ):
     """
     calculate tight-binding bands based on a W90 Hamiltonian
     """
-
     # set up Wannier Hamiltonian
     n_orb_rescale = 2 * data['n_wf'] if add_spin else data['n_wf']
     H_add_loc = np.zeros((n_orb_rescale, n_orb_rescale), dtype=complex)
@@ -90,19 +89,23 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, band_basis = F
     if not fermi_slice:
         k_disc, k_points, e_mat = energy_matrix_on_bz_paths(k_path, tb, n_pts=k_mesh['n_k'])
         if add_spin: e_mat = e_mat[2:5,2:5]
-
         if band_basis:
             e_vecs = np.zeros(e_mat.shape, dtype=complex)
+            total_proj = np.zeros(np.shape(e_vecs[0]))
             for ik in range(np.shape(e_mat)[2]):
                 evals, e_vecs[:,:,ik] = np.linalg.eigh(e_mat[:,:,ik])
                 e_mat[:,:,ik] = np.zeros(e_mat[:,:,ik].shape)
                 np.fill_diagonal(e_mat[:,:,ik],evals)
+            for band in range(data['n_wf']):
+                for orb in projected_orbs:
+                    total_proj[band] += np.real(e_vecs[orb,band] * e_vecs[orb,band].conjugate())
         else:
             e_vecs = np.array([None])
-
+            total_proj = [] 
     else:
         e_mat = np.zeros((n_orb_rescale, n_orb_rescale, k_mesh['n_k'], k_mesh['n_k']), dtype=complex)
         e_vecs = np.array([None])
+        total_proj = np.array([None])
         final_x, final_y = k_path[1]
         Z = np.array(k_mesh['Z'])
         for ik_y in range(k_mesh['n_k']):
@@ -112,6 +115,6 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, band_basis = F
         if add_spin: e_mat = e_mat[2:5,2:5]
 
     k_mesh = {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels, 'k_points_dash': k_mesh['k_path']}
-
-    return k_mesh, e_mat, e_vecs, tb
+    
+    return k_mesh, e_mat, e_vecs, tb, total_proj
 

@@ -1,11 +1,11 @@
 import numpy as np
 import base64
 import io
+import json
 from h5 import HDFArchive
 
 import tools.wannier90 as tb_w90
 import tools.calc_akw as calc_akw
-
 
 def load_config(contents, h5_filename, data):
     data['config_filename'] = h5_filename
@@ -24,15 +24,15 @@ def load_config(contents, h5_filename, data):
         del data['tb_data']['e_mat']
         data['tb_data']['eps_nuk'] = data['tb_data']['eps_nuk'].tolist()
         if 'e_vecs' in data['tb_data'].keys():
-            data['tb_data']['evecs_re'] = data['tb_data']['e_vecs'].real  
-            data['tb_data']['evecs_im'] = data['tb_data']['e_vecs'].imag  
+            data['tb_data']['evecs_re'] = data['tb_data']['e_vecs'].real
+            data['tb_data']['evecs_im'] = data['tb_data']['e_vecs'].imag
             del data['tb_data']['e_vecs']
         data['tb_data']['hopping'] = {str(key): value.tolist() for key, value in data['tb_data']['hopping'].items()}
-        
+
     if 'sigma_data' in ar:
         data['sigma_data'] = ar['sigma_data']
-        data['sigma_data']['sigma_re'] =  data['sigma_data']['sigma'].real.tolist()
-        data['sigma_data']['sigma_im'] =  data['sigma_data']['sigma'].imag.tolist()
+        data['sigma_data']['sigma_re'] = data['sigma_data']['sigma'].real.tolist()
+        data['sigma_data']['sigma_im'] = data['sigma_data']['sigma'].imag.tolist()
         del data['sigma_data']['sigma']
         data['sigma_data']['w_dict']['w_mesh'] = data['sigma_data']['w_dict']['w_mesh'].tolist()
         data['sigma_data']['orbital_order'] = tuple(data['sigma_data']['orbital_order'])
@@ -45,22 +45,95 @@ def load_config(contents, h5_filename, data):
 
     return data
 
+
+def load_pythTB_json(contents):
+    '''
+    read pythTB json file
+
+    Parameters
+    ----------
+    contents: json string from memory
+
+    Returns
+    -------
+    norb: int
+        number of orbitals
+    units: list of tuples
+        vectors spanning unit cell
+    hopping_dict: dict
+        dict of hopping tuples
+    '''
+
+    def decode(d):
+        '''
+        When decoding a json file this will check for the existence of complex
+        number dictionary objects created by the encoder and translates it into a
+        complex number.
+        '''
+        if "complex" in d:
+            return complex(d["real"], d["imag"])
+        if "array" in d:
+            return np.array(d["list"])
+        return d
+    
+    content_type, content_string = contents.split(',')
+    data_stream = base64.b64decode(content_string)
+    data = json.loads(data_stream, object_hook = decode)
+
+    lat = data['_lat']
+    hoppings = data['_hoppings']
+    site_energies = data['_site_energies']
+    norb = data['_norb']
+
+    # apparently if _dim_r <= 2 then an array doesnt need to be passed in the hoppings
+    if data['_dim_r'] <= 2:
+        raise Exception("The pyTB lattice must be greater than 2x2. ie _dim_r > 2")
+
+    # extract the lattice dimensions
+    units = []
+    for i in lat:
+        units.append(tuple(i))
+
+    # extract the hoppings
+    #parsing is taken and adapted from triqs/lattice/utils.py TB_from_pythTB
+    hopping_dict={}
+    m_zero = np.zeros((norb, norb), dtype=complex)
+    #on-site energy
+    hopping_dict[(0, 0, 0)] = np.eye(norb, dtype=complex) * site_energies
+    #hoppings
+    for hop, orb_from, orb_to, vector in hoppings:
+        if tuple(vector) not in hopping_dict:
+            hopping_dict[tuple(vector)] = m_zero.copy()
+            # per default pythTB does not explicitly stores -R
+            hopping_dict[tuple(-np.array(vector))] = m_zero.copy()
+            hopping_dict[tuple(vector)][orb_from, orb_to] += hop
+            # fill -R from +R using H_ij(+R)=[H_ji(-R)]*
+            # if the user specified -R explicitly we have to sum both hopping
+            # matrices
+            # according to pythTB documentation
+            hopping_dict[tuple(-np.array(vector))][orb_to, orb_from] += np.conj(hop)
+
+    return norb, units, hopping_dict
+
+
 def load_w90_hr(contents):
     content_type, content_string = contents.split(',')
     w90_hr_stream = base64.b64decode(content_string).decode('utf-8')
     hopping, n_wf = tb_w90.parse_hopping_from_wannier90_hr(w90_hr_stream)
-    #print('number of Wannier orbitals {}'.format(num_wann))
+    # print('number of Wannier orbitals {}'.format(num_wann))
 
     return hopping, n_wf
+
 
 def load_w90_wout(contents):
     content_type, content_string = contents.split(',')
     w90_wout_stream = base64.b64decode(content_string).decode('utf-8')
     units = tb_w90.parse_lattice_vectors_from_wannier90_wout(w90_wout_stream)
 
-    return units 
+    return units
 
-def load_sigma_h5(contents , filename, orbital_order = None):
+
+def load_sigma_h5(contents, filename, orbital_order=None):
     '''
     example to store a suitable sigma:
     with HDFArchive(path,'w') as h5:
@@ -88,9 +161,9 @@ def load_sigma_h5(contents , filename, orbital_order = None):
     w_mesh = ar['self_energy']['w_mesh']
 
     # setup w_dict
-    w_dict = {'w_mesh' : w_mesh, 
-              'n_w' : ar['self_energy']['n_w'], 
-              'window' : [w_mesh[0],w_mesh[-1]]}
+    w_dict = {'w_mesh': w_mesh,
+              'n_w': ar['self_energy']['n_w'],
+              'window': [w_mesh[0], w_mesh[-1]]}
     # TODO able to choose these
     spin = 'up'
     block = 0
@@ -107,7 +180,3 @@ def load_sigma_h5(contents , filename, orbital_order = None):
     print(sigma_interpolated.shape)
 
     return data
-
-
-
-
