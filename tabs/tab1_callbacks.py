@@ -168,8 +168,10 @@ def register_callbacks(app):
             w_mesh = sigma_data['w_dict']['w_mesh']
             Akw_df = pd.DataFrame(Akw, columns = w_mesh)
             df = pd.concat([df, Akw_df], axis=1)
-
-        return dash.dcc.send_data_frame(df.to_csv, "Akw_rawdata.csv")
+        
+        #round all values to 5 digits
+        return dash.dcc.send_data_frame(df.to_csv, "Akw_rawdata.csv",
+                                        index=False, float_format='%.5e')
 
     # dashboard calculate TB
     @app.callback(

@@ -46,7 +46,6 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
                             n_max=w_dict['n_w'])
     Sigma_triqs = Gf(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
     Sigma_triqs.data[:, :, :] = sigma.transpose((2, 0, 1)) 
-    print(tb_data['n_elect'],akw_data['dmft_mu'])
     if 'sigma_mu_re' in sigma_data.keys():
         sigma_mu = np.array(
             sigma_data['sigma_mu_re']) + 1j * np.array(sigma_data['sigma_mu_im'])
