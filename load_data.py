@@ -75,19 +75,44 @@ def load_pythTB_json(contents):
         if "array" in d:
             return np.array(d["list"])
         return d
-    
+   
+    def parsing_model(data):
+        '''
+        add a placeholder dimension to convert 2d models to 3d
+        '''
+        data['_dim_r'] = 3 
+        data['_dim_k'] = 3
+        
+        lattice = data['_lat'].tolist()
+        for i in lattice:
+            i.append(0.0)
+        lattice.append([0.0,0.5,0.5])
+        data['_lat']=np.array(lattice)
+
+        orb = data['_orb'].tolist()
+        for i in orb:
+            i.append(0.0)
+        data['_orb']=np.array(orb)
+
+        for i in data['_hoppings']:
+            v = i[-1].tolist()
+            v.append(0.0)
+            i[-1] = np.array(v)
+        
     content_type, content_string = contents.split(',')
     data_stream = base64.b64decode(content_string)
     data = json.loads(data_stream, object_hook = decode)
+    
+    # apparently if _dim_r <= 2 then an array doesnt need to be passed in the hoppings
+    if data['_dim_r'] <= 2:
+        parsing_model(data)
+        print(data)
 
     lat = data['_lat']
     hoppings = data['_hoppings']
     site_energies = data['_site_energies']
     norb = data['_norb']
 
-    # apparently if _dim_r <= 2 then an array doesnt need to be passed in the hoppings
-    if data['_dim_r'] <= 2:
-        raise Exception("The pyTB lattice must be greater than 2x2. ie _dim_r > 2")
 
     # extract the lattice dimensions
     units = []
