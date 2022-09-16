@@ -75,18 +75,18 @@ def load_pythTB_json(contents):
         if "array" in d:
             return np.array(d["list"])
         return d
-   
+
     def parsing_model(data):
         '''
         add a placeholder dimension to convert 2d models to 3d
         '''
-        data['_dim_r'] = 3 
+        data['_dim_r'] = 3
         data['_dim_k'] = 3
-        
+
         lattice = data['_lat'].tolist()
         for i in lattice:
             i.append(0.0)
-        lattice.append([0.0,0.5,0.5])
+        lattice.append([0.0,0.0,1.0])
         data['_lat']=np.array(lattice)
 
         orb = data['_orb'].tolist()
@@ -98,11 +98,11 @@ def load_pythTB_json(contents):
             v = i[-1].tolist()
             v.append(0.0)
             i[-1] = np.array(v)
-        
+
     content_type, content_string = contents.split(',')
     data_stream = base64.b64decode(content_string)
     data = json.loads(data_stream, object_hook = decode)
-    
+
     # apparently if _dim_r <= 2 then an array doesnt need to be passed in the hoppings
     if data['_dim_r'] <= 2:
         parsing_model(data)
@@ -127,16 +127,18 @@ def load_pythTB_json(contents):
     hopping_dict[(0, 0, 0)] = np.eye(norb, dtype=complex) * site_energies
     #hoppings
     for hop, orb_from, orb_to, vector in hoppings:
+        # if it does not exit create empty entry
         if tuple(vector) not in hopping_dict:
             hopping_dict[tuple(vector)] = m_zero.copy()
             # per default pythTB does not explicitly stores -R
             hopping_dict[tuple(-np.array(vector))] = m_zero.copy()
-            hopping_dict[tuple(vector)][orb_from, orb_to] += hop
-            # fill -R from +R using H_ij(+R)=[H_ji(-R)]*
-            # if the user specified -R explicitly we have to sum both hopping
-            # matrices
-            # according to pythTB documentation
-            hopping_dict[tuple(-np.array(vector))][orb_to, orb_from] += np.conj(hop)
+
+        hopping_dict[tuple(vector)][orb_from, orb_to] += hop
+        # fill -R from +R using H_ij(+R)=[H_ji(-R)]*
+        # if the user specified -R explicitly we have to sum both hopping
+        # matrices
+        # according to pythTB documentation
+        hopping_dict[tuple(-np.array(vector))][orb_to, orb_from] += np.conj(hop)
 
     return norb, units, hopping_dict
 
