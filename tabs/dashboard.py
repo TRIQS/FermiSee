@@ -261,6 +261,25 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                       color='warning', fade=True, is_open=False, duration=3000),
                             dbc.Alert('# of orbitals does not match (Σ vs. H(r))', id=id('orb-alert'), dismissable=True,
                                       color='warning', fade=True, is_open=False, duration=3000),
+                            html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0, style=button_style),
+                        ]),
+                        id=id('sec3-collapse'),
+                        is_open=False,
+                    ),
+                ], style=section_box_style),
+
+                # section 4
+                html.Div(children=[
+                    html.Button(
+                        "Options",
+                        id=id('sec4-collapse-button'),
+                        style=section_button_style,
+                        n_clicks=0,
+                    ),
+                    dbc.Collapse(
+                        # html div for collapse first:
+                        html.Div(children=[
+                            # now body of collapse:
                             html.Div([
                                 #Orbital Projection was called band basis
                                 #I left the id of the switch the same
@@ -276,7 +295,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 dbc.Tooltip('calculate A(k,w) in orbital (off) or band basis (on)',
                                             target=id('band-basis-tooltip'),
                                             style={'maxWidth': 300, 'width': 300, 'font-size': 14}),
-                            ], id=id('band-basis-tooltip'), style={'padding': '5px 5px'}
+                            ], id=id('band-basis-tooltip'), style={'display': 'None'}
                             ),
                             html.Div([
                                 html.P('select orbitals: ', style={'display': 'block', 'text-align': 'left', 'vertical-align': 'center'}
@@ -287,25 +306,21 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                           debounce=True,
                                           placeholder='Ex: 0,1,2'),
                             ],id=id('input-select-orbital'), style={'display':'none'}),
-                            html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0, style=button_style),
-                        ]),
-                        id=id('sec3-collapse'),
-                        is_open=False,
-                    ),
-                ], style=section_box_style),
-
-                # section 4
-                html.Div(children=[
-                    html.Button(
-                        "Layout",
-                        id=id('sec4-collapse-button'),
-                        style=section_button_style,
-                        n_clicks=0,
-                    ),
-                    dbc.Collapse(
-                        # html div for collapse first:
-                        html.Div(children=[
-                            # now body of collapse:
+                            html.Div([ 
+                                html.P('show TB bands:', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
+                                       ),
+                                dcc.Slider(0,2,step=None,
+                                           marks={
+                                               0 : 'none',
+                                               1 : 'bands',
+                                               2 : 'projection'
+                                           },
+                                           value=1,
+                                           id=id('band-slider')
+                                          )
+                            ], 
+                            id=id('input-band-slider'), style={'padding': '5px 1px'}
+                            ),
                             html.Div([
                                 html.P('show TB bands:', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                        ),
@@ -315,7 +330,22 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                     color='#005eb0',
                                     style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
                                 ),
-                            ], style={'padding': '5px 5px'}
+                            ], style={'display': 'None'}
+                            ),
+                            html.Div([ 
+                                html.P('show A(k,ω):', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
+                                       ),
+                                dcc.Slider(0,2,step=None,
+                                           marks={
+                                               0 : 'none',
+                                               1 : 'A(k,ω)',
+                                               2 : 'projection'
+                                           },
+                                           value=0,
+                                           id=id('akw-slider')
+                                          )
+                            ], 
+                            id=id('input-akw-slider'), style={'padding': '5px 1px'}
                             ),
                             html.Div([
                                 html.P('show A(k,ω):', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
@@ -326,7 +356,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                     color='#005eb0',
                                     style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
                                 ),
-                            ], style={'padding': '5px 5px'}
+                            ], style={'display': 'None'}
                             ),
                             html.Div([
                                 html.P('show A(ω):', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}

@@ -145,7 +145,7 @@ def calc_kslice(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
         e_vecs = np.array(
             tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
     iw0 = np.where(np.sign(w_dict['w_mesh']) == True)[0][0] - 1
-    tools.print_matrix(sigma[:, :, iw0], n_orb, 'Zero-frequency Sigma')
+    #tools.print_matrix(sigma[:, :, iw0], n_orb, 'Zero-frequency Sigma')
 
     # TODO add local
     add_local = [0.] * tb_data['n_wf']

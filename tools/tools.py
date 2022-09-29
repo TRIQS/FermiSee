@@ -15,11 +15,14 @@ def get_TBL(hopping,
     because it does not read from file but still needs
     be able to add local etc.
     """
-
+    print(units)
+    print(hopping)
+    unit_dim = np.shape(units)[0]
+    origin = (0,) * unit_dim
     if extend_to_spin:
         hopping, n_wf = extend_wannier90_to_spin(hopping, n_wf)
     if add_local is not None:
-        hopping[(0, 0, 0)] += add_local
+        hopping[origin] += add_local
     if renormalize is not None:
         assert len(np.shape(renormalize)) == 1, 'Give Z as a vector'
         assert len(
@@ -31,11 +34,11 @@ def get_TBL(hopping,
             hopping[R] = np.dot(np.dot(Z_mat, hopping[R]), Z_mat)
 
     if add_field is not None:
-        hopping[(0, 0, 0)] += add_field
+        hopping[origin] += add_field
 
     TBL = TBLattice(units=units,
                     hopping=hopping,
-                    orbital_positions=[(0, 0, 0)] * n_wf,
+                    orbital_positions=[origin] * n_wf,
                     orbital_names=[str(i) for i in range(n_wf)])
     return TBL
 

@@ -102,11 +102,13 @@ def load_pythTB_json(contents):
     content_type, content_string = contents.split(',')
     data_stream = base64.b64decode(content_string)
     data = json.loads(data_stream, object_hook = decode)
-
+    
+    '''
     # apparently if _dim_r <= 2 then an array doesnt need to be passed in the hoppings
     if data['_dim_r'] <= 2:
         parsing_model(data)
         print(data)
+    '''
 
     lat = data['_lat']
     hoppings = data['_hoppings']
@@ -119,12 +121,15 @@ def load_pythTB_json(contents):
     for i in lat:
         units.append(tuple(i))
 
+    
+    unit_dim = np.shape(units)[0]
+    origin = (0,) * unit_dim
     # extract the hoppings
     #parsing is taken and adapted from triqs/lattice/utils.py TB_from_pythTB
     hopping_dict={}
     m_zero = np.zeros((norb, norb), dtype=complex)
     #on-site energy
-    hopping_dict[(0, 0, 0)] = np.eye(norb, dtype=complex) * site_energies
+    hopping_dict[origin] = np.eye(norb, dtype=complex) * site_energies
     #hoppings
     for hop, orb_from, orb_to, vector in hoppings:
         # if it does not exit create empty entry
