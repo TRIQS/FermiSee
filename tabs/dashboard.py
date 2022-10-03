@@ -130,13 +130,13 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                             # ], style={'padding': '5px 5px'}
                             # ),
                             html.Div([
-                                html.P('# electrons: ', style={'width': '40%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
+                                html.P('# electrons: ', style={'width': '50%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                        ),
                                 dcc.Input(id=id('gf-filling'), type='number', value='0.', step='0.001',
-                                          debounce=True, placeholder='number of electrons', style={'width': '50%'}),
+                                          debounce=True, placeholder='number of electrons', style={'width': '40%'}),
                                 html.Button('calc mu:', id=id('calc-tb-mu'), n_clicks=0, style=button_style),
                                 html.Div(id=id('dft-mu'), children=html.P('0'),
-                                style={'width': '50%',
+                                style={'width': '40%',
                                        'display':'inline-block', 
                                        'margin': '5px',
                                        'padding': '5px 5px 0px 3px',
@@ -302,7 +302,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                        ),
                                 dcc.Input(id=id('select-orbitals'),
                                           type='text', 
-                                          value='0',
+                                          value='',
                                           debounce=True,
                                           placeholder='Ex: 0,1,2'),
                             ],id=id('input-select-orbital'), style={'display':'none'}),

@@ -65,10 +65,13 @@ def register_callbacks(app):
          Input(id('akw-mode'), 'value'),
          Input(id('eta'), 'value'),
          Input(id('band-slider'), 'value')],
-         State(id('tb-alert'), 'is_open'),
+        [State(id('select-orbitals'), 'value'),
+         State(id('tb-alert'), 'is_open')],
          prevent_initial_call=True
         )
-    def update_akw(akw_data, tb_data, sigma_data, akw_slider, dft_mu, k_points, n_k, click_tb, click_akw, akw_mode, eta, band_slider, tb_alert):
+    def update_akw(akw_data, tb_data, sigma_data, akw_slider, dft_mu, k_points,
+                   n_k, click_tb, click_akw, akw_mode, eta, band_slider,
+                   sel_orb, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***update_akw***:'), trigger_id)
@@ -76,7 +79,16 @@ def register_callbacks(app):
         if trigger_id == id('dft-mu') and not sigma_data['use']:
             return akw_data, akw_slider, tb_alert
 
-        elif trigger_id in (id('calc-akw'), id('n-k'), id('akw-mode')) or ( trigger_id == id('k-points') and click_akw > 0 ):
+        elif trigger_id in (id('calc-akw'), id('n-k'), id('akw-mode'), id('akw-slider'), id('dft-mu')) or (trigger_id == id('k-points') and click_akw > 0 ):
+            print("hi")
+
+            if trigger_id == id('akw-slider') and click_akw < 1:
+                return akw_data, 0, not tb_alert
+
+            if akw_slider == 2 and sel_orb == '':
+                print("bye: ", trigger_id, akw_slider, sel_orb)
+                return akw_data, akw_slider, tb_alert
+            
             if not sigma_data['use'] or not tb_data['use'] or not tb_data['dft_mu']:
                 return akw_data, akw_slider, not tb_alert
 
@@ -96,7 +108,7 @@ def register_callbacks(app):
             akw_data['solve'] = solve
             
             #default is 0, first calc-akw, set to 1 
-            if akw_slider == 0:
+            if trigger_id == id('calc-akw') and akw_slider == 0:
                 akw_slider = 1
 
         return akw_data, akw_slider, tb_alert
@@ -212,14 +224,14 @@ def register_callbacks(app):
          Input(id('orbital-order'), 'options'),
          Input(id('eta'), 'value'),
          Input(id('select-orbitals'), 'value'),
-         Input(id('band-slider'), 'value'),
-         Input(id('akw-slider'), 'value')],
+         State(id('akw-slider'), 'value'),
+         Input(id('band-slider'), 'value')],
         prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
                 w90_wout_button, pythTB, pythTB_name, pythTB_button,
                 click_tb, n_elect, click_tb_mu, tb_data, add_spin, dft_mu, n_k,
-                k_points, loaded_data, orb_options, eta, sel_orb,
-                band_slider, akw_slider):
+                k_points, loaded_data, orb_options, eta, sel_orb, akw_slider, 
+                band_slider):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***calc_tb***:'), trigger_id)
@@ -300,7 +312,7 @@ def register_callbacks(app):
             
             sel_orbs_list = []
             band_basis = False
-            if band_slider == 2 or akw_slider == 2:
+            if (band_slider == 2 or akw_slider == 2) and sel_orb != '':
                 #set band_basis to True, for calc projection weights
                 band_basis = True
                 #remove any spaces from the user input
@@ -324,7 +336,7 @@ def register_callbacks(app):
             # calculate Hamiltonian
             tb_data['e_mat_re'] = e_mat.real.tolist()
             tb_data['e_mat_im'] = e_mat.imag.tolist()
-            if band_slider == 2 or akw_slider == 2:
+            if (band_slider == 2 or akw_slider == 2) and sel_orb != '':
                 tb_data['evecs_re'] = e_vecs.real.tolist()
                 tb_data['evecs_im'] = e_vecs.imag.tolist()
                 tb_data['eps_nuk'] = np.einsum('iij -> ij', e_mat-tb_data['dft_mu']).real.tolist()

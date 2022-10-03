@@ -15,8 +15,6 @@ def get_TBL(hopping,
     because it does not read from file but still needs
     be able to add local etc.
     """
-    print(units)
-    print(hopping)
     unit_dim = np.shape(units)[0]
     origin = (0,) * unit_dim
     if extend_to_spin:

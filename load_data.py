@@ -76,39 +76,10 @@ def load_pythTB_json(contents):
             return np.array(d["list"])
         return d
 
-    def parsing_model(data):
-        '''
-        add a placeholder dimension to convert 2d models to 3d
-        '''
-        data['_dim_r'] = 3
-        data['_dim_k'] = 3
-
-        lattice = data['_lat'].tolist()
-        for i in lattice:
-            i.append(0.0)
-        lattice.append([0.0,0.0,1.0])
-        data['_lat']=np.array(lattice)
-
-        orb = data['_orb'].tolist()
-        for i in orb:
-            i.append(0.0)
-        data['_orb']=np.array(orb)
-
-        for i in data['_hoppings']:
-            v = i[-1].tolist()
-            v.append(0.0)
-            i[-1] = np.array(v)
-
     content_type, content_string = contents.split(',')
     data_stream = base64.b64decode(content_string)
     data = json.loads(data_stream, object_hook = decode)
     
-    '''
-    # apparently if _dim_r <= 2 then an array doesnt need to be passed in the hoppings
-    if data['_dim_r'] <= 2:
-        parsing_model(data)
-        print(data)
-    '''
 
     lat = data['_lat']
     hoppings = data['_hoppings']
@@ -209,6 +180,6 @@ def load_sigma_h5(contents, filename, orbital_order=None):
     data['dmft_mu'] = dmft_mu
     data['orbital_order'] = orbital_order
     data['n_orb'] = n_orb
-    print(sigma_interpolated.shape)
+    #print(sigma_interpolated.shape)
 
     return data
