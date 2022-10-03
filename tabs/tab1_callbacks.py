@@ -417,8 +417,11 @@ def register_callbacks(app):
         print('{:20s}'.format('***update_sigma***:'), trigger_id)
 
         return_f_sigma = None
-        # orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
         orbital_order = literal_eval(orbital_order)
+
+        # initial checks
+        if not tb_data['use']:
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma
 
         # update Sigma params if n_wf has changed
         if trigger_id == id('tb-data') and tb_data['n_wf'] != len(sigma_columns)-1:
@@ -575,6 +578,10 @@ def register_callbacks(app):
         if not tb_data['use']:
             return fig
 
+        # if band slider is turned on but orb_proj is not calculated yet pretend it is not turned on
+        if (akw_slider == 2 or band_slider == 2) and tb_data['orb_proj'] == []:
+            band_slider = 1
+
         k_mesh = tb_data['k_mesh']
         fig.add_shape(type = 'line', x0=0, y0=0, x1=max(k_mesh['k_disc']), y1=0, line=dict(color='gray', width=0.8))
         fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
@@ -660,7 +667,11 @@ def register_callbacks(app):
             return fig, 0, 1
 
         k_mesh = tb_temp['k_mesh']
-        
+
+        # if band slider is turned on but orb_proj is not calculated yet pretend it is not turned on
+        if (akw_slider == 2 or band_slider == 2) and tb_data['orb_proj'] == []:
+            band_slider = 1
+
         akw_bands = False
         if akw_slider >=1:
             akw_bands = True
@@ -752,6 +763,10 @@ def register_callbacks(app):
         if tb_data['use']: tb_temp = tb_data
         if not 'tb_temp' in locals():
             return fig, 0, 1
+
+        # if band slider is turned on but orb_proj is not calculated yet pretend it is not turned on
+        if (akw_slider == 2 or band_slider == 2) and tb_data['orb_proj'] == []:
+            band_slider = 1
 
         k_mesh = tb_temp['k_mesh']
 
