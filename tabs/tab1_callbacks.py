@@ -75,20 +75,18 @@ def register_callbacks(app):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***update_akw***:'), trigger_id)
-        
+
         if trigger_id == id('dft-mu') and not sigma_data['use']:
             return akw_data, akw_slider, tb_alert
 
         elif trigger_id in (id('calc-akw'), id('n-k'), id('akw-mode'), id('akw-slider'), id('dft-mu')) or (trigger_id == id('k-points') and click_akw > 0 ):
-            print("hi")
 
             if trigger_id == id('akw-slider') and click_akw < 1:
                 return akw_data, 0, not tb_alert
 
             if akw_slider == 2 and sel_orb == '':
-                print("bye: ", trigger_id, akw_slider, sel_orb)
                 return akw_data, akw_slider, tb_alert
-            
+
             if not sigma_data['use'] or not tb_data['use'] or not tb_data['dft_mu']:
                 return akw_data, akw_slider, not tb_alert
 
@@ -106,13 +104,13 @@ def register_callbacks(app):
             akw_data['Aw'] = Aw.tolist()
             akw_data['use'] = True
             akw_data['solve'] = solve
-            
-            #default is 0, first calc-akw, set to 1 
+
+            #default is 0, first calc-akw, set to 1
             if trigger_id == id('calc-akw') and akw_slider == 0:
                 akw_slider = 1
 
         return akw_data, akw_slider, tb_alert
-    
+
     #toggle the TB options
     @app.callback(
     [Output(id('w90-buttons'), 'style'),
@@ -163,8 +161,8 @@ def register_callbacks(app):
         if trigger_id == id('upload-pythTB-json'):
             return loaded_style
         return pythTB_style
-    
-    #download csv 
+
+    #download csv
     @app.callback(
         Output(id('download-csv'), 'data'),
         [Input(id('Akw-title'), 'n_clicks'),
@@ -177,19 +175,19 @@ def register_callbacks(app):
     )
     def prep_csv(n_clicks, band_slider, akw_slider, tb_data, akw_data, sigma_data):
         df = pd.DataFrame({"no": [0,0,0,0], "data": [0,0,0,0], "you need to plot the figure before downloading the csv": [0,0,0,0]})
-        
+
         if band_slider >= 1:
             df = pd.DataFrame()
             df['k'] = tb_data['k_mesh']['k_disc']
             for band in range(len(tb_data['eps_nuk'])):
                 b = 'ε'+str(band)
-                df[b] = tb_data['eps_nuk'][band] 
+                df[b] = tb_data['eps_nuk'][band]
         if akw_slider >= 1:
             Akw = np.array(akw_data['Akw'])
             w_mesh = sigma_data['w_dict']['w_mesh']
             Akw_df = pd.DataFrame(Akw, columns = w_mesh)
             df = pd.concat([df, Akw_df], axis=1)
-        
+
         #round all values to 5 digits
         return dash.dcc.send_data_frame(df.to_csv, "Akw_rawdata.csv",
                                         index=False, float_format='%.5e')
@@ -230,12 +228,12 @@ def register_callbacks(app):
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
                 w90_wout_button, pythTB, pythTB_name, pythTB_button,
                 click_tb, n_elect, click_tb_mu, tb_data, add_spin, dft_mu, n_k,
-                k_points, loaded_data, orb_options, eta, sel_orb, akw_slider, 
+                k_points, loaded_data, orb_options, eta, sel_orb, akw_slider,
                 band_slider):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***calc_tb***:'), trigger_id)
-        
+
         # if w90_hr != None and not 'loaded_hr' in tb_data:
         if trigger_id == id('upload-w90-hr'):
             print('loading w90 hr file...')
@@ -254,7 +252,7 @@ def register_callbacks(app):
             tb_data['units'] = load_w90_wout(w90_wout)
             tb_data['loaded_wout'] = True
             return tb_data, w90_hr_button, html.Div([w90_wout_name]), pythTB_button,  dft_mu, n_elect, orb_options
-        
+
         # if pythTB is being loaded
         if trigger_id == id('upload-pythTB-json'):
             print('loading pythTB .json file...')
@@ -281,7 +279,7 @@ def register_callbacks(app):
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
             return tb_data, w90_hr_button, w90_wout_button, pythTB_button, html.P('{:.4f}'.format(tb_data['dft_mu'])), tb_data['n_elect'], orb_options
-        
+
         if trigger_id == id('calc-tb-mu') and ((tb_data['loaded_hr'] and tb_data['loaded_wout']) or tb_data['use']):
             if float(n_elect) == 0.0:
                 print('please specify filling')
@@ -309,7 +307,7 @@ def register_callbacks(app):
             add_local = [0.] * tb_data['n_wf']
 
             k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
-            
+
             sel_orbs_list = []
             band_basis = False
             if (band_slider == 2 or akw_slider == 2) and sel_orb != '':
@@ -327,9 +325,9 @@ def register_callbacks(app):
                 #update the value on the dash of only the valid orbitals used
                 sel_orb = ''.join(str(x)+',' for x in sel_orbs_list)
 
-            tb_data['k_mesh'], e_mat, e_vecs, tbl, tb_data['orb_proj'] = tb.calc_tb_bands(tb_data, add_spin, 
-                                                                                          add_local, k_mesh, 
-                                                                                          fermi_slice=False, 
+            tb_data['k_mesh'], e_mat, e_vecs, tbl, tb_data['orb_proj'] = tb.calc_tb_bands(tb_data, add_spin,
+                                                                                          add_local, k_mesh,
+                                                                                          fermi_slice=False,
                                                                                           projected_orbs=sel_orbs_list,
                                                                                           band_basis=band_basis)
 
@@ -352,7 +350,7 @@ def register_callbacks(app):
             else:
                 tb_data['add_spin'] = True
             tb_data['use'] = True
-            
+
             return tb_data, w90_hr_button, w90_wout_button, pythTB_button, dft_mu, n_elect, orb_options
 
     # dashboard k-points
@@ -552,7 +550,7 @@ def register_callbacks(app):
     # plot A(k,w)
     @app.callback(
         Output(id('Akw'), 'figure'),
-        [Input(id('akw-slider'), 'value'), 
+        [Input(id('akw-slider'), 'value'),
          Input(id('colorscale'), 'value'),
          Input(id('tb-data'), 'data'),
          Input(id('akw-data'), 'data'),
@@ -588,14 +586,14 @@ def register_callbacks(app):
                           yaxis_title='ω(eV)',
                   xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
                   font=dict(size=20))
-        
+
         if band_slider == 1:
             for band in range(len(tb_data['eps_nuk'])):
                 fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=tb_data['eps_nuk'][band], mode='lines',
                             line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=False, text=f'tb band {band}',
                             hoverinfo='x+y+text'
                             ))
-        
+
         if band_slider == 2:
             for band in range(tb_data['n_wf']):
                 values = tb_data['orb_proj'][band]
@@ -631,7 +629,7 @@ def register_callbacks(app):
                 fig.add_trace(go.Heatmap(x=k_mesh['k_disc'], y=w_mesh, z=z_data,
                                          colorscale=colorscale, reversescale=False, showscale=False,
                                          zmin=np.min(z_data), zmax=np.max(z_data)))
-            
+
             fig.update_yaxes(range=[w_mesh[0], w_mesh[-1]])
 
         return fig

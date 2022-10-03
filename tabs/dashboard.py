@@ -108,7 +108,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                         'textAlign': 'center',
                                         'margin': '10px'
                                     },
- 
+
                                multiple=False)],
                                style={'display': 'none'}
                             ),
@@ -137,7 +137,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 html.Button('calc mu:', id=id('calc-tb-mu'), n_clicks=0, style=button_style),
                                 html.Div(id=id('dft-mu'), children=html.P('0'),
                                 style={'width': '40%',
-                                       'display':'inline-block', 
+                                       'display':'inline-block',
                                        'margin': '5px',
                                        'padding': '5px 5px 0px 3px',
                                        'background': 'white',
@@ -298,15 +298,16 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                             ], id=id('band-basis-tooltip'), style={'display': 'None'}
                             ),
                             html.Div([
-                                html.P('select orbitals: ', style={'display': 'block', 'text-align': 'left', 'vertical-align': 'center'}
+                                html.P('select orbitals: ', style={'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center', 'width': '50%'}
                                        ),
                                 dcc.Input(id=id('select-orbitals'),
-                                          type='text', 
+                                          type='text',
                                           value='',
                                           debounce=True,
-                                          placeholder='Ex: 0,1,2'),
+                                          placeholder='Ex: 0,1,2',
+                                          style={'width': '50%'}),
                             ],id=id('input-select-orbital'), style={'display':'none'}),
-                            html.Div([ 
+                            html.Div([
                                 html.P('show TB bands:', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                        ),
                                 dcc.Slider(0,2,step=None,
@@ -318,7 +319,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                            value=1,
                                            id=id('band-slider')
                                           )
-                            ], 
+                            ],
                             id=id('input-band-slider'), style={'padding': '5px 1px'}
                             ),
                             html.Div([
@@ -332,7 +333,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 ),
                             ], style={'display': 'None'}
                             ),
-                            html.Div([ 
+                            html.Div([
                                 html.P('show A(k,ω):', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                        ),
                                 dcc.Slider(0,2,step=None,
@@ -344,7 +345,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                            value=0,
                                            id=id('akw-slider')
                                           )
-                            ], 
+                            ],
                             id=id('input-akw-slider'), style={'padding': '5px 1px'}
                             ),
                             html.Div([
