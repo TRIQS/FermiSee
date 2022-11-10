@@ -23,13 +23,17 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                          'padding': '10px',
                          'margin-top': "10px",
                          'margin-bottom': "10px"}
-    return dcc.Tab(
-        label='spectral function A(k,ω)',
-        children=[
-            html.Div([
-                html.H3('Dashboard'),
-                # section 1
-                html.Div(children=[
+    tb_input_style = {'width': '90%',
+                             'height': '37px',
+                             'lineHeight': '37px',
+                             'borderWidth': '1px',
+                             'borderStyle': 'dashed',
+                             'borderRadius': '5px',
+                             'textAlign': 'center',
+                             'margin': '10px'}
+   
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  Section 1: Includes the upload and download buttons ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+    upload_dwnload = html.Div(children=[
                     dbc.Alert('file corrupt or no file', id=id('config-alert'), dismissable=True,
                               color='warning', fade=False, is_open=False, duration=3000),
                     dcc.Upload(
@@ -42,164 +46,134 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                     html.Button("Download config", id=id('dwn_button'),
                                 style=section_button_style),
                     dcc.Download(id=id('download_h5')),
-                ], style=section_box_style),
+                ], style=section_box_style)
 
-                # section 2
-                html.Div(children=[
-                    html.Button(
-                        "TB Hamiltonian",
-                        id=id('sec2-collapse-button'),
-                        style=section_button_style,
-                        n_clicks=0,
-                    ),
-                    dbc.Collapse(
-                        # html div for collapse first:
-                        html.Div(children=[
-                            # now body of collapse:
-
-                            dcc.RadioItems(
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  Section 2: Tight binding hamilatonian ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Selection between uploading w90 or a pythTB JSON file
+    w90_vs_pythTB = dcc.RadioItems(
                                 id=id('choose-TB-method'),
                                 options=[{'label': i, 'value': i} for i in ['wannier-90', 'pythTB']],
                                 value='wannier-90',
                                 inputStyle={"margin-right": "5px"},
                                 labelStyle={'display': 'inline-block', 'margin-left': '5px'}
-                            ),
-                            html.Div( id=id('w90-buttons'), children=[
+                            )
+        #w90hr and w90wout file upload buttons
+    w90_input = html.Div( id=id('w90-buttons'), children=[
                                 html.Div([dcc.Upload(
                                     id=id('upload-w90-hr'),
                                     children=html.A('w90_hr'),
-                                    style={
-                                        'width': '90%',
-                                        'height': '37px',
-                                        'lineHeight': '37px',
-                                        'borderWidth': '1px',
-                                        'borderStyle': 'dashed',
-                                        'borderRadius': '5px',
-                                        'textAlign': 'center',
-                                        'margin': '10px'
-                                    },
+                                    style=tb_input_style,                                    
                                     multiple=False)], style={'width': '49%', 'display': 'inline-block'}),
                                 html.Div([dcc.Upload(
                                     id=id('upload-w90-wout'),
                                     children=html.A('w90_wout'),
-                                    style={
-                                        'width': '90%',
-                                        'height': '37px',
-                                        'lineHeight': '37px',
-                                        'borderWidth': '1px',
-                                        'borderStyle': 'dashed',
-                                        'borderRadius': '5px',
-                                        'textAlign': 'center',
-                                        'margin': '10px'
-                                    },
+                                    style=tb_input_style,
                                     multiple=False)], style={'width': '49%', 'display': 'inline-block'})
-                            ]),
-                            html.Div(id=id('pythTB-button'), children=[
+                            ])
+        #pythTB JSON upload button
+    pythTB_input = html.Div(id=id('pythTB-button'), children=[
                                 dcc.Upload(
                                 id=id('upload-pythTB-json'),
                                 children=html.A('pythTB .json'),
-                                style={
-                                        'width': '90%',
-                                        'height': '37px',
-                                        'lineHeight': '37px',
-                                        'borderWidth': '1px',
-                                        'borderStyle': 'dashed',
-                                        'borderRadius': '5px',
-                                        'textAlign': 'center',
-                                        'margin': '10px'
-                                    },
-
-                               multiple=False)],
-                               style={'display': 'none'}
+                                style=tb_input_style,
+                                multiple=False)], style={'display': 'none'})
+        #add spin
+        #Shonel: what does this do?
+    add_spin = html.Div([html.P('add spin:', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}),
+                         daq.BooleanSwitch(
+                            id=id('add-spin'),
+                            on=False,
+                            color='#005eb0',
+                            style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
                             ),
-                            html.Div([
-                                html.P('add spin:', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
-                                       ),
-                                daq.BooleanSwitch(
-                                    id=id('add-spin'),
-                                    on=False,
-                                    color='#005eb0',
-                                    style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
-                                ),
-                            ], style={'padding': '5px 5px'}
-                            ),
-                            # html.Div([
-                            #     # html.P('μ (eV):',style={'width' : '25%','display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
-                            #         # ),
-
-                            # ], style={'padding': '5px 5px'}
-                            # ),
-                            html.Div([
+                        ], style={'padding': '5px 5px'}
+                       )
+        #this is the section that calculates the chemical potential based on the number of electrons in the system
+    electron_section = html.Div([
                                 html.P('# electrons: ', style={'width': '50%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                        ),
                                 dcc.Input(id=id('gf-filling'), type='number', value='0.', step='0.001',
-                                          debounce=True, placeholder='number of electrons', style={'width': '40%'}),
-                                html.Button('calc mu:', id=id('calc-tb-mu'), n_clicks=0, style=button_style),
+                                          debounce=True, placeholder='number of electrons', style={'width': '50%'}),
+                                html.P('μ:', style={'display': 'inline-block',
+                                                    'text-align': 'left',
+                                                    'vertical-align':
+                                                    'center'}),
                                 html.Div(id=id('dft-mu'), children=html.P('0'),
-                                style={'width': '40%',
+                                style={'width': '60%',
                                        'display':'inline-block',
                                        'margin': '5px',
                                        'padding': '5px 5px 0px 3px',
                                        'background': 'white',
-                                       'border-radius':'5px'
-
+                                       'border-radius':'5px',
                                       }),
                                 html.P('eV', style={'display': 'inline-block',
                                                     'text-align': 'left',
                                                     'vertical-align':
-                                                    'center'})
+                                                    'center'}),
+                                dcc.Loading(id=id("loading"), children=[html.Div([html.Div(id=id("loading-out"))])], type="circle")
                             ], style={'padding': '5px 5px'}
-                            ),
-                            html.Div('k-points'),
-                            dash_table.DataTable(
-                                id=id('k-points'),
-                                columns=[{
-                                    'name': k,
-                                    'id': id('column-{}'.format(i)),
-                                    'deletable': False,
-                                } for i, k in enumerate(['label', 'kx', 'ky', 'kz'])],
-                                data=[
-                                    {id('column-{}'.format(i)): k for i, k in enumerate(['G', 0, 0, 0])},
-                                    {id('column-{}'.format(i)): k for i, k in enumerate(['X', 0.5, 0.0, 0])},
-                                    {id('column-{}'.format(i)): k for i, k in enumerate(['M', 0.5, 0.5, 0])}],
-                                editable=True,
-                                row_deletable=True
-                            ),
-                            html.Button('Add k-point', id=id('add-kpoint'), n_clicks=0, style=button_style),
-                            html.Div([
+                            )
+        #k table: table for the k points
+    ktable =  html.Div([
+                                dash_table.DataTable(
+                                    id=id('k-points'),
+                                    columns=[{
+                                        'name': k,
+                                        'id': id('column-{}'.format(i)),
+                                        'deletable': False,
+                                    } for i, k in enumerate(['label', 'kx', 'ky', 'kz'])],
+                                    data=[
+                                        {id('column-{}'.format(i)): k for i, k in enumerate(['G', 0, 0, 0])},
+                                        {id('column-{}'.format(i)): k for i, k in enumerate(['X', 0.5, 0.0, 0])},
+                                        {id('column-{}'.format(i)): k for i, k in enumerate(['M', 0.5, 0.5, 0])}],
+                                    editable=True,
+                                    row_deletable=True
+                                )
+                            ],
+                            id=id('k-table')
+                            )
+        #k table for tab2 fermi slice (fslice)
+    fslice_ktable = html.Div([
+                                dash_table.DataTable(
+                                    id=id('fslice-k-points'),
+                                    columns=[{
+                                        'name': k,
+                                        'id': id('column-{}'.format(i)),
+                                        'deletable': False,
+                                    } for i, k in enumerate(['label', 'kx', 'ky', 'kz'])],
+                                    data=[
+                                        {id('column-{}'.format(i)): k for i, k in enumerate([ 'G', 0, 0, 0])},
+                                        {id('column-{}'.format(i)): k for i, k in enumerate([ 'X', 0.5, 0.0, 0])},
+                                        {id('column-{}'.format(i)): k for i, k in enumerate([ 'Y', 0, 0.5, 0])},
+                                        {id('column-{}'.format(i)): k for i, k in enumerate([ 'Z', 0, 0, 0.5])},
+                                    ],
+                                    editable=True,
+                                    row_deletable=False
+                                ),
+                            ],
+                            id=id('fslice-k-table'),
+                            )
+        # button to add k points to the k table
+    add_kpoint = html.Button('Add k-point', id=id('add-kpoint'), n_clicks=0, style=button_style)
+        #input the number of k-points 
+    num_kpoint = html.Div([
                                 html.P('#k-points:', style={'width': '40%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                        ),
                                 dcc.Input(id=id('n-k'), value='20', step=1, placeholder='number of k-points',
                                           type='number', debounce=True, style={'width': '60%'}),
                             ], style={'padding': '5px 5px'}
-                            ),
-                            html.Button('calc TB bands', id=id('calc-tb'), n_clicks=0, style=button_style),
-                        ]),
-                        id=id('sec2-collapse'),
-                        is_open=True,
-                    ),
-                ], style=section_box_style),
-
-                # section 3
-                html.Div(children=[
-                    html.Button(
-                        "Self-energy",
-                        id=id('sec3-collapse-button'),
-                        style=section_button_style,
-                        n_clicks=0,
-                    ),
-                    dbc.Collapse(
-                        # html div for collapse first:
-                        html.Div(children=[
-                            # now body of collapse:
-                            dcc.RadioItems(
+                            )
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Section 3: Self-Energy ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # radio select option between uploading an h5 archive for the self energy or manually inputting the function values
+    upload_vs_input = dcc.RadioItems(
                                 id=id('choose-sigma'),
                                 options=[{'label': i, 'value': i} for i in ['upload', 'enter manually']],
                                 value='upload',
                                 inputStyle={"margin-right": "5px"},
                                 labelStyle={'display': 'inline-block', 'margin-left': '5px'}
-                            ),
-                            html.Div(id=id('sigma-upload'), children=[
+                            )
+    # the sigma upload button
+    sigma_upload = html.Div(id=id('sigma-upload'), children=[
                                 dcc.Upload(
                                     id=id('sigma-upload-box'),
                                     children=html.Div(['drop or ', html.A('select files')]),
@@ -215,8 +189,9 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                     },
                                     multiple=False
                                 ),
-                            ]),
-                            html.Div(id=id('sigma-function'), children=[
+                            ])
+    #manually input sigma function
+    sigma_function = html.Div(id=id('sigma-function'), children=[
                                 # dcc.Textarea(
                                 # id=id('sigma-function-input'),
                                 # placeholder='Enter a python function',
@@ -240,20 +215,57 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 ),
                                 html.Button('Submit', id=id('sigma-function-button'), n_clicks=0, style=button_style),
                                 html.Div(id=id('sigma-function-output'), style={'whiteSpace': 'pre-line'}),
-                            ]),
-                            # html.Div(id=id('sigma-lambdas'), style={'padding': '5px 5px'}),
-                            html.Div([
+                            ])
+    # input value for ata η
+    input_ata = html.Div([
                                 html.P('η (eV):', style={'width': '40%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                        ),
                                 dcc.Input(id=id('eta'), type='number', value='0.010', step='0.001',
                                           placeholder='broadening η', style={'width': '60%', 'margin-bottom': '10px'}),
                             ], style={'padding': '5px 5px'}
-                            ),
-                            html.Div(
+                            )
+    # select orbital order
+    orbital_order = html.Div(
                                 dcc.Dropdown(id=id('orbital-order'), value='(0,1,2)', placeholder='Select orbital order',
                                              options=[{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([0, 1, 2])))],
                                              style={'width': '100%'}), id=id('orbital-order-tooltip')
-                            ),
+                            )
+    
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  Construct Dashboard  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Tab 2 Fermi Surface:
+    if tab_number == 2:
+        #does not include section 1
+        upload_dwnload = html.Div(style = {'display' : 'None'})
+        #in section two does not include the inputs, different k table
+        sec2_components = [add_spin,
+                           electron_section,
+                           html.Div('k-points'),
+                           fslice_ktable,
+                           num_kpoint
+                          ]
+        sec3_components = [ dbc.Alert('Complete TB section first and calc mu', id=id('tb-alert'), dismissable=True,
+                                      color='warning', fade=True, is_open=False, duration=3000),
+                            dbc.Alert('# of orbitals does not match (Σ vs. H(r))', id=id('orb-alert'), dismissable=True,
+                                      color='warning', fade=True, is_open=False, duration=3000),
+                            html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0, style=button_style)]
+    else:
+        #the default dashboard will be the tab 1 dashboard
+        sec2_components = [w90_vs_pythTB, 
+                           w90_input,
+                           pythTB_input,
+                           add_spin,
+                           electron_section,
+                           html.Div('k-points'),
+                           ktable,
+                           add_kpoint,
+                           num_kpoint
+                          ]
+
+        sec3_components = [ upload_vs_input,
+                            sigma_upload,
+                            sigma_function,
+                            input_ata,
+                            orbital_order,
                             dbc.Tooltip('Select orbital order of Σ with respect to W90 input Hamiltonian',
                                         target=id('orbital-order-tooltip'),
                                         style={'maxWidth': 300, 'width': 300, 'font-size': 14}),
@@ -261,8 +273,44 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                       color='warning', fade=True, is_open=False, duration=3000),
                             dbc.Alert('# of orbitals does not match (Σ vs. H(r))', id=id('orb-alert'), dismissable=True,
                                       color='warning', fade=True, is_open=False, duration=3000),
-                            html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0, style=button_style),
-                        ]),
+                            html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0, style=button_style)
+                          ]
+    return dcc.Tab(
+        label='spectral function A(k,ω)',
+        children=[
+            html.Div([
+                # section 1
+                upload_dwnload,
+                # section 2
+                html.Div(children=[
+                    html.Button(
+                        "TB Hamiltonian",
+                        id=id('sec2-collapse-button'),
+                        style=section_button_style,
+                        n_clicks=0,
+                    ),
+                    dbc.Collapse(
+                        # html div for collapse first:
+                        html.Div(
+                            # now body of collapse:
+                            children = sec2_components
+                        ),
+                        id=id('sec2-collapse'),
+                        is_open=True,
+                    ),
+                ], style=section_box_style),
+
+                # section 3
+                html.Div(children=[
+                    html.Button(
+                        "Self-energy",
+                        id=id('sec3-collapse-button'),
+                        style=section_button_style,
+                        n_clicks=0,
+                    ),
+                    dbc.Collapse(
+                        # html div for collapse first:
+                        html.Div(children=sec3_components),
                         id=id('sec3-collapse'),
                         is_open=False,
                     ),
@@ -280,23 +328,6 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                         # html div for collapse first:
                         html.Div(children=[
                             # now body of collapse:
-                            html.Div([
-                                #Orbital Projection was called band basis
-                                #I left the id of the switch the same
-                                html.P('Orbital Projection:', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
-                                       ),
-                                daq.BooleanSwitch(
-                                    id=id('band-basis'),
-                                    on=False,
-                                    color='#005eb0',
-                                    style={'width': '25%',
-                                           'display': 'inline-block', 'vertical-align': 'middle'}
-                                ),
-                                dbc.Tooltip('calculate A(k,w) in orbital (off) or band basis (on)',
-                                            target=id('band-basis-tooltip'),
-                                            style={'maxWidth': 300, 'width': 300, 'font-size': 14}),
-                            ], id=id('band-basis-tooltip'), style={'display': 'None'}
-                            ),
                             html.Div([
                                 html.P('select orbitals: ', style={'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center', 'width': '50%'}
                                        ),
@@ -323,17 +354,6 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                             id=id('input-band-slider'), style={'padding': '5px 1px'}
                             ),
                             html.Div([
-                                html.P('show TB bands:', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
-                                       ),
-                                daq.BooleanSwitch(
-                                    id=id('tb-bands'),
-                                    on=False,
-                                    color='#005eb0',
-                                    style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
-                                ),
-                            ], style={'display': 'None'}
-                            ),
-                            html.Div([
                                 html.P('show A(k,ω):', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
                                        ),
                                 dcc.Slider(0,2,step=None,
@@ -347,17 +367,6 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                           )
                             ],
                             id=id('input-akw-slider'), style={'padding': '5px 1px'}
-                            ),
-                            html.Div([
-                                html.P('show A(k,ω):', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
-                                       ),
-                                daq.BooleanSwitch(
-                                    id=id('akw-bands'),
-                                    on=False,
-                                    color='#005eb0',
-                                    style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
-                                ),
-                            ], style={'display': 'None'}
                             ),
                             html.Div([
                                 html.P('show A(ω):', style={'width': '130px', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'top'}
@@ -408,6 +417,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                 dcc.Store(id=id('ak0-data'), data=ak0_data),
                 dcc.Store(id=id('sigma-data'), data=sigma_data),
                 dcc.Store(id=id('loaded-data'), data=loaded_data),
+                dcc.Store(id=id('data-name')),
             ], style={
                 'padding-left': '1%',
                 'padding-right': '1%',

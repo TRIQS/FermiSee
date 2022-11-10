@@ -60,7 +60,6 @@ def register_callbacks(app):
          Input(id('dft-mu'), 'children'),
          Input(id('k-points'), 'data'),
          Input(id('n-k'), 'value'),
-         Input(id('calc-tb'), 'n_clicks'),
          Input(id('calc-akw'), 'n_clicks'),
          Input(id('akw-mode'), 'value'),
          Input(id('eta'), 'value'),
@@ -70,7 +69,7 @@ def register_callbacks(app):
          prevent_initial_call=True
         )
     def update_akw(akw_data, tb_data, sigma_data, akw_slider, dft_mu, k_points,
-                   n_k, click_tb, click_akw, akw_mode, eta, band_slider,
+                   n_k, click_akw, akw_mode, eta, band_slider,
                    sel_orb, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -191,7 +190,7 @@ def register_callbacks(app):
         #round all values to 5 digits
         return dash.dcc.send_data_frame(df.to_csv, "Akw_rawdata.csv",
                                         index=False, float_format='%.5e')
-
+    
     # dashboard calculate TB
     @app.callback(
         [Output(id('tb-data'), 'data'),
@@ -200,7 +199,8 @@ def register_callbacks(app):
          Output(id('upload-pythTB-json'), 'children'),
          Output(id('dft-mu'), 'children'),
          Output(id('gf-filling'), 'value'),
-         Output(id('orbital-order'), 'options')],
+         Output(id('orbital-order'), 'options'),
+         Output(id('loading-out'), 'children')],
         [Input(id('upload-w90-hr'), 'contents'),
          Input(id('upload-w90-hr'), 'filename'),
          Input(id('upload-w90-hr'), 'children'),
@@ -210,9 +210,7 @@ def register_callbacks(app):
          Input(id('upload-pythTB-json'), 'contents'),
          Input(id('upload-pythTB-json'), 'filename'),
          Input(id('upload-pythTB-json'), 'children'),
-         Input(id('calc-tb'), 'n_clicks'),
          Input(id('gf-filling'), 'value'),
-         Input(id('calc-tb-mu'), 'n_clicks'),
          Input(id('tb-data'), 'data'),
          Input(id('add-spin'), 'value'),
          Input(id('dft-mu'), 'children'),
@@ -226,8 +224,7 @@ def register_callbacks(app):
          Input(id('band-slider'), 'value')],
         prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
-                w90_wout_button, pythTB, pythTB_name, pythTB_button,
-                click_tb, n_elect, click_tb_mu, tb_data, add_spin, dft_mu, n_k,
+                w90_wout_button, pythTB, pythTB_name, pythTB_button, n_elect, tb_data, add_spin, dft_mu, n_k,
                 k_points, loaded_data, orb_options, eta, sel_orb, akw_slider,
                 band_slider):
         ctx = dash.callback_context
@@ -244,14 +241,14 @@ def register_callbacks(app):
             tb_data['loaded_hr'] = True
             tb_data['dft_mu'] = 0.0
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
-            return tb_data, html.Div([w90_hr_name]), w90_wout_button, pythTB_button,  dft_mu, n_elect, orb_options
+            w90_hr_button = html.Div([w90_hr_name])
 
         # if w90_wout != None and not 'loaded_wout' in tb_data:
         if trigger_id == id('upload-w90-wout'):
             print('loading w90 wout file...')
             tb_data['units'] = load_w90_wout(w90_wout)
             tb_data['loaded_wout'] = True
-            return tb_data, w90_hr_button, html.Div([w90_wout_name]), pythTB_button,  dft_mu, n_elect, orb_options
+            w90_wout_button = html.Div([w90_wout_name])
 
         # if pythTB is being loaded
         if trigger_id == id('upload-pythTB-json'):
@@ -269,7 +266,7 @@ def register_callbacks(app):
             tb_data['loaded_hr'] = True
             tb_data['loaded_wout'] = True
 
-            return tb_data, w90_hr_button, w90_wout_button, html.Div([pythTB_name]),  dft_mu, n_elect, orb_options
+            pythTB_button = html.Div([pythTB_name])
 
         # if a full config has been uploaded
         if trigger_id == id('loaded-data'):
@@ -278,12 +275,16 @@ def register_callbacks(app):
             tb_data['use'] = True
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
-            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, html.P('{:.4f}'.format(tb_data['dft_mu'])), tb_data['n_elect'], orb_options
+            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, html.P('{:.4f}'.format(tb_data['dft_mu'])), tb_data['n_elect'], orb_options, None
 
-        if trigger_id == id('calc-tb-mu') and ((tb_data['loaded_hr'] and tb_data['loaded_wout']) or tb_data['use']):
-            if float(n_elect) == 0.0:
-                print('please specify filling')
-                return tb_data, w90_hr_button, w90_wout_button, pythTB_button, dft_mu, n_elect, orb_options
+        if tb_data['loaded_hr'] and tb_data['loaded_wout']:
+            tb_data['use'] = True
+
+        if not tb_data['use']:
+            print("tb_data['use'] is false")
+            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, dft_mu, n_elect, orb_options, None
+        
+        if trigger_id == id('gf-filling') and ((tb_data['loaded_hr'] and tb_data['loaded_wout']) or tb_data['use']):
 
             add_local = [0.] * tb_data['n_wf']
             tb_data['dft_mu'], tb_data['eps_min_max'] = akw.calc_mu(tb_data,
@@ -293,66 +294,62 @@ def register_callbacks(app):
                                                                     current_mu=tb_data['dft_mu'],
                                                                     eta=float(eta))
 
-            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, html.P('{:.4f}'.format(tb_data['dft_mu'])), n_elect, orb_options
-
-        else:
-            if not click_tb > 0 and not tb_data['use']:
-                return tb_data, w90_hr_button, w90_wout_button, pythTB_button, dft_mu, n_elect, orb_options
-            if np.any([k_val in ['', None] for k in k_points for k_key, k_val in k.items()]):
-                return tb_data, w90_hr_button, w90_wout_button, pythTB_button, dft_mu, n_elect, orb_options
-
-            if not isinstance(n_k, int):
-                n_k = 20
-
-            add_local = [0.] * tb_data['n_wf']
-
-            k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
-
-            sel_orbs_list = []
-            band_basis = False
-            if (band_slider == 2 or akw_slider == 2) and sel_orb != '':
-                #set band_basis to True, for calc projection weights
-                band_basis = True
-                #remove any spaces from the user input
-                sel_orb = sel_orb.replace(" ", "")
-                #separate the input by commas
-                #if the input is a number and less than # of orbitals its valid
-                for i in sel_orb.split(','):
-                    if i.isdigit():
-                        val = int(i)
-                        if val <= tb_data['n_wf']:
-                            sel_orbs_list.append(val)
-                #update the value on the dash of only the valid orbitals used
-                sel_orb = ''.join(str(x)+',' for x in sel_orbs_list)
-
-            tb_data['k_mesh'], e_mat, e_vecs, tbl, tb_data['orb_proj'] = tb.calc_tb_bands(tb_data, add_spin,
-                                                                                          add_local, k_mesh,
-                                                                                          fermi_slice=False,
-                                                                                          projected_orbs=sel_orbs_list,
-                                                                                          band_basis=band_basis)
-
-            # calculate Hamiltonian
-            tb_data['e_mat_re'] = e_mat.real.tolist()
-            tb_data['e_mat_im'] = e_mat.imag.tolist()
-            if (band_slider == 2 or akw_slider == 2) and sel_orb != '':
-                tb_data['evecs_re'] = e_vecs.real.tolist()
-                tb_data['evecs_im'] = e_vecs.imag.tolist()
-                tb_data['eps_nuk'] = np.einsum('iij -> ij', e_mat-tb_data['dft_mu']).real.tolist()
-            else:
-                tb_data['eps_nuk'], evec_nuk = tb.get_tb_bands(e_mat, tb_data['dft_mu'])
-                tb_data['eps_nuk'] = tb_data['eps_nuk'].tolist()
-            tb_data['bnd_low'] = np.min(np.array(tb_data['eps_nuk'][0])).real
-            tb_data['bnd_high'] = np.max(np.array(tb_data['eps_nuk'][-1])).real
-            tb_data['n_elect'] = float(n_elect)
-            #tb_data['band_slider'] = band_slider
-            if not add_spin:
-                tb_data['add_spin'] = False
-            else:
-                tb_data['add_spin'] = True
             tb_data['use'] = True
 
-            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, dft_mu, n_elect, orb_options
+        if np.any([k_val in ['', None] for k in k_points for k_key, k_val in k.items()]):
+            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, dft_mu, n_elect, orb_options, None
 
+        if not isinstance(n_k, int):
+            n_k = 20
+
+        add_local = [0.] * tb_data['n_wf']
+
+        k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
+
+        sel_orbs_list = []
+        band_basis = False
+        if (band_slider == 2 or akw_slider == 2) and sel_orb != '':
+            # set band_basis to True, for calc projection weights
+            band_basis = True
+            # remove any spaces from the user input
+            sel_orb = sel_orb.replace(" ", "")
+            # separate the input by commas
+            # if the input is a number and less than # of orbitals its valid
+            for i in sel_orb.split(','):
+                if i.isdigit():
+                    val = int(i)
+                    if val <= tb_data['n_wf']:
+                        sel_orbs_list.append(val)
+            # update the value on the dash of only the valid orbitals used
+            sel_orb = ''.join(str(x)+',' for x in sel_orbs_list)
+
+        tb_data['k_mesh'], e_mat, e_vecs, tbl, tb_data['orb_proj'] = tb.calc_tb_bands(tb_data, add_spin,
+                                                                                      add_local, k_mesh,
+                                                                                      fermi_slice=False,
+                                                                                      projected_orbs=sel_orbs_list,
+                                                                                      band_basis=band_basis)
+
+        # calculate Hamiltonian
+        tb_data['e_mat_re'] = e_mat.real.tolist()
+        tb_data['e_mat_im'] = e_mat.imag.tolist()
+        if (band_slider == 2 or akw_slider == 2) and sel_orb != '':
+            tb_data['evecs_re'] = e_vecs.real.tolist()
+            tb_data['evecs_im'] = e_vecs.imag.tolist()
+            tb_data['eps_nuk'] = np.einsum('iij -> ij', e_mat-tb_data['dft_mu']).real.tolist()
+        else:
+            tb_data['eps_nuk'], evec_nuk = tb.get_tb_bands(e_mat, tb_data['dft_mu'])
+            tb_data['eps_nuk'] = tb_data['eps_nuk'].tolist()
+        tb_data['bnd_low'] = np.min(np.array(tb_data['eps_nuk'][0])).real
+        tb_data['bnd_high'] = np.max(np.array(tb_data['eps_nuk'][-1])).real
+        tb_data['n_elect'] = float(n_elect)
+        #tb_data['band_slider'] = band_slider
+        if not add_spin:
+            tb_data['add_spin'] = False
+        else:
+            tb_data['add_spin'] = True
+        tb_data['use'] = True
+        
+        return tb_data, w90_hr_button, w90_wout_button, pythTB_button, html.P('{:.4f}'.format(tb_data['dft_mu'])), n_elect, orb_options, None
     # dashboard k-points
     @app.callback(
         [Output(id('k-points'), 'data'),
