@@ -13,7 +13,7 @@ RUN apt-get update && \
       sudo \
       hdf5-tools \
       libboost-dev \
-      liblapack-dev \
+      intel-mkl \
       libfftw3-dev \
       libgmp-dev \
       libhdf5-dev \
@@ -21,7 +21,6 @@ RUN apt-get update && \
       gunicorn \
       python3-dev \
       python3-mako \
-      python3-numpy \
       python3-scipy \
       python3-mpi4py \
       python3-pip \
@@ -37,7 +36,20 @@ RUN apt-get update && \
       rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
 # Install Python dependencies.
-RUN pip3 install dash==2.3.1 dash-daq dash-bootstrap-components dash-extensions
+RUN pip3 install dash dash-daq dash-bootstrap-components dash-extensions
+
+ARG CFLAGS="-fopenmp -m64 -march=x86-64 -mtune=generic -O3 -Wl,--no-as-needed"
+ARG CXXFLAGS="-fopenmp -m64 -march=x86-64 -mtune=generic -O3 -Wl,--no-as-needed"
+ARG LDFLAGS="-ldl -lm"
+ARG FFLAGS="-fopenmp -m64 -march=x86-64 -mtune=generic -O3"
+ENV MKL_THREADING_LAYER=GNU
+ENV OMP_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+
+RUN echo "\n[mkl]" >> ~/.numpy-site.cfg && \
+    echo "mkl_libs = mkl_def, mkl_gf_lp64, mkl_core, mkl_sequential" >> ~/.numpy-site.cfg && \
+    echo "lapack_libs = mkl_def, mkl_gf_lp64, mkl_core, mkl_sequential" >> ~/.numpy-site.cfg && \
+    pip3 install numpy --no-binary numpy --force-reinstall
 
 # Create a working directory.
 RUN mkdir /fermisee

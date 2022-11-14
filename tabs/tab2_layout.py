@@ -22,7 +22,7 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
                     )
             ], style={
                 'display': 'inline-block',
-                'width': '41%',
+                'width': '55%',
                 'padding-right': '1%',
                 'vertical-align': 'top'
                 }
