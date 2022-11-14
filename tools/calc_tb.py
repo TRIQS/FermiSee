@@ -16,7 +16,6 @@ from matplotlib import cm, colors
 from scipy.optimize import brentq
 from scipy.interpolate import interp1d
 import itertools
-import matplotlib.pyplot as plt
 
 # triqs
 from triqs.sumk import SumkDiscreteFromLattice
@@ -104,7 +103,7 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
                     total_proj[band] += np.real(e_vecs[orb,band] * e_vecs[orb,band].conjugate())
         else:
             e_vecs = np.array([None])
-            total_proj = [] 
+            total_proj = []
     else:
         e_mat = np.zeros((n_orb_rescale, n_orb_rescale, k_mesh['n_k'], k_mesh['n_k']), dtype=complex)
         e_vecs = np.array([None])
@@ -118,6 +117,6 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
         if add_spin: e_mat = e_mat[2:5,2:5]
 
     k_mesh = {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels, 'k_points_dash': k_mesh['k_path']}
-    
+
     return k_mesh, e_mat, e_vecs, tb, total_proj
 

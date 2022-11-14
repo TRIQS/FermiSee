@@ -182,15 +182,23 @@ def register_callbacks(app):
                 b = 'ε'+str(band)
                 df[b] = tb_data['eps_nuk'][band]
         if akw_slider >= 1:
-            Akw = np.array(akw_data['Akw'])
-            w_mesh = sigma_data['w_dict']['w_mesh']
-            Akw_df = pd.DataFrame(Akw, columns = w_mesh)
+            if not akw_data['solve']:
+                Akw = np.array(akw_data['Akw'])
+                w_mesh = sigma_data['w_dict']['w_mesh']
+                Akw_df = pd.DataFrame(Akw, columns=w_mesh)
+            else:
+                qp_disp_data = np.array(akw_data['Akw'])
+                Akw_df = pd.DataFrame()
+                for band in range(len(tb_data['eps_nuk'])):
+                    b = 'QP'+str(band)
+                    Akw_df[b] = qp_disp_data[:, band]
             df = pd.concat([df, Akw_df], axis=1)
+
 
         #round all values to 5 digits
         return dash.dcc.send_data_frame(df.to_csv, "Akw_rawdata.csv",
                                         index=False, float_format='%.5e')
-    
+
     # dashboard calculate TB
     @app.callback(
         [Output(id('tb-data'), 'data'),
@@ -283,7 +291,7 @@ def register_callbacks(app):
         if not tb_data['use']:
             print("tb_data['use'] is false")
             return tb_data, w90_hr_button, w90_wout_button, pythTB_button, dft_mu, n_elect, orb_options, None
-        
+
         if trigger_id == id('gf-filling') and ((tb_data['loaded_hr'] and tb_data['loaded_wout']) or tb_data['use']):
 
             add_local = [0.] * tb_data['n_wf']
@@ -348,7 +356,7 @@ def register_callbacks(app):
         else:
             tb_data['add_spin'] = True
         tb_data['use'] = True
-        
+
         return tb_data, w90_hr_button, w90_wout_button, pythTB_button, html.P('{:.4f}'.format(tb_data['dft_mu'])), n_elect, orb_options, None
     # dashboard k-points
     @app.callback(
@@ -591,6 +599,7 @@ def register_callbacks(app):
                   xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
                   font=dict(size=20))
 
+        # normal plot of all bands
         if band_slider == 1:
             for band in range(len(tb_data['eps_nuk'])):
                 fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=tb_data['eps_nuk'][band], mode='lines',
@@ -598,6 +607,7 @@ def register_callbacks(app):
                             hoverinfo='x+y+text'
                             ))
 
+        # projection mode
         if band_slider == 2:
             for band in range(tb_data['n_wf']):
                 values = tb_data['orb_proj'][band]
@@ -620,19 +630,17 @@ def register_callbacks(app):
 
         if akw_slider >= 1:
             w_mesh = sigma_data['w_dict']['w_mesh']
+            # QP dispersion mode
             if akw_data['solve']:
-                z_data = np.array(akw_data['Akw'])
-                for orb in range(z_data.shape[1]):
-                    #fig.add_trace(go.Contour(x=k_mesh['k_disc'], y=w_mesh, z=z_data[:,:,orb].T,
-                    #    colorscale=colorscale, contours=dict(start=0.1, end=1.5, coloring='lines'), ncontours=1, contours_coloring='lines'))
-                    fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=z_data[:,orb].T, showlegend=False, mode='markers',
+                qp_disp_data = np.array(akw_data['Akw'])
+                for orb in range(qp_disp_data.shape[1]):
+                    fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=qp_disp_data[:,orb].T, showlegend=False, mode='markers',
                                                marker_color=px.colors.sequential.Viridis[0]))
             else:
-                # z_data = np.log(np.array(akw_data['Akw']).T)
-                z_data = np.array(akw_data['Akw']).T
-                fig.add_trace(go.Heatmap(x=k_mesh['k_disc'], y=w_mesh, z=z_data,
+                qp_disp_data = np.array(akw_data['Akw']).T
+                fig.add_trace(go.Heatmap(x=k_mesh['k_disc'], y=w_mesh, z=qp_disp_data,
                                          colorscale=colorscale, reversescale=False, showscale=False,
-                                         zmin=np.min(z_data), zmax=np.max(z_data)))
+                                         zmin=np.min(qp_disp_data), zmax=np.max(qp_disp_data)))
 
             fig.update_yaxes(range=[w_mesh[0], w_mesh[-1]])
 
@@ -673,6 +681,10 @@ def register_callbacks(app):
         if akw_slider >=1:
             akw_bands = True
 
+        if trigger_id == id('Akw'):
+            new_kpt = click_coordinates['points'][0]['x']
+            kpt_edc = np.argmin(np.abs(np.array(k_mesh['k_disc']) - new_kpt))
+
         if band_slider == 1:
             for band in range(len(tb_temp['eps_nuk'])):
                 if band == 0:
@@ -699,22 +711,34 @@ def register_callbacks(app):
                                 )
         if akw_bands:
             w_mesh = sigma_data['w_dict']['w_mesh']
-            if sum_edc:
-                fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Aw']), mode='lines',
-                    line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
-                                           hoverinfo='x+y+text'
+            if akw_data['solve']:
+                qp_disp_data = np.array(akw_data['Akw'])
+                for band in range(len(tb_temp['eps_nuk'])):
+                    if band == 0:
+                        fig.add_trace(go.Scattergl(x=[qp_disp_data[kpt_edc,band],qp_disp_data[kpt_edc,band]],
+                                             y=[0,300], mode="lines", line=go.scattergl.Line(color='magenta'),
+                                             showlegend=True, name='QP dispersion'.format(tb_temp['k_mesh']['k_disc'][kpt_edc]),
+                                        hoverinfo='x+y+text'
                                         ))
-                fig.update_layout(yaxis_title='A(ω) summed')
+                    else:
+                        fig.add_trace(go.Scattergl(x=[qp_disp_data[kpt_edc,band],qp_disp_data[kpt_edc,band]],
+                                                y=[0,300], mode="lines", line=go.scattergl.Line(color='magenta'),
+                                                showlegend=False, hoverinfo='x+y+text'
+                                            ))
             else:
-                if trigger_id == id('Akw'):
-                    new_kpt = click_coordinates['points'][0]['x']
-                    kpt_edc = np.argmin(np.abs(np.array(k_mesh['k_disc']) - new_kpt))
-
-                fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Akw'])[kpt_edc,:], mode='lines',
-                    line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
-                                           hoverinfo='x+y+text'
-                                        ))
-                fig.update_layout(yaxis_title='A(ω)')
+                # sum EDC to show A(w)
+                if sum_edc:
+                    fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Aw']), mode='lines',
+                        line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
+                                               hoverinfo='x+y+text'
+                                            ))
+                    fig.update_layout(yaxis_title='A(ω) summed')
+                else:
+                    fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Akw'])[kpt_edc,:], mode='lines',
+                        line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
+                                               hoverinfo='x+y+text'
+                                            ))
+                    fig.update_layout(yaxis_title='A(ω)')
 
             fig.update_layout(
                 margin={
@@ -767,38 +791,8 @@ def register_callbacks(app):
 
         k_mesh = tb_temp['k_mesh']
 
-        #if tb_bands:
-        #     # decide which data to show for TB
-        #     if tb_data['use']: tb_temp = tb_data
-        #     if not 'tb_temp' in locals():
-        #         return fig
-
-        #     k_mesh = tb_temp['k_mesh']
-        #     for band in range(len(tb_temp['eps_nuk'])):
-        #         if band == 0:
-        #             y = np.min(np.abs(np.array(tb_temp['eps_nuk'][band]) - w_mdc))
-        #             fig.add_trace(go.Scattergl(x=[k_mesh['k_disc'][0],k_mesh['k_disc'][-1]],
-        #                                  y=[y,y], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]),
-        #                                  showlegend=True, name='ω = {:.3f} eV'.format(akw_data['freq_mesh'][w_mdc]),
-        #                             hoverinfo='x+y+text'
-        #                             ))
-        #         # else:
-        #         #     fig.add_trace(go.Scattergl(x=[tb_temp['eps_nuk'][band][kpt_edc],tb_temp['eps_nuk'][band][kpt_edc]],
-        #         #                             y=[0,300], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]),
-        #         #                             showlegend=False, hoverinfo='x+y+text'
-        #                                 # ))
-        #     if not akw:
-        #         fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
-        #                         hovermode='closest',
-        #                         xaxis_range=[k_mesh['k_points'][0], k_mesh['k_points'][-1]],
-        #                         yaxis_range=[0, 1],
-        #                         xaxis_title='ω (eV)',
-        #                         yaxis_title='A(ω)',
-        #                         font=dict(size=16),
-        #                         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
-        #                         )
-
-        if akw_slider >= 1:
+        # plot Akw EDC only if not QP dispersion
+        if akw_slider >= 1 and not akw_data['solve']:
             w_mesh = sigma_data['w_dict']['w_mesh']
             if trigger_id == id('Akw'):
                 new_w = click_coordinates['points'][0]['y']
@@ -818,10 +812,7 @@ def register_callbacks(app):
                               xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']], tickvals=k_mesh['k_points']),
                               legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
                               )
-        if akw_slider >= 1:
             return fig, w_mdc, len(w_mesh)-1
-        # elif tb_bands:
-        #     return fig, w_mdc, np.max(np.array(tb_temp['eps_nuk'][-1]))+(0.03*np.max(np.array(tb_temp['eps_nuk'][-1])))
         else:
             return fig, 0, 1
 
