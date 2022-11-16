@@ -86,7 +86,9 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                             color='#005eb0',
                             style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'middle'}
                             ),
-                        ], style={'padding': '5px 5px'}
+                        ],
+                        # style={'padding': '5px 5px'}
+                        style={'display': 'None'}
                        )
         #this is the section that calculates the chemical potential based on the number of electrons in the system
     electron_section = html.Div([
