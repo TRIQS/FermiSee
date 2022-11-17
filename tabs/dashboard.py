@@ -112,8 +112,9 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                                     'text-align': 'left',
                                                     'vertical-align':
                                                     'center'}),
-                                dcc.Loading(id=id("loading"), children=[html.Div([html.Div(id=id("loading-out"))])], type="circle")
-                            ], style={'padding': '5px 5px'}
+        dcc.Loading(id=id("loading"), children=[html.Div([html.Div(id=id("loading-out"))])], type="cube", fullscreen=True, style={'backgroundColor' : 'transparent'})
+                                ], 
+                                style={'padding': '5px 5px'}
                             )
         #k table: table for the k points
     ktable =  html.Div([
@@ -232,7 +233,9 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                              options=[{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([0, 1, 2])))],
                                              style={'width': '100%'}), id=id('orbital-order-tooltip')
                             )
-    
+    akw_alert_tab2 = html.Div(dbc.Alert('Calculate A(k,w) in tab 1 first', id=id('akw-alert'), dismissable=True,
+                                      color='warning', fade=True, is_open=False, duration=3000)
+                               )
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  Construct Dashboard  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # Tab 2 Fermi Surface:
     if tab_number == 2:
@@ -249,6 +252,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                       color='warning', fade=True, is_open=False, duration=3000),
                             dbc.Alert('# of orbitals does not match (Σ vs. H(r))', id=id('orb-alert'), dismissable=True,
                                       color='warning', fade=True, is_open=False, duration=3000),
+                           akw_alert_tab2,
                             html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0, style=button_style)]
     else:
         #the default dashboard will be the tab 1 dashboard

@@ -17,12 +17,12 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
                 html.H3('A(k,0)', style={'textAlign': 'center'}),
                 dcc.Graph(
                     id=id('Ak0'),
-                    style={'height': '84vh'},
+                    style={'height': '80vh', 'width': '80vh'},
                     clickData={'points': []}
                     )
             ], style={
                 'display': 'inline-block',
-                'width': '55%',
+                'width': '40%',
                 'padding-right': '1%',
                 'vertical-align': 'top'
                 }

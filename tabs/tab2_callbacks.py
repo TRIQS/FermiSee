@@ -65,13 +65,14 @@ def register_callbacks(app):
             tb_kslice_data['eps_nuk'], evec_nuk = tb.get_tb_kslice(tbl, k_mesh, mu)
             tb_kslice_data['use'] = True
 
-        return tb_kslice_data, 1
+        return tb_kslice_data, band_slider
 
     # upload akw data
     @app.callback(
         [Output(id('ak0-data'), 'data'),
          Output(id('akw-slider'), 'value'),
-         Output(id('tb-alert'), 'is_open')],
+         Output(id('tb-alert'), 'is_open'),
+         Output(id('akw-alert'), 'is_open')],
         [Input(id('ak0-data'), 'data'),
          Input(id('tb-kslice-data'), 'data'),
          Input(id_tap('sigma-data'), 'data'),
@@ -82,20 +83,25 @@ def register_callbacks(app):
          Input(id('n-k'), 'value'),
          Input(id('calc-akw'), 'n_clicks'),
          Input(id('akw-mode'), 'value')],
-         State(id('tb-alert'), 'is_open'),
+         [State(id('tb-alert'), 'is_open'),
+          State('tab1-calc-akw', 'n_clicks'),
+          State(id('akw-alert'),'is_open')],
          prevent_initial_call=True,
         )
-    def update_ak0(ak0_data, tb_kslice_data, sigma_data, akw_data, akw_slider, dft_mu, k_points, n_k, click_akw, akw_mode, tb_alert):
+    def update_ak0(ak0_data, tb_kslice_data, sigma_data, akw_data, akw_slider, dft_mu, k_points, n_k, click_akw, akw_mode, tb_alert, tab1_click_akw, akw_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***update_ak0***:'), trigger_id)
 
+        if tab1_click_akw < 1:
+            return ak0_data, akw_slider, tb_alert, True
+
         if trigger_id == id('dft-mu') and not sigma_data['use']:
-            return ak0_data, akw_slider, tb_alert
+            return ak0_data, akw_slider, tb_alert, akw_alert
 
         elif trigger_id in (id('calc-akw'), id('n-k'), id('akw-mode')) or ( trigger_id == id('k-points') and click_akw > 0 ):
             if not sigma_data['use'] or not tb_kslice_data['use']:
-                return ak0_data, akw_slider, not tb_alert
+                return ak0_data, akw_slider, not tb_alert, akw_alert
 
             solve = True if akw_mode == 'QP dispersion' else False
             ak0_data['dmft_mu'] = akw_data['dmft_mu']
@@ -111,7 +117,7 @@ def register_callbacks(app):
             if akw_slider == 0:
                 akw_slider = 1
 
-        return ak0_data, akw_slider, tb_alert
+        return ak0_data, akw_slider, tb_alert, akw_alert
 
     # dashboard colors
     @app.callback(
@@ -157,6 +163,13 @@ def register_callbacks(app):
         quarter = 0
         quarters = np.array([sign,sign])
         k_mesh = tb_kslice_data['k_mesh']
+        fig.update_layout(xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
+                          yaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
+                          xaxis = dict(tickvals = [k_mesh['k_disc'][0],k_mesh['k_disc'][-1]],
+                                       ticktext = [ 'G', 'X' ]),
+                          yaxis = dict(tickvals = [k_mesh['k_disc'][-1]],
+                                       ticktext = [ 'Y' ])
+                         )
         if band_slider == 1:
             quarters *= 2
             eps_nuk = {int(key): np.array(value) for key, value in tb_kslice_data['eps_nuk'].items()}
