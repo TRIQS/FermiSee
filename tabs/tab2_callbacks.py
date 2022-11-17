@@ -27,7 +27,8 @@ def register_callbacks(app):
     # dashboard calculate TB
     @app.callback(
         [Output(id('tb-kslice-data'), 'data'),
-         Output(id('band-slider'), 'value')],
+         Output(id('band-slider'), 'value'),
+         Output(id('loading-tb'), 'children')],
         [Input(id('band-slider'), 'value'),
          Input(id('add-spin'), 'value'),
          Input(id_tap('dft-mu'), 'children'),
@@ -65,7 +66,7 @@ def register_callbacks(app):
             tb_kslice_data['eps_nuk'], evec_nuk = tb.get_tb_kslice(tbl, k_mesh, mu)
             tb_kslice_data['use'] = True
 
-        return tb_kslice_data, band_slider
+        return tb_kslice_data, band_slider, None
 
     # upload akw data
     @app.callback(
@@ -132,7 +133,8 @@ def register_callbacks(app):
 
     # upload akw data
     @app.callback(
-        Output(id('Ak0'), 'figure'),
+        [Output(id('Ak0'), 'figure'),
+         Output(id('loading-plot'), 'children')],
         [Input(id('band-slider'), 'value'),
          Input(id('akw-slider'), 'value'),
          Input(id('colorscale'), 'value'),
@@ -157,7 +159,7 @@ def register_callbacks(app):
                           xaxis_title="k<sub>x</sub>π", yaxis_title="k<sub>y</sub>π", font=dict(size=16))
 
         if not tb_kslice_data['use']:
-            return fig
+            return fig, None
 
         sign = [1,-1]
         quarter = 0
@@ -166,9 +168,9 @@ def register_callbacks(app):
         fig.update_layout(xaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
                           yaxis_range=[k_mesh['k_disc'][0], k_mesh['k_disc'][-1]],
                           xaxis = dict(tickvals = [k_mesh['k_disc'][0],k_mesh['k_disc'][-1]],
-                                       ticktext = [ 'G', 'X' ]),
+                                       ticktext = [ k_mesh['k_point_labels'][0], k_mesh['k_point_labels'][1]]),
                           yaxis = dict(tickvals = [k_mesh['k_disc'][-1]],
-                                       ticktext = [ 'Y' ])
+                                       ticktext = [ k_mesh['k_point_labels'][2]])
                          )
         if band_slider == 1:
             quarters *= 2
@@ -182,7 +184,7 @@ def register_callbacks(app):
                                                    text=f'tb band {band}', hoverinfo='x+y+text'))
 
         if not ak0_data['use']:
-            return fig
+            return fig, None
 
         if akw_slider == 1:
             n_kx, n_ky = np.array(tb_kslice_data['e_mat_re']).shape[2:4]
@@ -198,7 +200,7 @@ def register_callbacks(app):
                 else:
                     fig.add_trace(go.Heatmap(x=kx, y=ky, z=ak0.T, colorscale=colorscale, reversescale=False, showscale=False, zmin=np.min(ak0), zmax=np.max(ak0)))
 
-        return fig
+        return fig, None
 
 
     @app.callback(
@@ -232,7 +234,7 @@ def register_callbacks(app):
         return is_open
 
     @app.callback(
-    [Output(id('gf-filling'), "value"),
+    [Output(id('gf-filling'), "children"),
      Output(id('dft-mu'), "children")],
     [Input('tab1-gf-filling', "value"),
      Input('tab1-dft-mu', "children")],

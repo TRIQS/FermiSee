@@ -111,11 +111,46 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 html.P('eV', style={'display': 'inline-block',
                                                     'text-align': 'left',
                                                     'vertical-align':
+                                                    'center'})],
+                                style={'padding': '5px 5px'})
+
+    electron_no_edits = html.Div([
+                                html.P('# electrons: ', style={'width': '50%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
+                                       ),
+                                html.Div(id=id('gf-filling'), children=html.P('0'), 
+                                         style={'width': '30%',
+                                       'display':'inline-block',
+                                       'margin-left': '20%',
+                                       'padding': '5px 5px 0px 3px',
+                                       'background': 'white',
+                                       'border-radius':'5px'
+                                               }),
+                                html.P('μ:', style={'display': 'inline-block',
+                                                    'text-align': 'left',
+                                                    'vertical-align':
                                                     'center'}),
-        dcc.Loading(id=id("loading"), children=[html.Div([html.Div(id=id("loading-out"))])], type="cube", fullscreen=True, style={'backgroundColor' : 'transparent'})
-                                ], 
-                                style={'padding': '5px 5px'}
-                            )
+                                html.Div(id=id('dft-mu'), children=html.P('0'),
+                                style={'width': '60%',
+                                       'display':'inline-block',
+                                       'margin': '5px',
+                                       'padding': '5px 5px 0px 3px',
+                                       'background': 'white',
+                                       'border-radius':'5px',
+                                      }),
+                                html.P('eV', style={'display': 'inline-block',
+                                                    'text-align': 'left',
+                                                    'vertical-align':
+                                                    'center'})], 
+                                style={'padding': '5px 5px'} )
+        #84578E - GIMP
+    loading_component = dcc.Loading(id=id("loading"), 
+                children=[html.Div(id=id("loading-tb")), 
+                              html.Div(id=id("loading-akw")),
+                              html.Div(id=id("loading-plot")),
+                              html.Div(id=id("loading-sigma")),
+                              html.Div(id=id("loading-config"))
+                             ],color='#7E588A', type="cube", fullscreen=True, style={'backgroundColor' : 'transparent'})
+
         #k table: table for the k points
     ktable =  html.Div([
                                 dash_table.DataTable(
@@ -243,7 +278,8 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
         upload_dwnload = html.Div(style = {'display' : 'None'})
         #in section two does not include the inputs, different k table
         sec2_components = [add_spin,
-                           electron_section,
+                           electron_no_edits,
+                           loading_component,
                            html.Div('k-points'),
                            fslice_ktable,
                            num_kpoint
@@ -261,6 +297,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                            pythTB_input,
                            add_spin,
                            electron_section,
+                           loading_component,
                            html.Div('k-points'),
                            ktable,
                            add_kpoint,
@@ -281,6 +318,14 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                       color='warning', fade=True, is_open=False, duration=3000),
                             html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0, style=button_style)
                           ]
+    
+    #this is here to make the dashboard invisible for the tabs that are under construction
+    section_style = section_box_style
+    if tab_number == 3:
+        section_style = {'display' :' None'}
+        upload_dwnload = html.Div(style = {'display' : 'None'})
+
+
     return dcc.Tab(
         label='spectral function A(k,ω)',
         children=[
@@ -304,7 +349,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                         id=id('sec2-collapse'),
                         is_open=True,
                     ),
-                ], style=section_box_style),
+                ], style=section_style),
 
                 # section 3
                 html.Div(children=[
@@ -320,7 +365,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                         id=id('sec3-collapse'),
                         is_open=False,
                     ),
-                ], style=section_box_style),
+                ], style=section_style),
 
                 # section 4
                 html.Div(children=[
@@ -409,7 +454,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                         id=id('sec4-collapse'),
                         is_open=False,
                     ),
-                ], style=section_box_style),
+                ], style=section_style),
 
                 # support sec
                 html.Div(children=[

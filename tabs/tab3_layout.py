@@ -17,7 +17,7 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
                     'display': 'inline-block',
                     'width': '84%',
                     'textAlign': 'center',
-                    'margin-top': '40%'
+                    'margin-top': '20%'
                     }
                 )
             ]

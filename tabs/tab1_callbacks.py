@@ -29,7 +29,8 @@ def register_callbacks(app):
 
     @app.callback(
         [Output(id('loaded-data'),'data'),
-         Output(id('config-alert'), 'is_open')],
+         Output(id('config-alert'), 'is_open'),
+         Output(id('loading-config'), 'children')],
         [Input(id('upload-file'), 'contents'),
          Input(id('upload-file'), 'filename'),
          Input(id('loaded-data'), 'data')],
@@ -38,21 +39,22 @@ def register_callbacks(app):
     )
     def upload_config(config_contents, config_filename, loaded_data, config_alert):
         if not config_filename:
-            return loaded_data, True
+            return loaded_data, True, None
 
         print('loading config file from h5...')
         loaded_data = load_config(config_contents, config_filename, loaded_data)
         if loaded_data['error']:
-            return loaded_data, True
+            return loaded_data, True, None
 
-        return loaded_data, False
+        return loaded_data, False, None
 
 
     # upload akw data
     @app.callback(
         [Output(id('akw-data'), 'data'),
          Output(id('akw-slider'), 'value'),
-         Output(id('tb-alert'), 'is_open')],
+         Output(id('tb-alert'), 'is_open'),
+         Output(id('loading-akw'), 'children')],
         [Input(id('akw-data'), 'data'),
          Input(id('tb-data'), 'data'),
          Input(id('sigma-data'), 'data'),
@@ -76,18 +78,18 @@ def register_callbacks(app):
         print('{:20s}'.format('***update_akw***:'), trigger_id)
 
         if trigger_id == id('dft-mu') and not sigma_data['use']:
-            return akw_data, akw_slider, tb_alert
+            return akw_data, akw_slider, tb_alert, None
 
         elif trigger_id in (id('calc-akw'), id('n-k'), id('akw-mode'), id('akw-slider'), id('dft-mu')) or (trigger_id == id('k-points') and click_akw > 0 ):
 
             if trigger_id == id('akw-slider') and click_akw < 1:
-                return akw_data, 0, not tb_alert
+                return akw_data, 0, not tb_alert, None
 
             if akw_slider == 2 and sel_orb == '':
-                return akw_data, akw_slider, tb_alert
+                return akw_data, akw_slider, tb_alert, None
 
             if not sigma_data['use'] or not tb_data['use'] or not tb_data['dft_mu']:
-                return akw_data, akw_slider, not tb_alert
+                return akw_data, akw_slider, not tb_alert, None
 
             solve = True if akw_mode == 'QP dispersion' else False
             if not 'dmft_mu' in akw_data.keys():
@@ -108,7 +110,7 @@ def register_callbacks(app):
             if trigger_id == id('calc-akw') and akw_slider == 0:
                 akw_slider = 1
 
-        return akw_data, akw_slider, tb_alert
+        return akw_data, akw_slider, tb_alert, None
 
     #toggle the TB options
     @app.callback(
@@ -208,7 +210,7 @@ def register_callbacks(app):
          Output(id('dft-mu'), 'children'),
          Output(id('gf-filling'), 'value'),
          Output(id('orbital-order'), 'options'),
-         Output(id('loading-out'), 'children')],
+         Output(id('loading-tb'), 'children')],
         [Input(id('upload-w90-hr'), 'contents'),
          Input(id('upload-w90-hr'), 'filename'),
          Input(id('upload-w90-hr'), 'children'),
@@ -399,7 +401,8 @@ def register_callbacks(app):
           Output(id('orb-alert'), 'is_open'),
           Output(id('sigma-params'), 'data'),
           Output(id('sigma-params'), 'columns'),
-          Output(id('sigma-function-output'), 'children')],
+          Output(id('sigma-function-output'), 'children'),
+          Output(id('loading-sigma'), 'children')],
          [Input(id('sigma-data'), 'data'),
           Input(id('tb-data'), 'data'),
           Input(id('choose-sigma'), 'value'),
@@ -426,7 +429,7 @@ def register_callbacks(app):
 
         # initial checks
         if not tb_data['use']:
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma, None
 
         # update Sigma params if n_wf has changed
         if trigger_id == id('tb-data') and tb_data['n_wf'] != len(sigma_columns)-1:
@@ -450,7 +453,7 @@ def register_callbacks(app):
                     sigma_params[0][new_col['id']] = '1.0'
                     sigma_params[1][new_col['id']] = '0.0'
 
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma, None
 
         if trigger_id == id('loaded-data') and 'sigma_data' in loaded_data.keys():
             print('set uploaded data as sigma_data')
@@ -459,13 +462,13 @@ def register_callbacks(app):
             sigma_button = html.Div([loaded_data['config_filename']])
 
             # somehow the orbital order is transformed back to lists all the time, so make sure here that it is a tuple!
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order'])), orb_alert, sigma_params, sigma_columns, return_f_sigma
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(sigma_data['orbital_order'])), orb_alert, sigma_params, sigma_columns, return_f_sigma, None
 
         if trigger_id == id('orbital-order'):
             print('the orbital order has changed', orbital_order)
             if sigma_data['use'] == True:
                 sigma_data = gf.reorder_sigma(sigma_data, new_order=orbital_order, old_order=sigma_data['orbital_order'])
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma, None
 
         if sigma_radio_item == 'upload':
 
@@ -480,7 +483,7 @@ def register_callbacks(app):
                 orbital_order = sigma_data['orbital_order']
                 sigma_button = html.Div([sigma_filename])
 
-            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma, None
 
         if trigger_id == id('sigma-function-button'):
 
@@ -489,7 +492,7 @@ def register_callbacks(app):
                 return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma
 
             if np.any([S_val in ['', None] for params in sigma_params for S_key, S_val in params.items()]):
-                return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma
+                return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma, None
 
                 # append numpy and math
                 # import_np = 'import numpy as np'
@@ -540,9 +543,9 @@ def register_callbacks(app):
 
                 return_f_sigma = 'You have entered: \nZ={}\nΣ₀={}'.format(Z,Sigma_0)
 
-            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma
+            return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma, None
 
-        return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma
+        return sigma_data, {'display': 'block'}, {'display': 'none'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma, None
 
     # dashboard colors
     @app.callback(
@@ -558,6 +561,7 @@ def register_callbacks(app):
     # plot A(k,w)
     @app.callback(
         Output(id('Akw'), 'figure'),
+        Output(id('loading-plot'), 'children'),
         [Input(id('akw-slider'), 'value'),
          Input(id('colorscale'), 'value'),
          Input(id('tb-data'), 'data'),
@@ -581,7 +585,7 @@ def register_callbacks(app):
         fig.update_traces(xaxis='x', hoverinfo='none')
 
         if not tb_data['use']:
-            return fig
+            return fig, None
 
         # if band slider is turned on but orb_proj is not calculated yet pretend it is not turned on
         if (akw_slider == 2 or band_slider == 2) and tb_data['orb_proj'] == []:
@@ -626,7 +630,7 @@ def register_callbacks(app):
                                          showlegend=False))
 
         if not akw_data['use']:
-            return fig
+            return fig, None
 
         if akw_slider >= 1:
             w_mesh = sigma_data['w_dict']['w_mesh']
@@ -644,7 +648,7 @@ def register_callbacks(app):
 
             fig.update_yaxes(range=[w_mesh[0], w_mesh[-1]])
 
-        return fig
+        return fig, None
 
     # plot EDC
     @app.callback(
