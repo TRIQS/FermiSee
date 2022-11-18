@@ -140,19 +140,17 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 html.P('eV', style={'display': 'inline-block',
                                                     'text-align': 'left',
                                                     'vertical-align':
-                                                    'center'})], 
+                                                    'center'})],
                                 style={'padding': '5px 5px'} )
-        #84578E - GIMP
-    loading_component = dcc.Loading(id=id("loading"), 
-                children=[html.Div(id=id("loading-tb")), 
-                              html.Div(id=id("loading-akw")),
-                              html.Div(id=id("loading-plot")),
-                              html.Div(id=id("loading-sigma")),
-                              html.Div(id=id("loading-config"))
-                             ],color='#7E588A', type="cube", fullscreen=True, style={'backgroundColor' : 'transparent'})
 
-        #k table: table for the k points
-    ktable =  html.Div([
+    loading_component = dcc.Loading(id=id("loading"),
+                                    children=[html.Div(id=id("loading-tb")),
+                                              html.Div(id=id("loading-plot")),
+                                              html.Div(id=id("loading-akw"))
+                                              ], color='#7E588A', type="cube", fullscreen=True, style={'backgroundColor': 'transparent'})
+
+    # k table: table for the k points
+    ktable = html.Div([
                                 dash_table.DataTable(
                                     id=id('k-points'),
                                     columns=[{
