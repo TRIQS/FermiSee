@@ -92,55 +92,49 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                        )
         #this is the section that calculates the chemical potential based on the number of electrons in the system
     electron_section = html.Div([
-                                html.P('# electrons: ', style={'width': '50%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
+                                html.P('#electrons: ', style={'width': '50%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                        ),
                                 dcc.Input(id=id('gf-filling'), type='number', value='0.', step='0.001',
                                           debounce=True, placeholder='number of electrons', style={'width': '50%'}),
-                                html.P('μ:', style={'display': 'inline-block',
+                                html.P('μ (eV):', style={'width': '50%', 'display': 'inline-block', 
                                                     'text-align': 'left',
                                                     'vertical-align':
                                                     'center'}),
                                 html.Div(id=id('dft-mu'), children=html.P('0'),
-                                style={'width': '60%',
+                                style={'width': '50%',
                                        'display':'inline-block',
-                                       'margin': '5px',
-                                       'padding': '5px 5px 0px 3px',
+                                       'margin': '5px 0px',
+                                       'padding': '5px 0px 0px 10px',
                                        'background': 'white',
                                        'border-radius':'5px',
                                       }),
-                                html.P('eV', style={'display': 'inline-block',
-                                                    'text-align': 'left',
-                                                    'vertical-align':
-                                                    'center'})],
+                                ],
                                 style={'padding': '5px 5px'})
 
     electron_no_edits = html.Div([
-                                html.P('# electrons: ', style={'width': '50%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
+                                html.P('#electrons: ', style={'width': '50%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                        ),
                                 html.Div(id=id('gf-filling'), children=html.P('0'), 
-                                         style={'width': '30%',
+                                         style={'width': '50%',
                                        'display':'inline-block',
-                                       'margin-left': '20%',
-                                       'padding': '5px 5px 0px 3px',
+                                       'margin': '5px 0px',
+                                       'padding': '5px 5px 0px 10px',
                                        'background': 'white',
                                        'border-radius':'5px'
                                                }),
-                                html.P('μ:', style={'display': 'inline-block',
+                                html.P('μ (eV):', style={'width': '50%', 'display': 'inline-block',
                                                     'text-align': 'left',
                                                     'vertical-align':
                                                     'center'}),
                                 html.Div(id=id('dft-mu'), children=html.P('0'),
-                                style={'width': '60%',
+                                style={'width': '50%',
                                        'display':'inline-block',
-                                       'margin': '5px',
-                                       'padding': '5px 5px 0px 3px',
+                                       'margin': '5px 0px',
+                                       'padding': '5px 0px 0px 10px',
                                        'background': 'white',
                                        'border-radius':'5px',
                                       }),
-                                html.P('eV', style={'display': 'inline-block',
-                                                    'text-align': 'left',
-                                                    'vertical-align':
-                                                    'center'})],
+                                ],
                                 style={'padding': '5px 5px'} )
 
     loading_component = dcc.Loading(id=id("loading"),
@@ -193,10 +187,10 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
     add_kpoint = html.Button('Add k-point', id=id('add-kpoint'), n_clicks=0, style=button_style)
         #input the number of k-points 
     num_kpoint = html.Div([
-                                html.P('#k-points:', style={'width': '40%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
+                                html.P('#k-points:', style={'width': '50%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                        ),
                                 dcc.Input(id=id('n-k'), value='20', step=1, placeholder='number of k-points',
-                                          type='number', debounce=True, style={'width': '60%'}),
+                                          type='number', debounce=True, style={'width': '50%'}),
                             ], style={'padding': '5px 5px'}
                             )
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Section 3: Self-Energy ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -254,10 +248,11 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                             ])
     # input value for ata η
     input_ata = html.Div([
-                                html.P('η (eV):', style={'width': '40%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
+                                html.P('η (eV):', style={'width': '50%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                        ),
                                 dcc.Input(id=id('eta'), type='number', value='0.010', step='0.001',
-                                          placeholder='broadening η', style={'width': '60%', 'margin-bottom': '10px'}),
+                                          placeholder='broadening', 
+                                          style={'width': '50%'}),
                             ], style={'padding': '5px 5px'}
                             )
     # select orbital order
@@ -433,7 +428,8 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 options=[{'label': i, 'value': i} for i in ['A(k,ω)', 'QP dispersion']],
                                 value='A(k,ω)',
                                 inputStyle={"margin-right": "5px"},
-                                labelStyle={'display': 'inline-block', 'margin-left': '5px'}
+                                labelStyle={'display': 'inline-block', 'margin-left': '5px'},
+                                style={'padding': '0px 0px 10px 0px'}
                             ),
                             html.Div('Colorscale:'),
                             dcc.RadioItems(
@@ -441,7 +437,8 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 options=[{'label': i, 'value': i} for i in ['sequential', 'diverging']],
                                 value='diverging',
                                 inputStyle={"margin-right": "5px"},
-                                labelStyle={'display': 'inline-block', 'margin-left': '5px'}
+                                labelStyle={'display': 'inline-block', 'margin-left': '5px'},
+                                style={'padding': '0px 0px 10px 0px'}
                             ),
                             dcc.Dropdown(
                                 id=id('colorscale'),
