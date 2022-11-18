@@ -18,6 +18,8 @@ def layout(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, loaded_data)
                 dcc.Graph(
                     id=id('Ak0'),
                     style={'height': '70vh', 'width': '70vh'},
+                    config={'displaylogo': False, 
+                            'toImageButtonOptions': {'filename' : 'Ak0_fermisee.png', 'scale' : 1, 'width': 2000, 'height': 2000}},
                     clickData={'points': []}
                     )
             ], style={
