@@ -75,43 +75,46 @@ def load_pythTB_json(contents):
         if "array" in d:
             return np.array(d["list"])
         return d
-    
+
     content_type, content_string = contents.split(',')
     data_stream = base64.b64decode(content_string)
     data = json.loads(data_stream, object_hook = decode)
+    
 
     lat = data['_lat']
     hoppings = data['_hoppings']
     site_energies = data['_site_energies']
     norb = data['_norb']
 
-    # apparently if _dim_r <= 2 then an array doesnt need to be passed in the hoppings
-    if data['_dim_r'] <= 2:
-        raise Exception("The pyTB lattice must be greater than 2x2. ie _dim_r > 2")
 
     # extract the lattice dimensions
     units = []
     for i in lat:
         units.append(tuple(i))
 
+    
+    unit_dim = np.shape(units)[0]
+    origin = (0,) * unit_dim
     # extract the hoppings
     #parsing is taken and adapted from triqs/lattice/utils.py TB_from_pythTB
     hopping_dict={}
     m_zero = np.zeros((norb, norb), dtype=complex)
     #on-site energy
-    hopping_dict[(0, 0, 0)] = np.eye(norb, dtype=complex) * site_energies
+    hopping_dict[origin] = np.eye(norb, dtype=complex) * site_energies
     #hoppings
     for hop, orb_from, orb_to, vector in hoppings:
+        # if it does not exit create empty entry
         if tuple(vector) not in hopping_dict:
             hopping_dict[tuple(vector)] = m_zero.copy()
             # per default pythTB does not explicitly stores -R
             hopping_dict[tuple(-np.array(vector))] = m_zero.copy()
-            hopping_dict[tuple(vector)][orb_from, orb_to] += hop
-            # fill -R from +R using H_ij(+R)=[H_ji(-R)]*
-            # if the user specified -R explicitly we have to sum both hopping
-            # matrices
-            # according to pythTB documentation
-            hopping_dict[tuple(-np.array(vector))][orb_to, orb_from] += np.conj(hop)
+
+        hopping_dict[tuple(vector)][orb_from, orb_to] += hop
+        # fill -R from +R using H_ij(+R)=[H_ji(-R)]*
+        # if the user specified -R explicitly we have to sum both hopping
+        # matrices
+        # according to pythTB documentation
+        hopping_dict[tuple(-np.array(vector))][orb_to, orb_from] += np.conj(hop)
 
     return norb, units, hopping_dict
 
@@ -177,6 +180,6 @@ def load_sigma_h5(contents, filename, orbital_order=None):
     data['dmft_mu'] = dmft_mu
     data['orbital_order'] = orbital_order
     data['n_orb'] = n_orb
-    print(sigma_interpolated.shape)
+    #print(sigma_interpolated.shape)
 
     return data

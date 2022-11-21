@@ -34,7 +34,6 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
     # sigma
     sigma = np.array(
         sigma_data['sigma_re']) + 1j * np.array(sigma_data['sigma_im'])
-    sigma_rot = sigma.copy()
     if band_basis:
         e_vecs = np.array(
             tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
@@ -79,22 +78,29 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
 
     if not solve:
 
-        def invert_and_trace(w, eta, mu, e_mat, sigma):
+        def invert_and_trace(w, eta, mu, e_mat, sigma, weight=None):
             # inversion is automatically vectorized over first axis of 3D array (omega first index now)
             Glatt = np.linalg.inv(w + eta[None, ...] + mu[None, ...] -
-                                  e_mat[None, ...] - sigma.transpose(2, 0, 1))
-            return -1.0 / np.pi * np.trace(Glatt, axis1=1, axis2=2).imag
-
+                                  e_mat[None, ...] - sigma.transpose(2, 0,
+                                                                     1)).imag
+            #add optional parameter for weights if the optional parameter here
+            if weight is not None:
+                Glatt = Glatt * weight[None, ...]
+            return -1.0 / np.pi * np.trace(Glatt, axis1=1, axis2=2)
         alatt_k_w = np.zeros((n_k, w_dict['n_w']))
+        sigma_rot = sigma.copy()
         for ik in range(n_k):
+            wt = None
             # if evecs are given transform sigma into band basis
             if band_basis:
                 sigma_rot = np.einsum(
                     'ij,jkw->ikw', e_vecs[:, :, ik].conjugate().transpose(),
                     np.einsum('ijw,jk->ikw', sigma, e_vecs[:, :, ik]))
-            alatt_k_w[ik, :] = invert_and_trace(w_vec, eta, mu,
-                                                e_mat[:, :, ik], sigma_rot)
 
+                wt = np.array(tb_data['orb_proj']).T[ik]
+            alatt_k_w[ik, :] = invert_and_trace(w_vec, eta, mu,
+                                                e_mat[:, :, ik], sigma_rot,
+                                                weight=wt)
     else:
         alatt_k_w = np.zeros((n_k, n_orb))
         kslice = np.zeros((w_dict['n_w'], n_orb))
@@ -139,7 +145,7 @@ def calc_kslice(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
         e_vecs = np.array(
             tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
     iw0 = np.where(np.sign(w_dict['w_mesh']) == True)[0][0] - 1
-    tools.print_matrix(sigma[:, :, iw0], n_orb, 'Zero-frequency Sigma')
+    #tools.print_matrix(sigma[:, :, iw0], n_orb, 'Zero-frequency Sigma')
 
     # TODO add local
     add_local = [0.] * tb_data['n_wf']

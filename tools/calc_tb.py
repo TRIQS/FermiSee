@@ -16,7 +16,6 @@ from matplotlib import cm, colors
 from scipy.optimize import brentq
 from scipy.interpolate import interp1d
 import itertools
-import matplotlib.pyplot as plt
 
 # triqs
 from triqs.sumk import SumkDiscreteFromLattice
@@ -79,8 +78,11 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
     hopping = {eval(key): np.array(value, dtype=complex) for key, value in data['hopping'].items()}
     tb = tools.get_TBL(hopping, data['units'], data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
     # print local H(R)
-    h_of_r = tb.hoppings[(0,0,0)][2:5,2:5] if add_spin else tb.hoppings[(0,0,0)]
-    tools.print_matrix(h_of_r, data['n_wf'], 'H(R=0)')
+
+    unit_dim = np.shape(data['units'])[0]
+    origin = (0,) * unit_dim
+    h_of_r = tb.hoppings[origin][2:5,2:5] if add_spin else tb.hoppings[origin]
+    #tools.print_matrix(h_of_r, data['n_wf'], 'H(R=0)')
 
     # bands info
     k_path, k_point_labels = _convert_kpath(k_mesh)
@@ -101,7 +103,7 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
                     total_proj[band] += np.real(e_vecs[orb,band] * e_vecs[orb,band].conjugate())
         else:
             e_vecs = np.array([None])
-            total_proj = [] 
+            total_proj = []
     else:
         e_mat = np.zeros((n_orb_rescale, n_orb_rescale, k_mesh['n_k'], k_mesh['n_k']), dtype=complex)
         e_vecs = np.array([None])
@@ -115,6 +117,6 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
         if add_spin: e_mat = e_mat[2:5,2:5]
 
     k_mesh = {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels, 'k_points_dash': k_mesh['k_path']}
-    
+
     return k_mesh, e_mat, e_vecs, tb, total_proj
 

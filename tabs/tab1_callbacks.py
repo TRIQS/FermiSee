@@ -51,50 +51,66 @@ def register_callbacks(app):
     # upload akw data
     @app.callback(
         [Output(id('akw-data'), 'data'),
-         Output(id('akw-bands'), 'on'),
-         Output(id('tb-alert'), 'is_open')],
+         Output(id('akw-slider'), 'value'),
+         Output(id('tb-alert'), 'is_open'),
+         Output(id('loading-akw'), 'children')],
         [Input(id('akw-data'), 'data'),
          Input(id('tb-data'), 'data'),
          Input(id('sigma-data'), 'data'),
-         Input(id('akw-bands'), 'on'),
+         Input(id('akw-slider'), 'value'),
          Input(id('dft-mu'), 'children'),
          Input(id('k-points'), 'data'),
          Input(id('n-k'), 'value'),
-         Input(id('calc-tb'), 'n_clicks'),
          Input(id('calc-akw'), 'n_clicks'),
          Input(id('akw-mode'), 'value'),
          Input(id('eta'), 'value'),
-         Input(id('band-basis'), 'on')],
-         State(id('tb-alert'), 'is_open'),
+         Input(id('band-slider'), 'value')],
+        [State(id('select-orbitals'), 'value'),
+         State(id('tb-alert'), 'is_open')],
          prevent_initial_call=True
         )
-    def update_akw(akw_data, tb_data, sigma_data, akw_switch, dft_mu, k_points, n_k, click_tb, click_akw, akw_mode, eta, band_basis, tb_alert):
+    def update_akw(akw_data, tb_data, sigma_data, akw_slider, dft_mu, k_points,
+                   n_k, click_akw, akw_mode, eta, band_slider,
+                   sel_orb, tb_alert):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***update_akw***:'), trigger_id)
 
         if trigger_id == id('dft-mu') and not sigma_data['use']:
-            return akw_data, akw_switch, tb_alert
+            return akw_data, akw_slider, tb_alert, None
 
-        elif trigger_id in (id('calc-akw'), id('n-k'), id('akw-mode')) or ( trigger_id == id('k-points') and click_akw > 0 ):
+        elif trigger_id in (id('calc-akw'), id('n-k'), id('akw-mode'), id('akw-slider'), id('dft-mu')) or (trigger_id == id('k-points') and click_akw > 0 ):
+
+            if trigger_id == id('akw-slider') and click_akw < 1:
+                return akw_data, 0, not tb_alert, None
+
+            if akw_slider == 2 and sel_orb == '':
+                return akw_data, akw_slider, tb_alert, None
+
             if not sigma_data['use'] or not tb_data['use'] or not tb_data['dft_mu']:
-                return akw_data, akw_switch, not tb_alert
+                return akw_data, akw_slider, not tb_alert, None
 
             solve = True if akw_mode == 'QP dispersion' else False
             if not 'dmft_mu' in akw_data.keys():
                 akw_data['dmft_mu'] = sigma_data['dmft_mu']
 
             akw_data['eta'] = float(eta)
+            #band_basis is dependent on band_slider
+            band_basis = False
+            if akw_slider == 2:
+                band_basis = True
             alatt, Aw, akw_data['dmft_mu'] = akw.calc_alatt(tb_data, sigma_data, akw_data, solve, band_basis)
             akw_data['Akw'] = alatt.tolist()
             akw_data['Aw'] = Aw.tolist()
             akw_data['use'] = True
             akw_data['solve'] = solve
 
-            akw_switch = {'on': True}
+            #default is 0, first calc-akw, set to 1
+            if trigger_id == id('calc-akw') and akw_slider == 0:
+                akw_slider = 1
 
-        return akw_data, akw_switch, tb_alert
-    
+        return akw_data, akw_slider, tb_alert, None
+
     #toggle the TB options
     @app.callback(
     [Output(id('w90-buttons'), 'style'),
@@ -105,15 +121,18 @@ def register_callbacks(app):
             if radio_selection == 'pythTB':
                     return {'display': 'none'}, {'display': 'block'}
             return {'display': 'block'}, {'display': 'none'}
-    
+
     #show orbital projection prompt
     @app.callback(
     Output(id('input-select-orbital'), 'style'),
-    [Input(id('band-basis'), 'on')]
+    [Input(id('band-slider'), 'value'),
+     Input(id('akw-slider'), 'value')]
     )
-    def display_orbital_selection(band_basis):
-            if band_basis:
-                    return {'display': 'block'}
+    def display_orbital_selection(band_slider, akw_slider):
+            if band_slider == 2:
+                return {'display': 'block'}
+            if akw_slider == 2:
+                return {'display': 'block'}
             return{'display': 'none'}
 
     #change button color after something is uploaded
@@ -142,33 +161,41 @@ def register_callbacks(app):
         if trigger_id == id('upload-pythTB-json'):
             return loaded_style
         return pythTB_style
-    
-    #download csv 
+
+    #download csv
     @app.callback(
         Output(id('download-csv'), 'data'),
         [Input(id('Akw-title'), 'n_clicks'),
-         State(id('tb-bands'), 'on'),
-         State(id('akw-bands'), 'on'),
+         State(id('band-slider'), 'value'),
+         State(id('akw-slider'), 'value'),
          State(id('tb-data'), 'data'),
          State(id('akw-data'), 'data'),
          State(id('sigma-data'), 'data')],
         prevent_initial_call=True,
     )
-    def prep_csv(n_clicks,tb_switch, akw_switch, tb_data, akw_data, sigma_data):
+    def prep_csv(n_clicks, band_slider, akw_slider, tb_data, akw_data, sigma_data):
         df = pd.DataFrame({"no": [0,0,0,0], "data": [0,0,0,0], "you need to plot the figure before downloading the csv": [0,0,0,0]})
-        
-        if tb_switch:
+
+        if band_slider >= 1:
             df = pd.DataFrame()
             df['k'] = tb_data['k_mesh']['k_disc']
             for band in range(len(tb_data['eps_nuk'])):
                 b = 'ε'+str(band)
-                df[b] = tb_data['eps_nuk'][band] 
-        if akw_switch:
-            Akw = np.array(akw_data['Akw'])
-            w_mesh = sigma_data['w_dict']['w_mesh']
-            Akw_df = pd.DataFrame(Akw, columns = w_mesh)
+                df[b] = tb_data['eps_nuk'][band]
+        if akw_slider >= 1:
+            if not akw_data['solve']:
+                Akw = np.array(akw_data['Akw'])
+                w_mesh = sigma_data['w_dict']['w_mesh']
+                Akw_df = pd.DataFrame(Akw, columns=w_mesh)
+            else:
+                qp_disp_data = np.array(akw_data['Akw'])
+                Akw_df = pd.DataFrame()
+                for band in range(len(tb_data['eps_nuk'])):
+                    b = 'QP'+str(band)
+                    Akw_df[b] = qp_disp_data[:, band]
             df = pd.concat([df, Akw_df], axis=1)
-        
+
+
         #round all values to 5 digits
         return dash.dcc.send_data_frame(df.to_csv, "Akw_rawdata.csv",
                                         index=False, float_format='%.5e')
@@ -179,11 +206,10 @@ def register_callbacks(app):
          Output(id('upload-w90-hr'), 'children'),
          Output(id('upload-w90-wout'), 'children'),
          Output(id('upload-pythTB-json'), 'children'),
-         Output(id('tb-bands'), 'on'),
          Output(id('dft-mu'), 'children'),
          Output(id('gf-filling'), 'value'),
          Output(id('orbital-order'), 'options'),
-         Output(id('band-basis'), 'on')],
+         Output(id('loading-tb'), 'children')],
         [Input(id('upload-w90-hr'), 'contents'),
          Input(id('upload-w90-hr'), 'filename'),
          Input(id('upload-w90-hr'), 'children'),
@@ -193,29 +219,26 @@ def register_callbacks(app):
          Input(id('upload-pythTB-json'), 'contents'),
          Input(id('upload-pythTB-json'), 'filename'),
          Input(id('upload-pythTB-json'), 'children'),
-         Input(id('tb-bands'), 'on'),
-         Input(id('calc-tb'), 'n_clicks'),
          Input(id('gf-filling'), 'value'),
-         Input(id('calc-tb-mu'), 'n_clicks'),
          Input(id('tb-data'), 'data'),
          Input(id('add-spin'), 'value'),
          Input(id('dft-mu'), 'children'),
          Input(id('n-k'), 'value'),
          Input(id('k-points'), 'data'),
          Input(id('loaded-data'), 'data'),
-         Input(id('orbital-order'),'options'),
+         Input(id('orbital-order'), 'options'),
          Input(id('eta'), 'value'),
-         Input(id('band-basis'), 'on'),
-         Input(id('select-orbitals'), 'value')],
-         prevent_initial_call=True,)
+         Input(id('select-orbitals'), 'value'),
+         State(id('akw-slider'), 'value'),
+         Input(id('band-slider'), 'value')],
+        prevent_initial_call=True,)
     def calc_tb(w90_hr, w90_hr_name, w90_hr_button, w90_wout, w90_wout_name,
-                w90_wout_button, pythTB, pythTB_name, pythTB_button, tb_switch, click_tb, n_elect, click_tb_mu, tb_data, add_spin, dft_mu, n_k, k_points, loaded_data, orb_options, eta, band_basis, sel_orb):
+                w90_wout_button, pythTB, pythTB_name, pythTB_button, n_elect, tb_data, add_spin, dft_mu, n_k,
+                k_points, loaded_data, orb_options, eta, sel_orb, akw_slider,
+                band_slider):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***calc_tb***:'), trigger_id)
-       
-        if trigger_id == id('tb-bands'):
-            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
 
         # if w90_hr != None and not 'loaded_hr' in tb_data:
         if trigger_id == id('upload-w90-hr'):
@@ -227,15 +250,14 @@ def register_callbacks(app):
             tb_data['loaded_hr'] = True
             tb_data['dft_mu'] = 0.0
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
-            return tb_data, html.Div([w90_hr_name]), w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
+            w90_hr_button = html.Div([w90_hr_name])
 
         # if w90_wout != None and not 'loaded_wout' in tb_data:
         if trigger_id == id('upload-w90-wout'):
             print('loading w90 wout file...')
             tb_data['units'] = load_w90_wout(w90_wout)
             tb_data['loaded_wout'] = True
-
-            return tb_data, w90_hr_button, html.Div([w90_wout_name]), pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
+            w90_wout_button = html.Div([w90_wout_name])
 
         # if pythTB is being loaded
         if trigger_id == id('upload-pythTB-json'):
@@ -253,7 +275,7 @@ def register_callbacks(app):
             tb_data['loaded_hr'] = True
             tb_data['loaded_wout'] = True
 
-            return tb_data, w90_hr_button, w90_wout_button, html.Div([pythTB_name]), tb_switch, dft_mu, n_elect, orb_options, band_basis
+            pythTB_button = html.Div([pythTB_name])
 
         # if a full config has been uploaded
         if trigger_id == id('loaded-data'):
@@ -262,12 +284,16 @@ def register_callbacks(app):
             tb_data['use'] = True
             orb_options = [{'label': str(k), 'value': str(k)} for i, k in enumerate(list(permutations([i for i in range(tb_data['n_wf'])])))]
 
-            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, True, html.P('{:.4f}'.format(tb_data['dft_mu'])), tb_data['n_elect'], orb_options, tb_data['band_basis']
+            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, html.P('{:.4f}'.format(tb_data['dft_mu'])), tb_data['n_elect'], orb_options, None
 
-        if trigger_id == id('calc-tb-mu') and ((tb_data['loaded_hr'] and tb_data['loaded_wout']) or tb_data['use']):
-            if float(n_elect) == 0.0:
-                print('please specify filling')
-                return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
+        if tb_data['loaded_hr'] and tb_data['loaded_wout']:
+            tb_data['use'] = True
+
+        if not tb_data['use']:
+            print("tb_data['use'] is false")
+            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, dft_mu, n_elect, orb_options, None
+
+        if trigger_id == id('gf-filling') and ((tb_data['loaded_hr'] and tb_data['loaded_wout']) or tb_data['use']):
 
             add_local = [0.] * tb_data['n_wf']
             tb_data['dft_mu'], tb_data['eps_min_max'] = akw.calc_mu(tb_data,
@@ -277,66 +303,62 @@ def register_callbacks(app):
                                                                     current_mu=tb_data['dft_mu'],
                                                                     eta=float(eta))
 
-            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, html.P('{:.4f}'.format(tb_data['dft_mu'])), n_elect, orb_options, band_basis
-
-        else:
-            if not click_tb > 0 and not tb_data['use']:
-                return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
-            if np.any([k_val in ['', None] for k in k_points for k_key, k_val in k.items()]):
-                return tb_data, w90_hr_button, w90_wout_button, pythTB_button, tb_switch, dft_mu, n_elect, orb_options, band_basis
-
-
-
-            if not isinstance(n_k, int):
-                n_k = 20
-
-            add_local = [0.] * tb_data['n_wf']
-
-            k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
-            
-            sel_orbs_list = []
-            if band_basis:
-                #remove any spaces from the user input
-                sel_orb = sel_orb.replace(" ", "")
-                #separate the input by commas
-                #if the input is a number and less than # of orbitals its valid
-                for i in sel_orb.split(','):
-                    if i.isdigit():
-                        val = int(i)
-                        if val <= tb_data['n_wf']:
-                            sel_orbs_list.append(val)
-                #update the value on the dash of only the valid orbitals used
-                sel_orb = ''.join(str(x)+',' for x in sel_orbs_list)
-            tb_data['k_mesh'], e_mat, e_vecs, tbl, tb_data['orb_proj'] = tb.calc_tb_bands(tb_data, add_spin, add_local,
-                                                 k_mesh, fermi_slice=False,
-                                                 projected_orbs=sel_orbs_list, band_basis=band_basis)
-
-            # calculate Hamiltonian
-            tb_data['e_mat_re'] = e_mat.real.tolist()
-            tb_data['e_mat_im'] = e_mat.imag.tolist()
-            if band_basis:
-                tb_data['evecs_re'] = e_vecs.real.tolist()
-                tb_data['evecs_im'] = e_vecs.imag.tolist()
-                tb_data['eps_nuk'] = np.einsum('iij -> ij', e_mat-tb_data['dft_mu']).real.tolist()
-            else:
-                tb_data['eps_nuk'], evec_nuk = tb.get_tb_bands(e_mat, tb_data['dft_mu'])
-                tb_data['eps_nuk'] = tb_data['eps_nuk'].tolist()
-            tb_data['bnd_low'] = np.min(np.array(tb_data['eps_nuk'][0])).real
-            tb_data['bnd_high'] = np.max(np.array(tb_data['eps_nuk'][-1])).real
-            tb_data['n_elect'] = float(n_elect)
-            tb_data['band_basis'] = band_basis
-            if not add_spin:
-                tb_data['add_spin'] = False
-            else:
-                tb_data['add_spin'] = True
             tb_data['use'] = True
 
-            #if band-basis is on then switch off tb-bands
-            if band_basis:
-                return tb_data, w90_hr_button, w90_wout_button, pythTB_button,  False, dft_mu, n_elect, orb_options, band_basis
-            else:
-                return tb_data, w90_hr_button, w90_wout_button, pythTB_button,  True, dft_mu, n_elect, orb_options, band_basis
+        if np.any([k_val in ['', None] for k in k_points for k_key, k_val in k.items()]):
+            return tb_data, w90_hr_button, w90_wout_button, pythTB_button, dft_mu, n_elect, orb_options, None
 
+        if not isinstance(n_k, int):
+            n_k = 20
+
+        add_local = [0.] * tb_data['n_wf']
+
+        k_mesh = {'n_k': int(n_k), 'k_path': k_points, 'kz': 0.0}
+
+        sel_orbs_list = []
+        band_basis = False
+        if (band_slider == 2 or akw_slider == 2) and sel_orb != '':
+            # set band_basis to True, for calc projection weights
+            band_basis = True
+            # remove any spaces from the user input
+            sel_orb = sel_orb.replace(" ", "")
+            # separate the input by commas
+            # if the input is a number and less than # of orbitals its valid
+            for i in sel_orb.split(','):
+                if i.isdigit():
+                    val = int(i)
+                    if val <= tb_data['n_wf']:
+                        sel_orbs_list.append(val)
+            # update the value on the dash of only the valid orbitals used
+            sel_orb = ''.join(str(x)+',' for x in sel_orbs_list)
+
+        tb_data['k_mesh'], e_mat, e_vecs, tbl, tb_data['orb_proj'] = tb.calc_tb_bands(tb_data, add_spin,
+                                                                                      add_local, k_mesh,
+                                                                                      fermi_slice=False,
+                                                                                      projected_orbs=sel_orbs_list,
+                                                                                      band_basis=band_basis)
+
+        # calculate Hamiltonian
+        tb_data['e_mat_re'] = e_mat.real.tolist()
+        tb_data['e_mat_im'] = e_mat.imag.tolist()
+        if (band_slider == 2 or akw_slider == 2) and sel_orb != '':
+            tb_data['evecs_re'] = e_vecs.real.tolist()
+            tb_data['evecs_im'] = e_vecs.imag.tolist()
+            tb_data['eps_nuk'] = np.einsum('iij -> ij', e_mat-tb_data['dft_mu']).real.tolist()
+        else:
+            tb_data['eps_nuk'], evec_nuk = tb.get_tb_bands(e_mat, tb_data['dft_mu'])
+            tb_data['eps_nuk'] = tb_data['eps_nuk'].tolist()
+        tb_data['bnd_low'] = np.min(np.array(tb_data['eps_nuk'][0])).real
+        tb_data['bnd_high'] = np.max(np.array(tb_data['eps_nuk'][-1])).real
+        tb_data['n_elect'] = float(n_elect)
+        #tb_data['band_slider'] = band_slider
+        if not add_spin:
+            tb_data['add_spin'] = False
+        else:
+            tb_data['add_spin'] = True
+        tb_data['use'] = True
+
+        return tb_data, w90_hr_button, w90_wout_button, pythTB_button, html.P('{:.4f}'.format(tb_data['dft_mu'])), n_elect, orb_options, None
     # dashboard k-points
     @app.callback(
         [Output(id('k-points'), 'data'),
@@ -401,12 +423,14 @@ def register_callbacks(app):
         print('{:20s}'.format('***update_sigma***:'), trigger_id)
 
         return_f_sigma = None
-        # orbital_order = tuple(int(i) for i in orbital_order.strip('()').split(','))
         orbital_order = literal_eval(orbital_order)
+
+        # initial checks
+        if not tb_data['use']:
+            return sigma_data, {'display': 'none'}, {'display': 'block'}, sigma_button, str(tuple(orbital_order)), orb_alert, sigma_params, sigma_columns, return_f_sigma
 
         # update Sigma params if n_wf has changed
         if trigger_id == id('tb-data') and tb_data['n_wf'] != len(sigma_columns)-1:
-            print(sigma_columns)
             n_orb_table = len(sigma_columns)-1
             orbital_order = tuple(range(tb_data['n_wf']))
             if n_orb_table > tb_data['n_wf']:
@@ -535,15 +559,16 @@ def register_callbacks(app):
     # plot A(k,w)
     @app.callback(
         Output(id('Akw'), 'figure'),
-        [Input(id('tb-bands'), 'on'),
-         Input(id('akw-bands'), 'on'),
-         Input(id('band-basis'),'on'),
+        Output(id('loading-plot'), 'children'),
+        [Input(id('akw-slider'), 'value'),
          Input(id('colorscale'), 'value'),
          Input(id('tb-data'), 'data'),
          Input(id('akw-data'), 'data'),
-         Input(id('sigma-data'), 'data')],
+         Input(id('sigma-data'), 'data'),
+         Input(id('band-slider'),'value')],
          prevent_initial_call=True)
-    def plot_Akw(tb_switch, akw_switch, band_basis_switch, colorscale, tb_data, akw_data, sigma_data):
+    def plot_Akw(akw_slider, colorscale, tb_data,
+                 akw_data, sigma_data, band_slider):
 
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -558,7 +583,11 @@ def register_callbacks(app):
         fig.update_traces(xaxis='x', hoverinfo='none')
 
         if not tb_data['use']:
-            return fig
+            return fig, None
+
+        # if band slider is turned on but orb_proj is not calculated yet pretend it is not turned on
+        if (akw_slider == 2 or band_slider == 2) and tb_data['orb_proj'] == []:
+            band_slider = 1
 
         k_mesh = tb_data['k_mesh']
         fig.add_shape(type = 'line', x0=0, y0=0, x1=max(k_mesh['k_disc']), y1=0, line=dict(color='gray', width=0.8))
@@ -571,15 +600,17 @@ def register_callbacks(app):
                           yaxis_title='ω(eV)',
                   xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']],tickvals=k_mesh['k_points']),
                   font=dict(size=20))
-        
-        if tb_switch:
+
+        # normal plot of all bands
+        if band_slider == 1:
             for band in range(len(tb_data['eps_nuk'])):
                 fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=tb_data['eps_nuk'][band], mode='lines',
                             line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]), showlegend=False, text=f'tb band {band}',
                             hoverinfo='x+y+text'
                             ))
-        
-        if band_basis_switch:
+
+        # projection mode
+        if band_slider == 2:
             for band in range(tb_data['n_wf']):
                 values = tb_data['orb_proj'][band]
                 fig.add_trace(go.Scatter(x=k_mesh['k_disc'],
@@ -597,35 +628,33 @@ def register_callbacks(app):
                                          showlegend=False))
 
         if not akw_data['use']:
-            return fig
+            return fig, None
 
-        if akw_switch:
+        if akw_slider >= 1:
             w_mesh = sigma_data['w_dict']['w_mesh']
+            # QP dispersion mode
             if akw_data['solve']:
-                z_data = np.array(akw_data['Akw'])
-                for orb in range(z_data.shape[1]):
-                    #fig.add_trace(go.Contour(x=k_mesh['k_disc'], y=w_mesh, z=z_data[:,:,orb].T,
-                    #    colorscale=colorscale, contours=dict(start=0.1, end=1.5, coloring='lines'), ncontours=1, contours_coloring='lines'))
-                    fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=z_data[:,orb].T, showlegend=False, mode='markers',
+                qp_disp_data = np.array(akw_data['Akw'])
+                for orb in range(qp_disp_data.shape[1]):
+                    fig.add_trace(go.Scattergl(x=k_mesh['k_disc'], y=qp_disp_data[:,orb].T, showlegend=False, mode='markers',
                                                marker_color=px.colors.sequential.Viridis[0]))
             else:
-                # z_data = np.log(np.array(akw_data['Akw']).T)
-                z_data = np.array(akw_data['Akw']).T
-                fig.add_trace(go.Heatmap(x=k_mesh['k_disc'], y=w_mesh, z=z_data,
+                qp_disp_data = np.array(akw_data['Akw']).T
+                fig.add_trace(go.Heatmap(x=k_mesh['k_disc'], y=w_mesh, z=qp_disp_data,
                                          colorscale=colorscale, reversescale=False, showscale=False,
-                                         zmin=np.min(z_data), zmax=np.max(z_data)))
-            
+                                         zmin=np.min(qp_disp_data), zmax=np.max(qp_disp_data)))
+
             fig.update_yaxes(range=[w_mesh[0], w_mesh[-1]])
 
-        return fig
+        return fig, None
 
     # plot EDC
     @app.callback(
        [Output('EDC', 'figure'),
         Output('kpt_edc', 'value'),
         Output('kpt_edc', 'max')],
-       [Input(id('tb-bands'), 'on'),
-        Input(id('akw-bands'), 'on'),
+       [Input(id('band-slider'), 'value'),
+        Input(id('akw-slider'), 'value'),
         Input(id('sum-edc'), 'on'),
         Input('kpt_edc', 'value'),
         Input(id('akw-data'), 'data'),
@@ -633,7 +662,7 @@ def register_callbacks(app):
         Input(id('Akw'), 'clickData'),
         Input(id('sigma-data'), 'data')],
         prevent_initial_call=True)
-    def update_EDC(tb_bands, akw_bands, sum_edc, kpt_edc, akw_data, tb_data, click_coordinates, sigma_data):
+    def update_EDC(band_slider, akw_slider, sum_edc, kpt_edc, akw_data, tb_data, click_coordinates, sigma_data):
         layout = go.Layout()
         fig = go.Figure(layout=layout)
         ctx = dash.callback_context
@@ -646,7 +675,19 @@ def register_callbacks(app):
 
         k_mesh = tb_temp['k_mesh']
 
-        if tb_bands:
+        # if band slider is turned on but orb_proj is not calculated yet pretend it is not turned on
+        if (akw_slider == 2 or band_slider == 2) and tb_data['orb_proj'] == []:
+            band_slider = 1
+
+        akw_bands = False
+        if akw_slider >=1:
+            akw_bands = True
+
+        if trigger_id == id('Akw'):
+            new_kpt = click_coordinates['points'][0]['x']
+            kpt_edc = np.argmin(np.abs(np.array(k_mesh['k_disc']) - new_kpt))
+
+        if band_slider == 1:
             for band in range(len(tb_temp['eps_nuk'])):
                 if band == 0:
                     fig.add_trace(go.Scattergl(x=[tb_temp['eps_nuk'][band][kpt_edc],tb_temp['eps_nuk'][band][kpt_edc]],
@@ -672,22 +713,34 @@ def register_callbacks(app):
                                 )
         if akw_bands:
             w_mesh = sigma_data['w_dict']['w_mesh']
-            if sum_edc:
-                fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Aw']), mode='lines',
-                    line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
-                                           hoverinfo='x+y+text'
+            if akw_data['solve']:
+                qp_disp_data = np.array(akw_data['Akw'])
+                for band in range(len(tb_temp['eps_nuk'])):
+                    if band == 0:
+                        fig.add_trace(go.Scattergl(x=[qp_disp_data[kpt_edc,band],qp_disp_data[kpt_edc,band]],
+                                             y=[0,300], mode="lines", line=go.scattergl.Line(color='magenta'),
+                                             showlegend=True, name='QP dispersion'.format(tb_temp['k_mesh']['k_disc'][kpt_edc]),
+                                        hoverinfo='x+y+text'
                                         ))
-                fig.update_layout(yaxis_title='A(ω) summed')
+                    else:
+                        fig.add_trace(go.Scattergl(x=[qp_disp_data[kpt_edc,band],qp_disp_data[kpt_edc,band]],
+                                                y=[0,300], mode="lines", line=go.scattergl.Line(color='magenta'),
+                                                showlegend=False, hoverinfo='x+y+text'
+                                            ))
             else:
-                if trigger_id == id('Akw'):
-                    new_kpt = click_coordinates['points'][0]['x']
-                    kpt_edc = np.argmin(np.abs(np.array(k_mesh['k_disc']) - new_kpt))
-
-                fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Akw'])[kpt_edc,:], mode='lines',
-                    line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
-                                           hoverinfo='x+y+text'
-                                        ))
-                fig.update_layout(yaxis_title='A(ω)')
+                # sum EDC to show A(w)
+                if sum_edc:
+                    fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Aw']), mode='lines',
+                        line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
+                                               hoverinfo='x+y+text'
+                                            ))
+                    fig.update_layout(yaxis_title='A(ω) summed')
+                else:
+                    fig.add_trace(go.Scattergl(x=w_mesh, y=np.array(akw_data['Akw'])[kpt_edc,:], mode='lines',
+                        line=go.scattergl.Line(color='#AB63FA'), showlegend=False,
+                                               hoverinfo='x+y+text'
+                                            ))
+                    fig.update_layout(yaxis_title='A(ω)')
 
             fig.update_layout(
                 margin={
@@ -705,7 +758,7 @@ def register_callbacks(app):
 
         if akw_bands:
             return fig, kpt_edc, len(k_mesh['k_disc'])-1
-        elif tb_bands:
+        elif band_slider == 1:
             return fig, kpt_edc, len(k_mesh['k_disc'])-1
         else:
             return fig, 0, 1
@@ -715,15 +768,15 @@ def register_callbacks(app):
        [Output('MDC', 'figure'),
         Output('w_mdc', 'value'),
         Output('w_mdc', 'max')],
-       [Input(id('tb-bands'), 'on'),
-        Input(id('akw-bands'), 'on'),
+       [Input(id('band-slider'), 'value'),
+        Input(id('akw-slider'), 'value'),
         Input('w_mdc', 'value'),
         Input(id('akw-data'), 'data'),
         Input(id('tb-data'), 'data'),
         Input(id('Akw'), 'clickData'),
         Input(id('sigma-data'), 'data')],
         prevent_initial_call=True)
-    def update_MDC(tb_bands, akw_bands, w_mdc, akw_data, tb_data, click_coordinates, sigma_data):
+    def update_MDC(band_slider, akw_slider, w_mdc, akw_data, tb_data, click_coordinates, sigma_data):
         layout = go.Layout()
         fig = go.Figure(layout=layout)
         ctx = dash.callback_context
@@ -734,40 +787,14 @@ def register_callbacks(app):
         if not 'tb_temp' in locals():
             return fig, 0, 1
 
+        # if band slider is turned on but orb_proj is not calculated yet pretend it is not turned on
+        if (akw_slider == 2 or band_slider == 2) and tb_data['orb_proj'] == []:
+            band_slider = 1
+
         k_mesh = tb_temp['k_mesh']
 
-        #if tb_bands:
-        #     # decide which data to show for TB
-        #     if tb_data['use']: tb_temp = tb_data
-        #     if not 'tb_temp' in locals():
-        #         return fig
-
-        #     k_mesh = tb_temp['k_mesh']
-        #     for band in range(len(tb_temp['eps_nuk'])):
-        #         if band == 0:
-        #             y = np.min(np.abs(np.array(tb_temp['eps_nuk'][band]) - w_mdc))
-        #             fig.add_trace(go.Scattergl(x=[k_mesh['k_disc'][0],k_mesh['k_disc'][-1]],
-        #                                  y=[y,y], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]),
-        #                                  showlegend=True, name='ω = {:.3f} eV'.format(akw_data['freq_mesh'][w_mdc]),
-        #                             hoverinfo='x+y+text'
-        #                             ))
-        #         # else:
-        #         #     fig.add_trace(go.Scattergl(x=[tb_temp['eps_nuk'][band][kpt_edc],tb_temp['eps_nuk'][band][kpt_edc]],
-        #         #                             y=[0,300], mode="lines", line=go.scattergl.Line(color=px.colors.sequential.Viridis[0]),
-        #         #                             showlegend=False, hoverinfo='x+y+text'
-        #                                 # ))
-        #     if not akw:
-        #         fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 40},
-        #                         hovermode='closest',
-        #                         xaxis_range=[k_mesh['k_points'][0], k_mesh['k_points'][-1]],
-        #                         yaxis_range=[0, 1],
-        #                         xaxis_title='ω (eV)',
-        #                         yaxis_title='A(ω)',
-        #                         font=dict(size=16),
-        #                         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
-        #                         )
-
-        if akw_bands:
+        # plot Akw EDC only if not QP dispersion
+        if akw_slider >= 1 and not akw_data['solve']:
             w_mesh = sigma_data['w_dict']['w_mesh']
             if trigger_id == id('Akw'):
                 new_w = click_coordinates['points'][0]['y']
@@ -787,10 +814,7 @@ def register_callbacks(app):
                               xaxis=dict(ticktext=['γ' if k == 'g' else k for k in k_mesh['k_point_labels']], tickvals=k_mesh['k_points']),
                               legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
                               )
-        if akw_bands:
             return fig, w_mdc, len(w_mesh)-1
-        # elif tb_bands:
-        #     return fig, w_mdc, np.max(np.array(tb_temp['eps_nuk'][-1]))+(0.03*np.max(np.array(tb_temp['eps_nuk'][-1])))
         else:
             return fig, 0, 1
 
@@ -800,10 +824,10 @@ def register_callbacks(app):
      Input(id('tb-data'), 'data'),
      Input(id('akw-data'), 'data'),
      Input(id('sigma-data'), 'data'),
-     Input(id('band-basis'), 'on')],
+     Input(id('band-slider'), 'value')],
      prevent_initial_call=True,
     )
-    def download_data(n_clicks, tb_data, akw_data, sigma_data, band_basis):
+    def download_data(n_clicks, tb_data, akw_data, sigma_data, band_slider):
         ctx = dash.callback_context
         trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
         print('{:20s}'.format('***download_data***:'), trigger_id)
@@ -814,7 +838,7 @@ def register_callbacks(app):
             # store everything as np arrays not as list to enable compression in h5 write!
             tb_data_store = tb_data.copy()
             tb_data_store['e_mat'] = np.array(tb_data['e_mat_re']) + 1j * np.array(tb_data['e_mat_im'])
-            if band_basis:
+            if band_slider == 2:
                 tb_data_store['e_vecs'] = np.array(tb_data['evecs_re']) + 1j * np.array(tb_data['evecs_im'])
                 del tb_data_store['evecs_re']
                 del tb_data_store['evecs_im']
