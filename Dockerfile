@@ -36,7 +36,7 @@ RUN apt-get update && \
       rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
 # Install Python dependencies.
-RUN pip3 install dash dash-daq dash-bootstrap-components dash-extensions
+RUN pip3 install dash[compress] dash-daq dash-bootstrap-components dash-extensions
 
 ARG CFLAGS="-fopenmp -m64 -march=x86-64 -mtune=generic -O3 -Wl,--no-as-needed"
 ARG CXXFLAGS="-fopenmp -m64 -march=x86-64 -mtune=generic -O3 -Wl,--no-as-needed"

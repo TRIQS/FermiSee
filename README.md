@@ -12,7 +12,7 @@ FermiSee can be either used directly as WebApp [fermisee.flatironinstitute.org](
  ```
  This requires the installation of [triqs](https://triqs.github.io/) and the following python packages: 
  ``` 
- pip install numpy dash dash_daq dash_bootstrap_components dash_extensions
+ pip install numpy dash[compress] dash_daq dash_bootstrap_components dash_extensions scikit-image pandas
  ```
  If you want it simple, build the WebApp via docker-compose:
  ```
