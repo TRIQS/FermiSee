@@ -48,6 +48,12 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                     dcc.Download(id=id('download_h5')),
                 ], style=section_box_style)
 
+    loading_component = dcc.Loading(id=id("loading"),
+                                    children=[html.Div(id=id("loading-tb")),
+                                              html.Div(id=id("loading-plot")),
+                                              html.Div(id=id("loading-akw"))
+                                              ], color='#7E588A', type="cube", fullscreen=True, style={'backgroundColor': 'transparent'})
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  Section 2: Tight binding hamilatonian ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Selection between uploading w90 or a pythTB JSON file
     w90_vs_pythTB = dcc.RadioItems(
@@ -136,12 +142,6 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                       }),
                                 ],
                                 style={'padding': '5px 5px'} )
-
-    loading_component = dcc.Loading(id=id("loading"),
-                                    children=[html.Div(id=id("loading-tb")),
-                                              html.Div(id=id("loading-plot")),
-                                              html.Div(id=id("loading-akw"))
-                                              ], color='#7E588A', type="cube", fullscreen=True, style={'backgroundColor': 'transparent'})
 
     # k table: table for the k points
     ktable = html.Div([
@@ -272,7 +272,6 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
         #in section two does not include the inputs, different k table
         sec2_components = [add_spin,
                            electron_no_edits,
-                           loading_component,
                            html.Div('k-points'),
                            fslice_ktable,
                            num_kpoint
@@ -290,7 +289,6 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                            pythTB_input,
                            add_spin,
                            electron_section,
-                           loading_component,
                            html.Div('k-points'),
                            ktable,
                            add_kpoint,
@@ -325,6 +323,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
             html.Div([
                 # section 1
                 upload_dwnload,
+                loading_component,
                 # section 2
                 html.Div(children=[
                     html.Button(
