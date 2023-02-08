@@ -1,6 +1,7 @@
  # FermiSee
 
-![Basic tutorial](doc/Fermisee_basics_1080p.mp4)
+https://user-images.githubusercontent.com/21337117/217666858-2ff1afe5-4e70-44d7-8ee0-0394c05eede4.mp4
+
 
  This is a graphical spectral function A(k,w) analyzer tool, based on [triqs tight binding Hamiltonians](https://triqs.github.io/triqs/unstable/documentation/manual/triqs/lattice_tools/contents.html) decorated with a self-energy. Either provided from file in a specific h5 format (see [doc examples](doc/howto_prepare_self_energy.py)) or entered phenomenologically directly in the interface. 
  
