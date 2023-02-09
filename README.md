@@ -33,7 +33,9 @@ or use a public docker image, available on [hub.docker.com/repository/docker/mat
 * plot Fermi surface cuts
 * download and upload config in a single h5 container
 * add self-energy correction to tight binding Hamiltonian from file or add analytic form of self-energy via the interface
+* quasiparticle dispersions
 * add constant scattering rate η as imaginary shift
+* download resulting spectral function as csv or h5
 
 ## quick video showcases
 
@@ -41,23 +43,22 @@ Here we showcase typical workflows in FermiSee.
 
 ### plot tight binding band structure
 
-First, let's plot the tight binding bands from a SrVO3 Wannier Hamiltonian representing the three t2g states. Here, we show how to tune the chemical potential of the system, change the k-path, and how to save the results in a downloadable hdf5 archive.
+First, let's plot the tight binding bands from a SrVO3 Wannier Hamiltonian representing the three t2g states. Here, we show how to tune the chemical potential of the system, change the k-path, make projection of one of the input orbitals, and how to save the results in a downloadable hdf5 archive.
 
-![small tutorial](doc/tutorial_tight_binding.gif)
-
+https://user-images.githubusercontent.com/21337117/217946580-92a72dbb-41b1-4fc3-849f-c8581de3b757.mp4
 
 ### plot spectral function (numerical self-energy)
 
-Next, we can load the the previous hdf5 archive, and add a numerical self-energy by uploading a hdf5 archive containing a real frequency self-energy on a regular grid. The new chemical potential is determined and the result is plotted together with the tight binding bands. We can also save the resulting plot as a png. In the end we switch to showing the quasiparticle dispersion instead of the spectral function.
+Next, we can load the the previous hdf5 archive, and add a numerical self-energy by uploading a hdf5 archive containing a real frequency self-energy on a regular grid. The new chemical potential is determined and the result is plotted together with the tight binding bands. We can also save the resulting spectral function as csv file for further processing.
 
-![small tutorial](doc/tutorial_sigma_num.gif)
-
+https://user-images.githubusercontent.com/21337117/217946757-4b35d233-75d9-457f-b76f-9745604f1f33.mp4
 
 ### plot Fermi surface cut (analytic self-energy)
 
-Lastly, we manually construct a self-energy using an analytic form for a Fermi liquid. We can add a quasiparticle renormalization Z, an orbital-dependent level shift, and a constant scattering rate η. Finally, we calculate the Fermi surface cut at kz=0.0 in the upper right quadrant.
+Lastly, we manually construct a self-energy using an analytic form for a Fermi liquid. We can add a quasiparticle renormalization Z, an orbital-dependent level shift, and a constant scattering rate η. In the end we switch to showing the quasiparticle dispersion instead of the spectral function.
 
-![small tutorial](doc/tutorial_sigma_analytic.gif)
+https://user-images.githubusercontent.com/21337117/217946717-06165b64-9b37-4a7d-89a7-a9224ebba561.mp4
 
 
-©2021-2022 The Simons Foundation, Inc. - All Rights Reserved
+
+©2021-2023 The Simons Foundation, Inc. - All Rights Reserved
