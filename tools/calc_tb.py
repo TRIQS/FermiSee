@@ -23,6 +23,7 @@ from h5 import HDFArchive
 from triqs.gf import BlockGf
 from triqs.gf import GfReFreq, MeshReFreq
 from triqs.utility.dichotomy import dichotomy
+from triqs.lattice.utils import k_space_path
 import tools.tools as tools
 from tools.TB_functions import *
 
@@ -89,7 +90,9 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
 
     # calculate tight-binding eigenvalues
     if not fermi_slice:
-        k_disc, k_points, e_mat = energy_matrix_on_bz_paths(k_path, tb, n_pts=k_mesh['n_k'])
+        k_points, k_disc, ticks  = k_space_path(k_path, num=k_mesh['n_k'], bz=tb.bz)
+        e_mat = tb.fourier(k_points).transpose(1,2,0)
+
         if add_spin: e_mat = e_mat[2:5,2:5]
         if band_basis:
             e_vecs = np.zeros(e_mat.shape, dtype=complex)
@@ -112,7 +115,8 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
         Z = np.array(k_mesh['Z'])
         for ik_y in range(k_mesh['n_k']):
             path_along_x = [(final_y / (k_mesh['n_k'] - 1) * ik_y + k_mesh['kz'] * Z, final_x + final_y / (k_mesh['n_k'] - 1) * ik_y + k_mesh['kz'] * Z)]
-            _, _, e_mat[:,:,:,ik_y] = energy_matrix_on_bz_paths(path_along_x, tb, n_pts=k_mesh['n_k'])
+            k_points, _, _  = k_space_path(path_along_x, num=k_mesh['n_k'], bz=tb.bz)
+            e_mat[:,:,:,ik_y] = tb.fourier(k_points).transpose(1,2,0)
         k_disc = k_points = np.array([0,1])
         if add_spin: e_mat = e_mat[2:5,2:5]
 

@@ -40,11 +40,11 @@ def calc_alatt(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
 
     # TODO add local
     add_local = [0.] * tb_data['n_wf']
-    triqs_mesh = MeshReFreq(omega_min=w_dict['window'][0],
-                            omega_max=w_dict['window'][1],
-                            n_max=w_dict['n_w'])
+    triqs_mesh = MeshReFreq(w_min=w_dict['window'][0],
+                            w_max=w_dict['window'][1],
+                            n_w=w_dict['n_w'])
     Sigma_triqs = Gf(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
-    Sigma_triqs.data[:, :, :] = sigma.transpose((2, 0, 1)) 
+    Sigma_triqs.data[:, :, :] = sigma.transpose((2, 0, 1))
     if 'sigma_mu_re' in sigma_data.keys():
         sigma_mu = np.array(
             sigma_data['sigma_mu_re']) + 1j * np.array(sigma_data['sigma_mu_im'])
@@ -149,9 +149,9 @@ def calc_kslice(tb_data, sigma_data, akw_data, solve=False, band_basis=False):
 
     # TODO add local
     add_local = [0.] * tb_data['n_wf']
-    triqs_mesh = MeshReFreq(omega_min=w_dict['window'][0],
-                            omega_max=w_dict['window'][1],
-                            n_max=w_dict['n_w'])
+    triqs_mesh = MeshReFreq(w_min=w_dict['window'][0],
+                            w_max=w_dict['window'][1],
+                            n_w=w_dict['n_w'])
     Sigma_triqs = Gf(mesh=triqs_mesh, target_shape=[n_orb, n_orb])
     Sigma_triqs.data[:, :, :] = sigma.transpose((2, 0, 1))
 
@@ -221,7 +221,7 @@ def sumk(mu, Sigma, bz_weight, eps_nuk, w_mat, eta=0.0):
 
     mu_mat = mu * np.eye(Gloc.target_shape[0])
     eta_mat = 1j * eta * np.eye(Gloc.target_shape[0])
-   
+
     #check if the eps_nuk is a matrix otherwise it must be converted to a
     #diagonal matrix
     if len(eps_nuk.shape) == 2:
@@ -295,7 +295,7 @@ def calc_mu(tb_data,
         if sigma_eig[0] <  0: eps_min+=sigma_eig[0]
 
     w_mat = np.array([w.value * np.eye(tb_data['n_wf']) for w in Sigma.mesh])
-    
+
     #Check if stored mu is the correct mu to avoid recalculation
     #if mu is correct, dens-n_elect == 0
     if np.isclose(0.0,dens(current_mu, n_elect),atol=1e-3):
@@ -334,7 +334,7 @@ def calc_Aw(tb_data, mu, add_spin, add_local, Sigma=None, eta=0.0, n_k=10):
     bz_weight = 1/(n_k**3)
     eps_nuk = tb.dispersion(k_array)
     w_mat = np.array([w.value * np.eye(tb_data['n_wf']) for w in Sigma.mesh])
-    
+
     Gloc = sp_factor * sumk(mu=mu,
                             Sigma=Sigma,
                             bz_weight=bz_weight,
