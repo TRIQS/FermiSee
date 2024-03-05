@@ -12,80 +12,6 @@ def extend_wannier90_to_spin(hopping, num_wann):
         hopping_spin[key] = np.kron(np.eye(2), value)
     return hopping_spin, 2 * num_wann
 
-def energies_on_bz_paths(paths, tb_lattice, n_pts=50):
-
-    """ Given a list of k-point paths compute the eigen energies along
-    the paths using n_pts discrete points for each sub-path. """
-
-    # -- Get the reciprocal lattice vectors
-    bz = BrillouinZone(tb_lattice.bl)
-    k_mat = np.array(bz.units)
-
-    n_paths = len(paths)
-    n_orb = tb_lattice.NOrbitalsInUnitCell
-
-    k = np.zeros(n_pts * n_paths)
-    E = np.zeros((n_orb, n_pts * n_paths))
-
-    k_length = 0. # accumulative k-path length
-
-    for pidx, (ki, kf) in enumerate(paths):
-
-        s, e = pidx * n_pts, (pidx+1) * n_pts
-        E[:, s:e] = energies_on_bz_path(tb_lattice.tb, ki, kf, n_pts)
-
-        dk = np.dot(k_mat.T, (ki - kf))
-        a = np.linspace(0., 1., num=n_pts, endpoint=False)
-        k_vec = a[:, None] * dk[None, :]
-
-        k[s:e] = np.linalg.norm(k_vec, axis=1) + k_length
-        k_length += np.linalg.norm(dk)
-
-    #K = np.concatenate((k[::n_pts], [2 * k[-1] - k[-2]])) # add last point for K-grid
-    K = np.concatenate((k[::n_pts], [k[-1]])) # add last point for K-grid
-
-    return k, K, E
-
-
-def energy_matrix_on_bz_paths(paths, TBL, n_pts=50):
-
-    """ Given a list of k-point paths compute the eigen energies along
-    the paths using n_pts discrete points for each sub-path. """
-
-    # -- Get the reciprocal lattice vectors
-    bz = BrillouinZone(TBL.bl)
-    k_mat = np.array(bz.units)
-
-    n_paths = len(paths)
-    n_orb = TBL.NOrbitalsInUnitCell
-
-    k = np.zeros(n_pts * n_paths)
-    E = np.zeros((n_orb, n_orb, n_pts * n_paths),dtype=complex)
-
-    k_length = 0. # accumulative k-path length
-
-    for pidx, (ki, kf) in enumerate(paths):
-
-        # if this is the last section, add the endpoint!
-        if pidx == len(paths)-1:
-             endpoint = True
-        else:
-            endpoint = False
-
-        s, e = pidx * n_pts, (pidx+1) * n_pts
-        E[:,:, s:e] = energy_matrix_on_bz_path(TBL.tb, ki, kf, n_pts)
-
-        dk = np.dot(k_mat.T, (ki - kf))
-        a = np.linspace(0., 1., num=n_pts, endpoint=endpoint)
-        k_vec = a[:, None] * dk[None, :]
-
-        k[s:e] = np.linalg.norm(k_vec, axis=1) + k_length
-        k_length += np.linalg.norm(dk)
-
-    K = np.concatenate((k[::n_pts], [k[-1]])) # add last point for K-grid
-
-    return k, K, E
-
 def reg(k) : return tuple( int(x) for x in k)
 
 def fract_ind_to_val(x,ind):
@@ -99,12 +25,12 @@ def get_kx_ky_FS(X,Y,Z,tbl,k_trans_back,select=None,N_kxy=10,kz=0.0, fermi=0.0):
     kx = np.linspace(0,0.5,N_kxy)
     ky = np.linspace(0,0.5,N_kxy)
 
-    if select is None: select = np.array(range(tbl.NOrbitalsInUnitCell))
+    if select is None: select = np.array(range(tbl.n_orbitals))
 
-    E_FS = np.zeros((tbl.NOrbitalsInUnitCell,N_kxy,N_kxy))
+    E_FS = np.zeros((tbl.n_orbitals,N_kxy,N_kxy))
     for kyi in range(N_kxy):
         path_FS = [(Y/(N_kxy-1)*kyi +kz*Z, X+Y/(N_kxy-1)*kyi+kz*Z)]
-        kvecs, k = k_space_path(path_FS, num=N_kxy)
+        kvecs, k, _ = k_space_path(path_FS, num=N_kxy)
         E_FS[:,:,kyi] = tbl.dispersion(kvecs).transpose()
 
     contours = {}
