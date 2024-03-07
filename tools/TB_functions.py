@@ -1,8 +1,6 @@
 from triqs.lattice.tight_binding import *
 from triqs.lattice.utils import k_space_path
 import skimage.measure
-import copy
-from matplotlib import cm
 import numpy as np
 
 def extend_wannier90_to_spin(hopping, num_wann):

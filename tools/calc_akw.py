@@ -8,15 +8,12 @@ Written by Sophie Beck, 2021
 """
 
 import numpy as np
-from scipy.optimize import brentq, root_scalar
+from scipy.optimize import brentq
 from scipy.interpolate import interp1d
 import itertools
 
 # triqs
-from triqs.sumk import SumkDiscreteFromLattice
-from tools.TB_functions import *
 from triqs.gf import Gf, MeshReFreq
-from triqs.utility.dichotomy import dichotomy
 import tools.tools as tools
 
 upscale = lambda quantity, n_orb: quantity * np.identity(n_orb)
@@ -262,7 +259,8 @@ def calc_mu(tb_data,
     n_orb_rescale = 2 * tb_data['n_wf'] if add_spin else tb_data['n_wf']
     sp_factor = 1 if add_spin else 2
     H_add_loc = np.zeros((n_orb_rescale, n_orb_rescale), dtype=complex)
-    if add_spin: H_add_loc += tools.lambda_matrix_w90_t2g(add_local)
+    if add_spin:
+        H_add_loc += tools.lambda_matrix_w90_t2g(add_local)
 
     hopping = {
         eval(key): np.array(value, dtype=complex)
@@ -291,8 +289,10 @@ def calc_mu(tb_data,
         #TODO: there could be an edge case that is beyond the boundaries
         sigma_hartree = Sigma(0.0).real
         sigma_eig, _ = np.linalg.eigh(sigma_hartree)
-        if sigma_eig[-1] > 0: eps_max+=sigma_eig[-1]
-        if sigma_eig[0] <  0: eps_min+=sigma_eig[0]
+        if sigma_eig[-1] > 0:
+            eps_max+=sigma_eig[-1]
+        if sigma_eig[0] <  0:
+            eps_min+=sigma_eig[0]
 
     w_mat = np.array([w.value * np.eye(tb_data['n_wf']) for w in Sigma.mesh])
 
@@ -309,7 +309,8 @@ def calc_Aw(tb_data, mu, add_spin, add_local, Sigma=None, eta=0.0, n_k=10):
     n_orb_rescale = 2 * tb_data['n_wf'] if add_spin else tb_data['n_wf']
     sp_factor = 1 if add_spin else 2
     H_add_loc = np.zeros((n_orb_rescale, n_orb_rescale), dtype=complex)
-    if add_spin: H_add_loc += tools.lambda_matrix_w90_t2g(add_local)
+    if add_spin:
+        H_add_loc += tools.lambda_matrix_w90_t2g(add_local)
 
     if not Sigma:
         w_min = tb_data['bnd_low'] - 0.2*abs(tb_data['bnd_low'])
@@ -402,7 +403,8 @@ def sigma_from_dmft(n_orb,
             w_mesh, w_mesh_dmft, sigma_mat[block_spin][:, orb1, orb2])
 
         for ct1, ct2 in itertools.product(range(n_orb), range(n_orb)):
-            if ct1 != ct2 and not SOC: continue
+            if ct1 != ct2 and not SOC:
+                continue
             sigma_interpolated[ct1, ct2] = interpolate_sigma(
                 w_mesh, w_mesh_dmft, ct1, ct2)
 

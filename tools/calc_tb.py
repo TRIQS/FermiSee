@@ -9,23 +9,10 @@ Written by Sophie Beck, 2021
 """
 
 import numpy as np
-from numpy import dtype
-from matplotlib.ticker import MaxNLocator, AutoMinorLocator
-from matplotlib.colors import LogNorm
-from matplotlib import cm, colors
-from scipy.optimize import brentq
-from scipy.interpolate import interp1d
-import itertools
 
-# triqs
-from triqs.sumk import SumkDiscreteFromLattice
-from h5 import HDFArchive
-from triqs.gf import BlockGf
-from triqs.gf import GfReFreq, MeshReFreq
-from triqs.utility.dichotomy import dichotomy
 from triqs.lattice.utils import k_space_path
 import tools.tools as tools
-from tools.TB_functions import *
+from tools.TB_functions import get_kx_ky_FS
 
 def _convert_kpath(k_mesh):
     k_path = k_mesh['k_path']
@@ -73,7 +60,8 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
     # set up Wannier Hamiltonian
     n_orb_rescale = 2 * data['n_wf'] if add_spin else data['n_wf']
     H_add_loc = np.zeros((n_orb_rescale, n_orb_rescale), dtype=complex)
-    if add_spin: H_add_loc += tools.lambda_matrix_w90_t2g(add_local)
+    if add_spin:
+        H_add_loc += tools.lambda_matrix_w90_t2g(add_local)
 
     hopping = {eval(key): np.array(value, dtype=complex) for key, value in data['hopping'].items()}
     tb = tools.get_TBL(hopping, data['units'], data['n_wf'], extend_to_spin=add_spin, add_local=H_add_loc)
@@ -81,7 +69,7 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
 
     unit_dim = np.shape(data['units'])[0]
     origin = (0,) * unit_dim
-    h_of_r = tb.hoppings[origin][2:5,2:5] if add_spin else tb.hoppings[origin]
+    # h_of_r = tb.hoppings[origin][2:5,2:5] if add_spin else tb.hoppings[origin]
     #tools.print_matrix(h_of_r, data['n_wf'], 'H(R=0)')
 
     # bands info
@@ -92,7 +80,8 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
         k_points, k_disc, ticks  = k_space_path(k_path, num=k_mesh['n_k'], bz=tb.bz)
         e_mat = tb.fourier(k_points).transpose(1,2,0)
 
-        if add_spin: e_mat = e_mat[2:5,2:5]
+        if add_spin:
+            e_mat = e_mat[2:5,2:5]
         if band_basis:
             e_vecs = np.zeros(e_mat.shape, dtype=complex)
             total_proj = np.zeros(np.shape(e_vecs[0]))
@@ -119,7 +108,8 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
             k_points, _, _  = k_space_path(path_along_x, num=k_mesh['n_k'], bz=tb.bz)
             e_mat[:,:,:,ik_y] = tb.fourier(k_points).transpose(1,2,0)
         k_disc = k_points = np.array([0,1])
-        if add_spin: e_mat = e_mat[2:5,2:5]
+        if add_spin:
+            e_mat = e_mat[2:5,2:5]
 
     k_mesh = {'k_disc': k_disc.tolist(), 'k_points': k_points.tolist(), 'k_point_labels': k_point_labels, 'k_points_dash': k_mesh['k_path']}
 
