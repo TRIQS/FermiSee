@@ -60,10 +60,9 @@ def get_tb_kslice(tb, k_mesh, dft_mu):
     cart_to_prim = np.linalg.inv(prim_to_cart)
     k_path, _ = _convert_kpath(k_mesh)
     final_x, final_y = k_path[1]
-    Z = np.array(k_mesh['Z'])
 
     fermi = dft_mu
-    e_val, e_vec = get_kx_ky_FS(final_x, final_y, Z, tb, k_trans_back=cart_to_prim, N_kxy=k_mesh['n_k'], kz=k_mesh['kz'], fermi=fermi)
+    e_val, e_vec = get_kx_ky_FS(final_x, final_y, k_path[0][0], tb, k_trans_back=cart_to_prim, N_kxy=k_mesh['n_k'], kz=k_mesh['kz'], fermi=fermi)
 
     return e_val, e_vec
 
@@ -112,9 +111,11 @@ def calc_tb_bands(data, add_spin, add_local, k_mesh, fermi_slice, projected_orbs
         e_vecs = np.array([None])
         total_proj = np.array([None])
         final_x, final_y = k_path[1]
-        Z = np.array(k_mesh['Z'])
+        origin = k_path[0][0]
+        Z = np.zeros(3)
         for ik_y in range(k_mesh['n_k']):
-            path_along_x = [(final_y / (k_mesh['n_k'] - 1) * ik_y + k_mesh['kz'] * Z, final_x + final_y / (k_mesh['n_k'] - 1) * ik_y + k_mesh['kz'] * Z)]
+            path_along_x = [((final_y-origin) / (k_mesh['n_k'] - 1) * ik_y + k_mesh['kz'] * Z + origin,
+                             origin+(final_x-origin) + (final_y-origin) / (k_mesh['n_k'] - 1) * ik_y + k_mesh['kz'] * Z)]
             k_points, _, _  = k_space_path(path_along_x, num=k_mesh['n_k'], bz=tb.bz)
             e_mat[:,:,:,ik_y] = tb.fourier(k_points).transpose(1,2,0)
         k_disc = k_points = np.array([0,1])

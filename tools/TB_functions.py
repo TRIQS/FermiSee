@@ -20,16 +20,16 @@ def fract_ind_to_val(x,ind):
     int_ind_p1 = [int(indi)+1 for indi in ind]
     return x[int_ind] + (x[int_ind_p1] - x[int_ind])*(np.array(ind)-np.array(int_ind))
 
-def get_kx_ky_FS(X,Y,Z,tbl,k_trans_back,select=None,N_kxy=10,kz=0.0, fermi=0.0):
-
+def get_kx_ky_FS(X,Y,origin,tbl,k_trans_back,select=None,N_kxy=10,kz=0.0, fermi=0.0):
     kx = np.linspace(0,0.5,N_kxy)
     ky = np.linspace(0,0.5,N_kxy)
+    Z  = np.zeros(3)
 
     if select is None: select = np.array(range(tbl.n_orbitals))
 
     E_FS = np.zeros((tbl.n_orbitals,N_kxy,N_kxy))
     for kyi in range(N_kxy):
-        path_FS = [(Y/(N_kxy-1)*kyi +kz*Z, X+Y/(N_kxy-1)*kyi+kz*Z)]
+        path_FS = [((Y-origin)/(N_kxy-1)*kyi +kz*Z + origin, origin+(X-origin)+(Y-origin)/(N_kxy-1)*kyi+kz*Z)]
         kvecs, k, _ = k_space_path(path_FS, num=N_kxy)
         E_FS[:,:,kyi] = tbl.dispersion(kvecs).transpose()
 

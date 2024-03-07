@@ -31,8 +31,8 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                              'borderRadius': '5px',
                              'textAlign': 'center',
                              'margin': '10px'}
-   
-    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  Section 1: Includes the upload and download buttons ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  Section 1: Includes the upload and download buttons ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     upload_dwnload = html.Div(children=[
                     dbc.Alert('file corrupt or no file', id=id('config-alert'), dismissable=True,
                               color='warning', fade=False, is_open=False, duration=3000),
@@ -68,7 +68,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 html.Div([dcc.Upload(
                                     id=id('upload-w90-hr'),
                                     children=html.A('w90_hr'),
-                                    style=tb_input_style,                                    
+                                    style=tb_input_style,
                                     multiple=False)], style={'width': '49%', 'display': 'inline-block'}),
                                 html.Div([dcc.Upload(
                                     id=id('upload-w90-wout'),
@@ -102,7 +102,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                        ),
                                 dcc.Input(id=id('gf-filling'), type='number', value='0.', step='0.001',
                                           debounce=True, placeholder='number of electrons', style={'width': '50%'}),
-                                html.P('μ (eV):', style={'width': '50%', 'display': 'inline-block', 
+                                html.P('μ (eV):', style={'width': '50%', 'display': 'inline-block',
                                                     'text-align': 'left',
                                                     'vertical-align':
                                                     'center'}),
@@ -120,7 +120,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
     electron_no_edits = html.Div([
                                 html.P('#electrons: ', style={'width': '50%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                        ),
-                                html.Div(id=id('gf-filling'), children=html.P('0'), 
+                                html.Div(id=id('gf-filling'), children=html.P('0'),
                                          style={'width': '50%',
                                        'display':'inline-block',
                                        'margin': '5px 0px',
@@ -172,10 +172,10 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                         'deletable': False,
                                     } for i, k in enumerate(['label', 'kx', 'ky', 'kz'])],
                                     data=[
-                                        {id('column-{}'.format(i)): k for i, k in enumerate([ 'G', 0, 0, 0])},
-                                        {id('column-{}'.format(i)): k for i, k in enumerate([ 'X', 0.5, 0.0, 0])},
-                                        {id('column-{}'.format(i)): k for i, k in enumerate([ 'Y', 0, 0.5, 0])},
-                                        {id('column-{}'.format(i)): k for i, k in enumerate([ 'Z', 0, 0, 0.5])},
+                                        {id('column-{}'.format(i)): k for i, k in enumerate([ 'origin', 0, 0, 0])},
+                                        {id('column-{}'.format(i)): k for i, k in enumerate([ 'lower right', 0.5, 0.0, 0])},
+                                        {id('column-{}'.format(i)): k for i, k in enumerate([ 'upper left', 0, 0.5, 0])},
+                                        # {id('column-{}'.format(i)): k for i, k in enumerate([ 'Z', 0, 0, 0.5])},
                                     ],
                                     editable=True,
                                     row_deletable=False
@@ -185,7 +185,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                             )
         # button to add k points to the k table
     add_kpoint = html.Button('Add k-point', id=id('add-kpoint'), n_clicks=0, style=button_style)
-        #input the number of k-points 
+        #input the number of k-points
     num_kpoint = html.Div([
                                 html.P('#k-points:', style={'width': '50%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                        ),
@@ -251,7 +251,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                 html.P('η (eV):', style={'width': '50%', 'display': 'inline-block', 'text-align': 'left', 'vertical-align': 'center'}
                                        ),
                                 dcc.Input(id=id('eta'), type='number', value='0.010', step='0.001',
-                                          placeholder='broadening', 
+                                          placeholder='broadening',
                                           style={'width': '50%'}),
                             ], style={'padding': '5px 5px'}
                             )
@@ -284,7 +284,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                             html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0, style=button_style)]
     else:
         #the default dashboard will be the tab 1 dashboard
-        sec2_components = [w90_vs_pythTB, 
+        sec2_components = [w90_vs_pythTB,
                            w90_input,
                            pythTB_input,
                            add_spin,
@@ -309,7 +309,7 @@ def make_dashboard(tb_data, tb_kslice_data, akw_data, ak0_data, sigma_data, load
                                       color='warning', fade=True, is_open=False, duration=3000),
                             html.Button('Calculate A(k,w)', id=id('calc-akw'), n_clicks=0, style=button_style)
                           ]
-    
+
     #this is here to make the dashboard invisible for the tabs that are under construction
     section_style = section_box_style
     if tab_number == 3:
