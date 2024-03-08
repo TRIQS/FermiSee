@@ -1,4 +1,5 @@
-from tools.TB_functions import *
+from tools.TB_functions import extend_wannier90_to_spin
+from triqs.lattice.tight_binding import TBLattice
 import numpy as np
 
 
