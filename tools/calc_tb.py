@@ -49,7 +49,7 @@ def get_tb_kslice(tb, k_mesh, dft_mu):
     final_x, final_y = k_path[1]
 
     fermi = dft_mu
-    e_val, e_vec = get_kx_ky_FS(final_x, final_y, k_path[0][0], tb, k_trans_back=cart_to_prim, N_kxy=k_mesh['n_k'], kz=k_mesh['kz'], fermi=fermi)
+    e_val, e_vec = get_kx_ky_FS(final_x, final_y, k_path[0][0], tb, k_trans_back=cart_to_prim, N_kxy=k_mesh['n_k'], fermi=fermi)
 
     return e_val, e_vec
 
