@@ -518,7 +518,7 @@ def register_callbacks(app):
                 n_w = 1001
                 soc = False
 
-                w_mesh = MeshReFreq(omega_min=w_min, omega_max=w_max, n_max=n_w)
+                w_mesh = MeshReFreq(window=[w_min, w_max], n_w=n_w)
                 w_dict = {'w_mesh' : w_mesh, 'n_w' : n_w, 'window' : [w_min, w_max]}
 
                 # Sigma(w) = (1-1/Z) w + Sigma_0
